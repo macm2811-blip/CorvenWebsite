@@ -1,26 +1,21 @@
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
-const challenges = [
+const solutions = [
   {
     number: "01",
-    title: "Todo pasa por la persona dueña",
-    text: "Las decisiones, autorizaciones y respuestas se detienen cuando usted no está disponible.",
+    title: "Operaciones que funcionan",
+    text: "Organizamos, mejoramos y podemos acompañar la administración de operaciones para lograr un funcionamiento óptimo y estratégico.",
   },
   {
     number: "02",
-    title: "Cada persona trabaja diferente",
-    text: "Los procesos cambian según quién atienda, venda, compre o coordine el trabajo.",
+    title: "Datos que se entienden",
+    text: "Convertimos información dispersa en indicadores y visualizaciones claras que muestran qué está ocurriendo en la empresa.",
   },
   {
     number: "03",
-    title: "La información no está clara",
-    text: "Cuesta saber qué hay, qué falta, qué se vendió o quién debe encargarse de cada cosa.",
-  },
-  {
-    number: "04",
-    title: "Los problemas se repiten",
-    text: "El equipo pierde tiempo corrigiendo errores, buscando información o rehaciendo tareas.",
+    title: "Proyección para decidir",
+    text: "Construimos escenarios y proyecciones que ayudan a anticipar posibilidades y tomar mejores decisiones en el presente.",
   },
 ];
 
@@ -34,21 +29,18 @@ const deliverables = [
 ];
 
 const steps = [
-  ["01", "Conversamos", "Confirmamos qué necesita y si el diagnóstico es adecuado para su negocio."],
-  ["02", "Entendemos", "Usted completa un formulario breve y nos explica cómo funciona la operación hoy."],
-  ["03", "Revisamos", "Analizamos procesos, responsabilidades, controles y ejemplos que ya existan."],
-  ["04", "Priorizamos", "Identificamos qué sería más útil mejorar primero, según su capacidad actual."],
-  ["05", "Creamos el plan", "Ordenamos acciones concretas en un plan inicial de 30 días."],
-  ["06", "Usted decide", "Presentamos los resultados y usted elige cómo desea continuar."],
+  ["01", "Entendemos", "Escuchamos sus objetivos y conocemos cómo funciona realmente la empresa."],
+  ["02", "Hacemos visible", "Conectamos procesos, datos y señales relevantes para obtener una visión clara."],
+  ["03", "Definimos dirección", "Priorizamos oportunidades y construimos escenarios para decidir qué hacer primero."],
+  ["04", "Impulsamos la acción", "Convertimos la dirección elegida en un plan práctico y acompañamos su avance."],
 ];
 
-const audiences = [
-  "Comercios pequeños",
-  "Negocios familiares",
-  "Empresas de servicios",
-  "Contratistas y cuadrillas",
-  "Operaciones técnicas en campo",
-  "Equipos de 2 a 25 personas",
+const pillars = [
+  ["01", "Claridad", "Hacemos comprensible lo complejo para facilitar decisiones con propósito."],
+  ["02", "Evidencia", "Conectamos observación, información y datos antes de recomendar una dirección."],
+  ["03", "Ejecución", "Convertimos ideas y análisis en acciones concretas que la empresa puede sostener."],
+  ["04", "Colaboración", "Trabajamos junto al cliente, respetando su experiencia, contexto y capacidad."],
+  ["05", "Evolución", "Buscamos mejoras que fortalezcan el presente y preparen a la empresa para el futuro."],
 ];
 
 export default function Home() {
@@ -59,72 +51,60 @@ export default function Home() {
         <section className="hero" id="inicio">
           <div className="container hero-grid">
             <div className="hero-copy">
-              <p className="eyebrow"><span aria-hidden="true"></span> Consultoría práctica para pequeñas empresas</p>
+              <p className="eyebrow"><span aria-hidden="true"></span> Operaciones · Datos · Estrategia</p>
               <h1>
-                Entienda qué está frenando su negocio. <span>Decida qué mejorar primero.</span>
+                Convierta la realidad de su empresa en decisiones que <span>construyen su futuro.</span>
               </h1>
               <p className="hero-lead">
-                CORVEN ayuda a organizar y mejorar su operación con prioridades claras,
-                acciones realistas y sin agregar burocracia innecesaria.
+                CORVEN integra gestión operativa, visualización de datos y proyección estratégica para ayudar a las empresas a actuar hoy con una visión más clara del mañana.
               </p>
               <div className="button-row">
                 <a className="button button-primary" href="#contacto">
-                  Agendar una conversación
+                  Conversemos
                   <span aria-hidden="true">→</span>
                 </a>
-                <a className="button button-secondary" href="#diagnostico">
-                  Conocer el diagnóstico
+                <a className="button button-secondary" href="#soluciones">
+                  Conocer nuestras soluciones
                 </a>
               </div>
-              <ul className="trust-list" aria-label="Características del servicio">
-                <li>Empresas de 2 a 25 personas</li>
-                <li>Enfoque práctico</li>
-                <li>Sin reportes nuevos</li>
+              <ul className="trust-list" aria-label="Enfoque de CORVEN">
+                <li>Decisiones con evidencia</li>
+                <li>Ejecución práctica</li>
+                <li>Visión de futuro</li>
               </ul>
-              <div className="hero-proof" aria-label="Resultado del servicio">
-                <span>El objetivo</span>
-                <strong>Claridad → Prioridades → Acción</strong>
+              <div className="hero-proof" aria-label="Enfoque integral">
+                <span>Nuestro enfoque</span>
+                <strong>Entender → Visualizar → Proyectar → Actuar</strong>
               </div>
             </div>
 
-            <div className="snapshot-wrap" aria-label="Ejemplo ilustrativo de un Operations Snapshot">
+            <div className="snapshot-wrap" aria-label="Ejemplo ilustrativo de un Business Snapshot">
               <div className="snapshot-note"><span aria-hidden="true"></span> Ejemplo ilustrativo</div>
               <article className="snapshot-card">
                 <div className="snapshot-header">
                   <div>
-                    <p>Operations Snapshot</p>
-                    <strong>Claridad para actuar</strong>
+                    <p>Business Snapshot</p>
+                    <strong>Decisiones conectadas</strong>
                   </div>
-                  <span>30 días</span>
+                  <span>Presente + futuro</span>
                 </div>
                 <div className="snapshot-body">
-                  <p className="snapshot-label">Prioridades identificadas</p>
+                  <p className="snapshot-label">Una visión integral</p>
                   <div className="priority priority-high">
                     <span>1</span>
-                    <div>
-                      <strong>Definir responsabilidades</strong>
-                      <small>Reduce decisiones que dependen del dueño</small>
-                    </div>
+                    <div><strong>Operación</strong><small>Procesos, responsabilidades y control</small></div>
                   </div>
                   <div className="priority priority-medium">
                     <span>2</span>
-                    <div>
-                      <strong>Ordenar el control diario</strong>
-                      <small>Hace visible qué pasó y qué requiere atención</small>
-                    </div>
+                    <div><strong>Datos</strong><small>Indicadores visibles para decidir</small></div>
                   </div>
                   <div className="priority priority-low">
                     <span>3</span>
-                    <div>
-                      <strong>Estandarizar una rutina</strong>
-                      <small>Evita resolver el mismo problema cada semana</small>
-                    </div>
+                    <div><strong>Proyección</strong><small>Escenarios para actuar a tiempo</small></div>
                   </div>
                 </div>
                 <div className="snapshot-footer">
-                  <span>Prioridades</span>
-                  <span>Acciones</span>
-                  <span>Responsables</span>
+                  <span>Operación</span><span>Datos</span><span>Estrategia</span>
                 </div>
               </article>
             </div>
@@ -134,28 +114,20 @@ export default function Home() {
         <section className="signal-strip" aria-label="Mensaje principal">
           <div className="container signal-content">
             <span className="signal-mark">C</span>
-            <p>Primero buscamos <strong>claridad</strong>. Después se decide qué implementar.</p>
+            <p>Hacemos visible lo que ocurre hoy para construir <strong>mejores decisiones mañana.</strong></p>
           </div>
         </section>
 
-        <section className="section section-challenges" id="problemas">
+        <section className="section section-challenges" id="soluciones">
           <div className="container">
             <div className="section-heading heading-split">
-              <div>
-                <p className="eyebrow">Cuando crecer empieza a sentirse pesado</p>
-                <h2>¿Alguna de estas situaciones le resulta familiar?</h2>
-              </div>
-              <p>
-                No significa que su negocio esté mal. Muchas veces significa que creció y ahora
-                necesita una forma más clara de operar.
-              </p>
+              <div><p className="eyebrow">Qué hacemos</p><h2>Tres capacidades conectadas para fortalecer su empresa.</h2></div>
+              <p>Analizamos el presente, hacemos visible la información importante y ayudamos a convertirla en dirección y acción.</p>
             </div>
-            <div className="challenge-grid">
-              {challenges.map((challenge) => (
-                <article className="challenge-card" key={challenge.number}>
-                  <span>{challenge.number}</span>
-                  <h3>{challenge.title}</h3>
-                  <p>{challenge.text}</p>
+            <div className="challenge-grid solutions-grid">
+              {solutions.map((solution) => (
+                <article className="challenge-card" key={solution.number}>
+                  <span>{solution.number}</span><h3>{solution.title}</h3><p>{solution.text}</p>
                 </article>
               ))}
             </div>
@@ -165,28 +137,18 @@ export default function Home() {
         <section className="section section-diagnostic" id="diagnostico">
           <div className="container diagnostic-grid">
             <div className="diagnostic-copy">
-              <p className="eyebrow eyebrow-light">Diagnóstico Operativo Express</p>
-              <h2>Una mirada clara a su operación, sin convertirla en una auditoría interminable.</h2>
-              <p>
-                Revisamos de forma ligera cómo funciona hoy su negocio para identificar dónde
-                conviene concentrar tiempo y atención primero.
-              </p>
+              <p className="eyebrow eyebrow-light">Servicio de entrada</p>
+              <h2>Diagnóstico Operativo Express: claridad para decidir qué mejorar primero.</h2>
+              <p>Revisamos de forma ligera cómo funciona hoy la operación para identificar prioridades y convertirlas en un plan inicial práctico.</p>
               <div className="effort-card">
-                <span>Participación estimada del cliente</span>
-                <strong>2,5 a 3,5 horas</strong>
+                <span>Participación estimada del cliente</span><strong>2,5 a 3,5 horas</strong>
                 <small>Distribuidas entre el formulario, las conversaciones y la sesión de resultados.</small>
               </div>
             </div>
             <div className="deliverables-card">
               <p className="card-kicker">Al finalizar, usted recibe</p>
-              <ul>
-                {deliverables.map((item) => (
-                  <li key={item}><span aria-hidden="true">✓</span>{item}</li>
-                ))}
-              </ul>
-              <p className="deliverables-note">
-                Recomendaciones adaptadas a la capacidad actual del negocio, no una lista genérica de sistemas por comprar.
-              </p>
+              <ul>{deliverables.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul>
+              <p className="deliverables-note">Recomendaciones acordes con la realidad y capacidad actual de la empresa.</p>
             </div>
           </div>
         </section>
@@ -194,57 +156,32 @@ export default function Home() {
         <section className="section section-process" id="como-trabajamos">
           <div className="container">
             <div className="section-heading centered-heading">
-              <p className="eyebrow">Cómo trabajamos</p>
-              <h2>De una conversación a un plan inicial</h2>
-              <p>Un proceso ligero, ordenado y pensado para no interrumpir innecesariamente su operación.</p>
+              <p className="eyebrow">Cómo trabajamos</p><h2>De la realidad actual a una dirección clara</h2>
+              <p>Un enfoque directo para conectar operación, información, futuro y ejecución.</p>
             </div>
-            <ol className="process-grid">
+            <ol className="process-grid process-grid-four">
               {steps.map(([number, title, text]) => (
-                <li key={number}>
-                  <span className="step-number">{number}</span>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </li>
+                <li key={number}><span className="step-number">{number}</span><h3>{title}</h3><p>{text}</p></li>
               ))}
             </ol>
           </div>
         </section>
 
-        <section className="section section-audience" id="para-quien">
-          <div className="container audience-grid">
-            <div>
-              <p className="eyebrow">Para quién es</p>
-              <h2>Para negocios reales, con operaciones reales.</h2>
-              <p className="section-intro">
-                Especialmente útil cuando el negocio ha crecido gracias al esfuerzo de sus dueños y necesita más estructura sin perder agilidad.
-              </p>
+        <section className="section section-vision" id="vision">
+          <div className="container">
+            <div className="vision-statement">
+              <p className="eyebrow eyebrow-light">Nuestra visión</p>
+              <h2>Ayudar a construir la mejor versión de los negocios.</h2>
+              <p>Queremos que cada empresa pueda comprender mejor su presente, anticipar posibilidades y avanzar con decisiones estratégicas que fortalezcan su futuro.</p>
             </div>
-            <div className="audience-list">
-              {audiences.map((audience) => (
-                <div key={audience}><span aria-hidden="true">↗</span><strong>{audience}</strong></div>
+            <div className="pillars-heading">
+              <p className="eyebrow">Los cinco pilares de CORVEN</p>
+              <p>La forma en que pensamos, decidimos y trabajamos con cada cliente.</p>
+            </div>
+            <div className="pillars-grid">
+              {pillars.map(([number, title, text]) => (
+                <article className="pillar-card" key={number}><span>{number}</span><h3>{title}</h3><p>{text}</p></article>
               ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section section-boundaries">
-          <div className="container boundaries-grid">
-            <div className="principle-card">
-              <p className="eyebrow">Nuestro principio</p>
-              <blockquote>“Trabajamos sobre procesos, no sobre culpables.”</blockquote>
-              <p>
-                Queremos entender cómo funciona realmente la operación y recomendar acciones que el negocio pueda sostener.
-              </p>
-            </div>
-            <div className="boundary-copy">
-              <p className="eyebrow">Alcance claro desde el inicio</p>
-              <h2>Diagnosticar no significa imponer.</h2>
-              <p>
-                El servicio no es una auditoría contable, no evalúa personas para encontrar culpables y no obliga a comprar sistemas ni contratar una implementación posterior.
-              </p>
-              <p>
-                Cualquier acompañamiento adicional se conversa y cotiza por separado. Usted mantiene el control de la decisión.
-              </p>
             </div>
           </div>
         </section>
@@ -253,11 +190,8 @@ export default function Home() {
           <div className="container about-grid">
             <p className="eyebrow eyebrow-light">Sobre CORVEN</p>
             <div>
-              <h2>Orden, claridad y mejora práctica para pequeñas empresas.</h2>
-              <p>
-                CORVEN Consulting nace para acercar herramientas de gestión operativa a negocios que necesitan soluciones útiles, comprensibles y acordes con su realidad.
-              </p>
-              <p className="pending-copy">Historia y biografías de los socios: contenido pendiente de confirmación.</p>
+              <h2>Una compañía que conecta operación, información y futuro.</h2>
+              <p>CORVEN ayuda a las empresas a entender cómo funcionan, visualizar lo que sus datos revelan y convertir ese conocimiento en decisiones y acciones estratégicas.</p>
             </div>
           </div>
         </section>
@@ -265,11 +199,8 @@ export default function Home() {
         <section className="section section-contact" id="contacto">
           <div className="container contact-card">
             <div>
-              <p className="eyebrow">Conversemos</p>
-              <h2>Descubra qué sería más útil mejorar primero.</h2>
-              <p>
-                Una conversación inicial nos permitirá conocer su situación y confirmar si el Diagnóstico Operativo Express es adecuado para su negocio.
-              </p>
+              <p className="eyebrow">Conversemos</p><h2>Construyamos una visión más clara para su empresa.</h2>
+              <p>Cuéntenos qué necesita entender, mejorar o proyectar. Empezaremos por identificar la conversación más útil para avanzar.</p>
             </div>
             <div className="contact-actions">
               <span className="button button-primary button-disabled" aria-disabled="true">Solicitar información</span>

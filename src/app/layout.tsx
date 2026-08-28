@@ -19,26 +19,29 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
 export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: {
-    default: "CORVEN Consulting | Claridad para mejorar su operación",
-    template: "%s | CORVEN Consulting",
+    default: "CORVEN | Operaciones, datos y estrategia",
+    template: "%s | CORVEN",
   },
   description:
-    "Ayudamos a pequeñas empresas de Costa Rica a identificar qué mejorar primero y convertirlo en acciones claras mediante el Diagnóstico Operativo Express.",
-  applicationName: "CORVEN Consulting",
+    "CORVEN conecta gestión operativa, visualización de datos y proyección estratégica para ayudar a las empresas a tomar mejores decisiones.",
+  applicationName: "CORVEN",
   keywords: [
-    "consultoría para pequeñas empresas Costa Rica",
+    "gestión operativa",
+    "visualización de datos",
+    "proyección estratégica",
+    "administración de operaciones",
     "diagnóstico operativo",
     "mejora de procesos",
-    "organización de negocios",
-    "CORVEN Consulting",
+    "inteligencia de negocios",
+    "CORVEN",
   ],
   openGraph: {
     type: "website",
-    locale: "es_CR",
-    siteName: "CORVEN Consulting",
-    title: "CORVEN Consulting | Claridad para mejorar su operación",
+    locale: "es_419",
+    siteName: "CORVEN",
+    title: "CORVEN | Operaciones, datos y estrategia",
     description:
-      "Identifique qué está frenando su negocio, decida qué mejorar primero y comience con un plan práctico.",
+      "Entienda su operación, visualice sus datos y proyecte el futuro para tomar mejores decisiones hoy.",
   },
   robots: {
     index: true,
@@ -48,7 +51,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es-CR" className={`${displayFont.variable} ${bodyFont.variable}`}>
+    <html lang="es" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body>{children}</body>
     </html>
   );

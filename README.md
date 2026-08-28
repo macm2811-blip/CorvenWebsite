@@ -1,6 +1,6 @@
-# CORVEN Consulting Website
+# CORVEN Website
 
-Website corporativo de CORVEN Consulting, enfocado inicialmente en el Diagnóstico Operativo Express para pequeñas empresas de Costa Rica.
+Website corporativo de CORVEN, compañía de gestión operativa, visualización de datos y proyección estratégica con alcance global.
 
 ## Desarrollo local
 

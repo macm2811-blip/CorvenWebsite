@@ -52,10 +52,9 @@ button, input, textarea, select { font: inherit; }
 }
 .header-inner { min-height: 76px; display: flex; align-items: center; gap: 28px; }
 .brand { display: inline-flex; align-items: center; flex-shrink: 0; }
-.brand-logo { position: relative; display: inline-grid; min-width: 130px; padding: 11px 34px 9px 14px; background: #050505; line-height: 1; }
+.brand-logo { position: relative; display: inline-grid; min-width: 130px; padding: 14px 34px 14px 14px; background: #050505; line-height: 1; }
 .brand-wordmark { color: white; font-family: var(--font-display), sans-serif; font-size: 24px; font-weight: 850; letter-spacing: -.035em; }
-.brand-dot { position: absolute; top: 11px; right: 13px; width: 8px; height: 8px; background: var(--signal); }
-.brand-descriptor { margin-top: 5px; color: #b8b8c2; font-size: 7px; font-weight: 800; letter-spacing: .31em; text-transform: uppercase; }
+.brand-dot { position: absolute; top: 14px; right: 13px; width: 8px; height: 8px; background: var(--signal); }
 .desktop-nav { margin-left: auto; display: flex; align-items: center; gap: 26px; }
 .desktop-nav a { position: relative; color: #465468; font-size: 14px; font-weight: 700; }
 .desktop-nav a::after { content: ""; position: absolute; right: 0; bottom: -9px; left: 0; height: 2px; background: var(--accent-purple); transform: scaleX(0); transform-origin: left; transition: transform .2s ease; }
@@ -153,6 +152,7 @@ button, input, textarea, select { font: inherit; }
 .heading-split > p, .centered-heading > p:last-child, .section-intro { margin: 0; color: var(--muted); font-size: 19px; }
 .section-challenges { background: var(--white); }
 .challenge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.solutions-grid { grid-template-columns: repeat(3, 1fr); }
 .challenge-card { position: relative; min-height: 292px; overflow: hidden; padding: 27px; border: 1px solid var(--line); border-radius: var(--radius-md); background: linear-gradient(160deg, #fff, #f7f9fc); transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .challenge-card::before { content: ""; position: absolute; top: 0; right: 0; left: 0; height: 5px; background: var(--accent-purple); transform: scaleX(.24); transform-origin: left; transition: transform .25s ease; }
 .challenge-card:nth-child(2)::before { background: var(--signal); }
@@ -185,10 +185,30 @@ button, input, textarea, select { font: inherit; }
 .centered-heading { max-width: 720px; margin-inline: auto; text-align: center; }
 .centered-heading > p:last-child { margin-top: 20px; }
 .process-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; background: var(--line); list-style: none; }
+.process-grid-four { grid-template-columns: repeat(4, 1fr); }
 .process-grid li { min-height: 260px; padding: 30px; background: var(--sand-50); }
 .step-number { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 2px; background: var(--teal-100); color: var(--teal-700); font-family: var(--font-display), sans-serif; font-size: 12px; font-weight: 850; }
 .process-grid h3 { margin: 48px 0 10px; color: var(--navy-950); font-family: var(--font-display), sans-serif; font-size: 24px; }
 .process-grid p { margin: 0; color: var(--muted); font-size: 16px; }
+
+.section-vision { background: white; }
+.vision-statement { display: grid; grid-template-columns: .46fr 1.15fr; gap: 16px 70px; padding: 58px; background: linear-gradient(120deg, #3d147f 0%, #6d28d9 50%, #254ec4 100%); color: white; box-shadow: var(--shadow-soft); }
+.vision-statement .eyebrow { grid-row: 1 / span 2; color: #ffb37e; }
+.vision-statement h2 { color: white; }
+.vision-statement > p:last-child { max-width: 780px; margin: 0; color: #e4ddfa; font-size: 19px; }
+.pillars-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; margin: 64px 0 30px; }
+.pillars-heading .eyebrow { margin: 0; }
+.pillars-heading > p:last-child { max-width: 480px; margin: 0; color: var(--muted); text-align: right; }
+.pillars-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.pillar-card { position: relative; min-height: 250px; padding: 25px 22px; border: 1px solid var(--line); background: var(--sand-50); }
+.pillar-card::before { content: ""; position: absolute; top: 0; right: 0; left: 0; height: 5px; background: var(--accent-purple); }
+.pillar-card:nth-child(2)::before { background: var(--signal); }
+.pillar-card:nth-child(3)::before { background: var(--accent-red); }
+.pillar-card:nth-child(4)::before { background: var(--electric); }
+.pillar-card:nth-child(5)::before { background: #4f46e5; }
+.pillar-card > span { color: var(--muted); font-size: 12px; font-weight: 850; letter-spacing: .12em; }
+.pillar-card h3 { margin: 54px 0 12px; color: var(--navy-950); font-family: var(--font-display), sans-serif; font-size: 21px; }
+.pillar-card p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
 
 .section-audience { background: var(--white); }
 .audience-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 90px; align-items: center; }
@@ -254,6 +274,9 @@ button, input, textarea, select { font: inherit; }
   .snapshot-wrap { width: min(620px, 100%); margin-inline: auto; }
   .challenge-grid { grid-template-columns: 1fr 1fr; }
   .process-grid { grid-template-columns: 1fr 1fr; }
+  .vision-statement { grid-template-columns: 1fr; gap: 22px; }
+  .vision-statement .eyebrow { grid-row: auto; }
+  .pillars-grid { grid-template-columns: repeat(2, 1fr); }
   .about-grid { grid-template-columns: 1fr; gap: 20px; }
   .contact-card { grid-template-columns: 1fr; }
   .contact-actions { max-width: 420px; }
@@ -279,6 +302,12 @@ button, input, textarea, select { font: inherit; }
   .heading-split { grid-template-columns: 1fr; gap: 22px; }
   .section-heading { margin-bottom: 36px; }
   .challenge-grid, .process-grid, .audience-list { grid-template-columns: 1fr; }
+  .vision-statement { padding: 34px 24px; }
+  .pillars-heading { align-items: flex-start; flex-direction: column; }
+  .pillars-heading > p:last-child { text-align: left; }
+  .pillars-grid { grid-template-columns: 1fr; }
+  .pillar-card { min-height: auto; }
+  .pillar-card h3 { margin-top: 30px; }
   .challenge-card, .process-grid li { min-height: auto; }
   .challenge-card h3, .process-grid h3 { margin-top: 28px; }
   .deliverables-card, .principle-card { padding: 28px 22px; }

@@ -1,6 +1,4 @@
-type BrandLogoProps = {
-  footer?: boolean;
-};
+type BrandLogoProps = { footer?: boolean };
 
 export function BrandLogo({ footer = false }: BrandLogoProps) {
   return (
@@ -9,8 +7,7 @@ export function BrandLogo({ footer = false }: BrandLogoProps) {
         CORVEN
       </span>
       <span className="brand-dot" aria-hidden="true"></span>
-      <span className="brand-descriptor" aria-hidden="true">consulting</span>
-      <span className="sr-only">CORVEN Consulting</span>
+      <span className="sr-only">CORVEN</span>
     </span>
   );
 }
