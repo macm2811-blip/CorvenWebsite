@@ -1,3 +1,5 @@
+import { BrandLogo } from "@/components/brand-logo";
+
 const navigation = [
   ["Problemas", "#problemas"],
   ["Diagnóstico", "#diagnostico"],
@@ -11,11 +13,7 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="container header-inner">
         <a className="brand" href="#inicio" aria-label="CORVEN Consulting, ir al inicio">
-          <span className="brand-mark" aria-hidden="true">C</span>
-          <span>
-            <strong>CORVEN</strong>
-            <small>CONSULTING</small>
-          </span>
+          <BrandLogo />
         </a>
 
         <nav className="desktop-nav" aria-label="Navegación principal">

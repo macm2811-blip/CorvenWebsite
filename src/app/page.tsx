@@ -59,7 +59,7 @@ export default function Home() {
         <section className="hero" id="inicio">
           <div className="container hero-grid">
             <div className="hero-copy">
-              <p className="eyebrow">Consultoría práctica para pequeñas empresas</p>
+              <p className="eyebrow"><span aria-hidden="true"></span> Consultoría práctica para pequeñas empresas</p>
               <h1>
                 Entienda qué está frenando su negocio. <span>Decida qué mejorar primero.</span>
               </h1>
@@ -81,10 +81,14 @@ export default function Home() {
                 <li>Enfoque práctico</li>
                 <li>Sin reportes nuevos</li>
               </ul>
+              <div className="hero-proof" aria-label="Resultado del servicio">
+                <span>El objetivo</span>
+                <strong>Claridad → Prioridades → Acción</strong>
+              </div>
             </div>
 
             <div className="snapshot-wrap" aria-label="Ejemplo ilustrativo de un Operations Snapshot">
-              <div className="snapshot-note">Ejemplo ilustrativo</div>
+              <div className="snapshot-note"><span aria-hidden="true"></span> Ejemplo ilustrativo</div>
               <article className="snapshot-card">
                 <div className="snapshot-header">
                   <div>
