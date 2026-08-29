@@ -3,24 +3,24 @@ import { SiteHeader } from "@/components/site-header";
 
 const solutions = [
   {
-    number: "01",
+    number: "1",
     title: "Operaciones que funcionan",
     text: "Organizamos, mejoramos y podemos acompañar la administración de operaciones para lograr un funcionamiento óptimo y estratégico.",
   },
   {
-    number: "02",
+    number: "2",
     title: "Datos que se entienden",
     text: "Convertimos información dispersa en indicadores y visualizaciones claras que muestran qué está ocurriendo en la empresa.",
   },
   {
-    number: "03",
+    number: "3",
     title: "Proyección para decidir",
     text: "Construimos escenarios y proyecciones que ayudan a anticipar posibilidades y tomar mejores decisiones en el presente.",
   },
 ];
 
 const deliverables = [
-  "Operations Snapshot de una página",
+  "Panorama Estratégico de una página",
   "Tres prioridades operativas",
   "Tres acciones recomendadas y ordenadas",
   "Plan inicial de 30 días",
@@ -29,18 +29,18 @@ const deliverables = [
 ];
 
 const steps = [
-  ["01", "Entendemos", "Escuchamos sus objetivos y conocemos cómo funciona realmente la empresa."],
-  ["02", "Hacemos visible", "Conectamos procesos, datos y señales relevantes para obtener una visión clara."],
-  ["03", "Definimos dirección", "Priorizamos oportunidades y construimos escenarios para decidir qué hacer primero."],
-  ["04", "Impulsamos la acción", "Convertimos la dirección elegida en un plan práctico y acompañamos su avance."],
+  ["1", "Entendemos", "Escuchamos sus objetivos y conocemos cómo funciona realmente la empresa."],
+  ["2", "Hacemos visible", "Conectamos procesos, datos y señales relevantes para obtener una visión clara."],
+  ["3", "Definimos dirección", "Priorizamos oportunidades y construimos escenarios para decidir qué hacer primero."],
+  ["4", "Impulsamos la acción", "Convertimos la dirección elegida en un plan práctico y acompañamos su avance."],
 ];
 
 const pillars = [
-  ["01", "Claridad", "Hacemos comprensible lo complejo para facilitar decisiones con propósito."],
-  ["02", "Evidencia", "Conectamos observación, información y datos antes de recomendar una dirección."],
-  ["03", "Ejecución", "Convertimos ideas y análisis en acciones concretas que la empresa puede sostener."],
-  ["04", "Colaboración", "Trabajamos junto al cliente, respetando su experiencia, contexto y capacidad."],
-  ["05", "Evolución", "Buscamos mejoras que fortalezcan el presente y preparen a la empresa para el futuro."],
+  ["1", "Claridad", "Hacemos comprensible lo complejo para facilitar decisiones con propósito."],
+  ["2", "Evidencia", "Conectamos observación, información y datos antes de recomendar una dirección."],
+  ["3", "Ejecución", "Convertimos ideas y análisis en acciones concretas que la empresa puede sostener."],
+  ["4", "Colaboración", "Trabajamos junto al cliente, respetando su experiencia, contexto y capacidad."],
+  ["5", "Evolución", "Buscamos mejoras que fortalezcan el presente y preparen a la empresa para el futuro."],
 ];
 
 export default function Home() {
@@ -53,7 +53,7 @@ export default function Home() {
             <div className="hero-copy">
               <p className="eyebrow"><span aria-hidden="true"></span> Operaciones · Datos · Estrategia</p>
               <h1>
-                Convierta la realidad de su empresa en decisiones que <span>construyen su futuro.</span>
+                Construya su <span>futuro.</span>
               </h1>
               <p className="hero-lead">
                 CORVEN integra gestión operativa, visualización de datos y proyección estratégica para ayudar a las empresas a actuar hoy con una visión más clara del mañana.
@@ -78,35 +78,20 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="snapshot-wrap" aria-label="Ejemplo ilustrativo de un Business Snapshot">
-              <div className="snapshot-note"><span aria-hidden="true"></span> Ejemplo ilustrativo</div>
-              <article className="snapshot-card">
-                <div className="snapshot-header">
-                  <div>
-                    <p>Business Snapshot</p>
-                    <strong>Decisiones conectadas</strong>
-                  </div>
-                  <span>Presente + futuro</span>
-                </div>
-                <div className="snapshot-body">
-                  <p className="snapshot-label">Una visión integral</p>
-                  <div className="priority priority-high">
-                    <span>1</span>
-                    <div><strong>Operación</strong><small>Procesos, responsabilidades y control</small></div>
-                  </div>
-                  <div className="priority priority-medium">
-                    <span>2</span>
-                    <div><strong>Datos</strong><small>Indicadores visibles para decidir</small></div>
-                  </div>
-                  <div className="priority priority-low">
-                    <span>3</span>
-                    <div><strong>Proyección</strong><small>Escenarios para actuar a tiempo</small></div>
-                  </div>
-                </div>
-                <div className="snapshot-footer">
-                  <span>Operación</span><span>Datos</span><span>Estrategia</span>
-                </div>
-              </article>
+            <div className="improvement-cycle" aria-label="Ciclo de mejora continua: entender, visualizar, proyectar y actuar">
+              <div className="cycle-orbit" aria-hidden="true"></div>
+              <div className="cycle-center">
+                <span>Mejora</span>
+                <strong>continua</strong>
+              </div>
+              <div className="cycle-step cycle-step-1"><span>1</span><strong>Entender</strong></div>
+              <div className="cycle-step cycle-step-2"><span>2</span><strong>Visualizar</strong></div>
+              <div className="cycle-step cycle-step-3"><span>3</span><strong>Proyectar</strong></div>
+              <div className="cycle-step cycle-step-4"><span>4</span><strong>Actuar</strong></div>
+              <span className="cycle-arrow cycle-arrow-1" aria-hidden="true">→</span>
+              <span className="cycle-arrow cycle-arrow-2" aria-hidden="true">↓</span>
+              <span className="cycle-arrow cycle-arrow-3" aria-hidden="true">←</span>
+              <span className="cycle-arrow cycle-arrow-4" aria-hidden="true">↑</span>
             </div>
           </div>
         </section>
@@ -140,15 +125,51 @@ export default function Home() {
               <p className="eyebrow eyebrow-light">Servicio de entrada</p>
               <h2>Diagnóstico Operativo Express: claridad para decidir qué mejorar primero.</h2>
               <p>Revisamos de forma ligera cómo funciona hoy la operación para identificar prioridades y convertirlas en un plan inicial práctico.</p>
-              <div className="effort-card">
-                <span>Participación estimada del cliente</span><strong>2,5 a 3,5 horas</strong>
-                <small>Distribuidas entre el formulario, las conversaciones y la sesión de resultados.</small>
-              </div>
             </div>
             <div className="deliverables-card">
               <p className="card-kicker">Al finalizar, usted recibe</p>
               <ul>{deliverables.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul>
               <p className="deliverables-note">Recomendaciones acordes con la realidad y capacidad actual de la empresa.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="section section-snapshot" aria-labelledby="snapshot-title">
+          <div className="container snapshot-section-grid">
+            <div className="snapshot-section-copy">
+              <p className="eyebrow">Una visión conectada</p>
+              <h2 id="snapshot-title">Panorama Estratégico CORVEN</h2>
+              <p>Una lectura clara del presente que conecta operación, datos y proyección para definir prioridades y orientar las próximas decisiones.</p>
+            </div>
+            <div className="snapshot-wrap" aria-label="Ejemplo ilustrativo del Panorama Estratégico CORVEN">
+              <div className="snapshot-note"><span aria-hidden="true"></span> Ejemplo ilustrativo</div>
+              <article className="snapshot-card">
+                <div className="snapshot-header">
+                  <div>
+                    <p>Panorama Estratégico</p>
+                    <strong>Decisiones conectadas</strong>
+                  </div>
+                  <span>Presente + futuro</span>
+                </div>
+                <div className="snapshot-body">
+                  <p className="snapshot-label">Una visión integral</p>
+                  <div className="priority priority-high">
+                    <span>1</span>
+                    <div><strong>Operación</strong><small>Procesos, responsabilidades y control</small></div>
+                  </div>
+                  <div className="priority priority-medium">
+                    <span>2</span>
+                    <div><strong>Datos</strong><small>Indicadores visibles para decidir</small></div>
+                  </div>
+                  <div className="priority priority-low">
+                    <span>3</span>
+                    <div><strong>Proyección</strong><small>Escenarios para actuar a tiempo</small></div>
+                  </div>
+                </div>
+                <div className="snapshot-footer">
+                  <span>Operación</span><span>Datos</span><span>Estrategia</span>
+                </div>
+              </article>
             </div>
           </div>
         </section>
