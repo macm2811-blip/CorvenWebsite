@@ -5,15 +5,13 @@ const navigation = {
     ["Soluciones", "#soluciones"],
     ["Diagnóstico", "#diagnostico"],
     ["Cómo trabajamos", "#como-trabajamos"],
-    ["Visión", "#vision"],
-    ["CORVEN", "#sobre-corven"],
+    ["Sobre CORVEN", "#sobre-corven"],
   ],
   en: [
     ["Solutions", "#solutions"],
     ["Diagnostic", "#diagnostic"],
     ["How we work", "#how-we-work"],
-    ["Vision", "#vision"],
-    ["CORVEN", "#about-corven"],
+    ["About CORVEN", "#about-corven"],
   ],
 } as const;
 

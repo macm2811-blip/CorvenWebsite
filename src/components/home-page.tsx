@@ -11,8 +11,7 @@ const content = {
       lead: "CORVEN integra gestión operativa, visualización de datos y proyección estratégica para ayudar a las empresas a actuar hoy con una visión más clara del mañana.",
       primaryCta: "Conversemos", secondaryCta: "Conocer nuestras soluciones", trustLabel: "Enfoque de CORVEN",
       trust: ["Decisiones con evidencia", "Ejecución práctica", "Visión de futuro"], approachLabel: "Nuestro enfoque",
-      approach: "Entender → Visualizar → Proyectar → Actuar", cycleLabel: "Ciclo de mejora continua: entender, visualizar, proyectar y actuar",
-      cycleCenterTop: "Mejora", cycleCenterBottom: "continua", cycleSteps: ["Entender", "Visualizar", "Proyectar", "Actuar"],
+      approach: "Entender → Visualizar → Proyectar → Actuar",
     },
     signal: { label: "Mensaje principal", text: "Hacemos visible lo que ocurre hoy para construir", strong: "mejores decisiones mañana." },
     solutions: {
@@ -43,26 +42,27 @@ const content = {
       eyebrow: "Cómo trabajamos", title: "De la realidad actual a una dirección clara",
       intro: "Un enfoque directo para conectar operación, información, futuro y ejecución.",
       items: [
-        ["1", "Entendemos", "Escuchamos sus objetivos y conocemos cómo funciona realmente la empresa."],
-        ["2", "Hacemos visible", "Conectamos procesos, datos y señales relevantes para obtener una visión clara."],
-        ["3", "Definimos dirección", "Priorizamos oportunidades y construimos escenarios para decidir qué hacer primero."],
-        ["4", "Impulsamos la acción", "Convertimos la dirección elegida en un plan práctico y acompañamos su avance."],
+        ["Entendemos", "Escuchamos sus objetivos y conocemos cómo funciona realmente la empresa."],
+        ["Hacemos visible", "Conectamos procesos, datos y señales relevantes para obtener una visión clara."],
+        ["Definimos dirección", "Priorizamos oportunidades y construimos escenarios para decidir qué hacer primero."],
+        ["Impulsamos la acción", "Convertimos la dirección elegida en un plan práctico y acompañamos su avance."],
       ],
     },
     vision: {
-      eyebrow: "Nuestra visión", title: "Ayudar a construir la mejor versión de los negocios.",
-      intro: "Queremos que cada empresa pueda comprender mejor su presente, anticipar posibilidades y avanzar con decisiones estratégicas que fortalezcan su futuro.",
-      pillarsTitle: "Los cinco pilares de CORVEN", pillarsIntro: "La forma en que pensamos, decidimos y trabajamos con cada cliente.",
+      eyebrow: "Sobre CORVEN", title: "Una compañía que conecta operación, información y futuro.",
+      intro: "Ayudamos a las empresas a entender cómo funcionan, visualizar lo que sus datos revelan y convertir ese conocimiento en decisiones y acciones estratégicas.",
+      missionLabel: "Misión", missionTitle: "Convertir claridad en decisiones y acción.", missionText: "Ayudar a las empresas a fortalecer sus operaciones, transformar sus datos en información útil y proyectar escenarios que les permitan tomar decisiones estratégicas y sostenibles.",
+      visionLabel: "Visión", visionTitle: "Ayudar a construir la mejor versión de los negocios.", visionText: "Queremos que cada empresa comprenda mejor su presente, anticipe posibilidades y avance con decisiones que fortalezcan su futuro.",
+      pillarsTitle: "Nuestros valores", pillarsIntro: "Los cinco principios que guían cómo pensamos, decidimos y trabajamos con cada cliente.",
       pillars: [
-        ["1", "Claridad", "Hacemos comprensible lo complejo para facilitar decisiones con propósito."],
-        ["2", "Evidencia", "Conectamos observación, información y datos antes de recomendar una dirección."],
-        ["3", "Ejecución", "Convertimos ideas y análisis en acciones concretas que la empresa puede sostener."],
-        ["4", "Colaboración", "Trabajamos junto al cliente, respetando su experiencia, contexto y capacidad."],
-        ["5", "Evolución", "Buscamos mejoras que fortalezcan el presente y preparen a la empresa para el futuro."],
+        ["Claridad", "Hacemos comprensible lo complejo para facilitar decisiones con propósito."],
+        ["Evidencia", "Conectamos observación, información y datos antes de recomendar una dirección."],
+        ["Ejecución", "Convertimos ideas y análisis en acciones concretas que la empresa puede sostener."],
+        ["Colaboración", "Trabajamos junto al cliente, respetando su experiencia, contexto y capacidad."],
+        ["Evolución", "Buscamos mejoras que fortalezcan el presente y preparen a la empresa para el futuro."],
       ],
     },
-    about: { eyebrow: "Sobre CORVEN", title: "Una compañía que conecta operación, información y futuro.", text: "CORVEN ayuda a las empresas a entender cómo funcionan, visualizar lo que sus datos revelan y convertir ese conocimiento en decisiones y acciones estratégicas." },
-    contact: { eyebrow: "Conversemos", title: "Construyamos una visión más clara para su empresa.", text: "Cuéntenos qué necesita entender, mejorar o proyectar. Empezaremos por identificar la conversación más útil para avanzar.", cta: "Solicitar información", pending: "Correo y WhatsApp pendientes de confirmación antes de publicar." },
+    contact: { eyebrow: "Conversemos", title: "Construyamos una visión más clara para su empresa.", text: "Cuéntenos qué necesita entender, mejorar o proyectar. Empezaremos por identificar la conversación más útil para avanzar.", email: "Correo electrónico", whatsapp: "WhatsApp", pending: "Datos de contacto pendientes de confirmación antes de publicar." },
   },
   en: {
     ids: { home: "home", solutions: "solutions", diagnostic: "diagnostic", process: "how-we-work", about: "about-corven", contact: "contact" },
@@ -71,8 +71,7 @@ const content = {
       lead: "CORVEN brings together operations management, data visualization, and strategic forecasting to help companies act today with a clearer view of tomorrow.",
       primaryCta: "Let's talk", secondaryCta: "Explore our solutions", trustLabel: "CORVEN's approach",
       trust: ["Evidence-based decisions", "Practical execution", "Forward-looking vision"], approachLabel: "Our approach",
-      approach: "Understand → Visualize → Project → Act", cycleLabel: "Continuous improvement cycle: understand, visualize, project, and act",
-      cycleCenterTop: "Continuous", cycleCenterBottom: "improvement", cycleSteps: ["Understand", "Visualize", "Project", "Act"],
+      approach: "Understand → Visualize → Project → Act",
     },
     signal: { label: "Key message", text: "We make today's reality visible to build", strong: "better decisions for tomorrow." },
     solutions: {
@@ -103,26 +102,27 @@ const content = {
       eyebrow: "How we work", title: "From today's reality to clear direction",
       intro: "A direct approach connecting operations, information, the future, and execution.",
       items: [
-        ["1", "We understand", "We listen to your goals and learn how the company actually operates."],
-        ["2", "We make it visible", "We connect processes, data, and relevant signals to create a clear view."],
-        ["3", "We define direction", "We prioritize opportunities and build scenarios to decide what should come first."],
-        ["4", "We drive action", "We turn the chosen direction into a practical plan and support its progress."],
+        ["We understand", "We listen to your goals and learn how the company actually operates."],
+        ["We make it visible", "We connect processes, data, and relevant signals to create a clear view."],
+        ["We define direction", "We prioritize opportunities and build scenarios to decide what should come first."],
+        ["We drive action", "We turn the chosen direction into a practical plan and support its progress."],
       ],
     },
     vision: {
-      eyebrow: "Our vision", title: "Help build the best version of every business.",
-      intro: "We want every company to understand its present, anticipate possibilities, and move forward with strategic decisions that strengthen its future.",
-      pillarsTitle: "CORVEN's five pillars", pillarsIntro: "The principles behind how we think, decide, and work with every client.",
+      eyebrow: "About CORVEN", title: "A company connecting operations, information, and the future.",
+      intro: "We help companies understand how they operate, see what their data reveals, and turn that knowledge into strategic decisions and action.",
+      missionLabel: "Mission", missionTitle: "Turn clarity into decisions and action.", missionText: "Help companies strengthen their operations, transform data into useful information, and project scenarios that support strategic, sustainable decisions.",
+      visionLabel: "Vision", visionTitle: "Help build the best version of every business.", visionText: "We want every company to understand its present, anticipate possibilities, and move forward with decisions that strengthen its future.",
+      pillarsTitle: "Our values", pillarsIntro: "The five principles guiding how we think, decide, and work with every client.",
       pillars: [
-        ["1", "Clarity", "We make complexity understandable so decisions can be made with purpose."],
-        ["2", "Evidence", "We connect observation, information, and data before recommending a direction."],
-        ["3", "Execution", "We turn ideas and analysis into concrete actions the company can sustain."],
-        ["4", "Collaboration", "We work alongside each client, respecting their experience, context, and capacity."],
-        ["5", "Evolution", "We pursue improvements that strengthen the present and prepare the company for the future."],
+        ["Clarity", "We make complexity understandable so decisions can be made with purpose."],
+        ["Evidence", "We connect observation, information, and data before recommending a direction."],
+        ["Execution", "We turn ideas and analysis into concrete actions the company can sustain."],
+        ["Collaboration", "We work alongside each client, respecting their experience, context, and capacity."],
+        ["Evolution", "We pursue improvements that strengthen the present and prepare the company for the future."],
       ],
     },
-    about: { eyebrow: "About CORVEN", title: "A company connecting operations, information, and the future.", text: "CORVEN helps companies understand how they operate, see what their data reveals, and turn that knowledge into strategic decisions and action." },
-    contact: { eyebrow: "Let's talk", title: "Let's build a clearer vision for your company.", text: "Tell us what you need to understand, improve, or project. We will begin by identifying the most useful conversation to move forward.", cta: "Request information", pending: "Email and WhatsApp details pending confirmation before publication." },
+    contact: { eyebrow: "Let's talk", title: "Let's build a clearer vision for your company.", text: "Tell us what you need to understand, improve, or project. We will begin by identifying the most useful conversation to move forward.", email: "Email", whatsapp: "WhatsApp", pending: "Contact details pending confirmation before publication." },
   },
 } as const;
 
@@ -144,25 +144,23 @@ export function HomePage({ locale }: { locale: Locale }) {
             </div>
           </div>
         </section>
-        <section className="cycle-section" aria-label={c.hero.cycleLabel}>
-          <div className="container">
-            <div className="improvement-cycle" aria-label={c.hero.cycleLabel}>
-              <div className="cycle-orbit" aria-hidden="true"></div><div className="cycle-center"><span>{c.hero.cycleCenterTop}</span><strong>{c.hero.cycleCenterBottom}</strong></div>
-              {c.hero.cycleSteps.map((step, index) => <div className={`cycle-step cycle-step-${index + 1}`} key={step}><span>{index + 1}</span><strong>{step}</strong></div>)}
-              <span className="cycle-arrow cycle-arrow-1" aria-hidden="true">→</span><span className="cycle-arrow cycle-arrow-2" aria-hidden="true">↓</span><span className="cycle-arrow cycle-arrow-3" aria-hidden="true">←</span><span className="cycle-arrow cycle-arrow-4" aria-hidden="true">↑</span>
-            </div>
-          </div>
-        </section>
         <section className="signal-strip" aria-label={c.signal.label}><div className="container signal-content"><span className="signal-mark">C</span><p>{c.signal.text} <strong>{c.signal.strong}</strong></p></div></section>
         <section className="section section-challenges" id={c.ids.solutions}><div className="container"><div className="section-heading heading-split"><div><p className="eyebrow">{c.solutions.eyebrow}</p><h2>{c.solutions.title}</h2></div><p>{c.solutions.intro}</p></div><div className="challenge-grid solutions-grid">{c.solutions.items.map(([number, title, text]) => <article className="challenge-card" key={number}><span>{number}</span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
         <section className="section section-diagnostic" id={c.ids.diagnostic}><div className="container diagnostic-grid"><div className="diagnostic-copy"><p className="eyebrow eyebrow-light">{c.diagnostic.eyebrow}</p><h2>{c.diagnostic.title}</h2><p>{c.diagnostic.intro}</p></div><div className="deliverables-card"><p className="card-kicker">{c.diagnostic.deliverablesTitle}</p><ul>{c.diagnostic.deliverables.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul><p className="deliverables-note">{c.diagnostic.note}</p></div></div></section>
         <section className="section section-snapshot" aria-labelledby={`snapshot-title-${locale}`}><div className="container snapshot-section-grid"><div className="snapshot-section-copy"><p className="eyebrow">{c.snapshot.eyebrow}</p><h2 id={`snapshot-title-${locale}`}>{c.snapshot.title}</h2><p>{c.snapshot.intro}</p></div><div className="snapshot-wrap" aria-label={c.snapshot.aria}><div className="snapshot-note"><span aria-hidden="true"></span> {c.snapshot.example}</div><article className="snapshot-card"><div className="snapshot-header"><div><p>{c.snapshot.cardTitle}</p><strong>{c.snapshot.cardStrong}</strong></div><span>{c.snapshot.timing}</span></div><div className="snapshot-body"><p className="snapshot-label">{c.snapshot.label}</p>{c.snapshot.priorities.map(([number, title, text], index) => <div className={`priority ${["priority-high", "priority-medium", "priority-low"][index]}`} key={number}><span>{number}</span><div><strong>{title}</strong><small>{text}</small></div></div>)}</div><div className="snapshot-footer">{c.snapshot.footer.map((item) => <span key={item}>{item}</span>)}</div></article></div></div></section>
-        <section className="section section-process" id={c.ids.process}><div className="container"><div className="section-heading centered-heading"><p className="eyebrow">{c.process.eyebrow}</p><h2>{c.process.title}</h2><p>{c.process.intro}</p></div><ol className="process-grid process-grid-four">{c.process.items.map(([number, title, text]) => <li key={number}><span className="step-number">{number}</span><h3>{title}</h3><p>{text}</p></li>)}</ol></div></section>
-        <section className="section section-vision" id="vision"><div className="container"><div className="vision-statement"><p className="eyebrow eyebrow-light">{c.vision.eyebrow}</p><h2>{c.vision.title}</h2><p>{c.vision.intro}</p></div><div className="pillars-heading"><p className="eyebrow">{c.vision.pillarsTitle}</p><p>{c.vision.pillarsIntro}</p></div><div className="pillars-grid">{c.vision.pillars.map(([number, title, text]) => <article className="pillar-card" key={number}><span>{number}</span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
-        <section className="section section-about" id={c.ids.about}><div className="container about-grid"><p className="eyebrow eyebrow-light">{c.about.eyebrow}</p><div><h2>{c.about.title}</h2><p>{c.about.text}</p></div></div></section>
-        <section className="section section-contact" id={c.ids.contact}><div className="container contact-card"><div><p className="eyebrow">{c.contact.eyebrow}</p><h2>{c.contact.title}</h2><p>{c.contact.text}</p></div><div className="contact-actions"><span className="button button-primary button-disabled" aria-disabled="true">{c.contact.cta}</span><small>{c.contact.pending}</small></div></div></section>
+        <section className="section section-process" id={c.ids.process}><div className="container"><div className="section-heading centered-heading"><p className="eyebrow">{c.process.eyebrow}</p><h2>{c.process.title}</h2><p>{c.process.intro}</p></div><ol className="process-grid process-grid-four">{c.process.items.map(([title, text]) => <li key={title}><h3>{title}</h3><p>{text}</p></li>)}</ol></div></section>
+        <section className="section section-vision" id={c.ids.about}><div className="container"><div className="about-statement"><p className="eyebrow eyebrow-light">{c.vision.eyebrow}</p><h2>{c.vision.title}</h2><p>{c.vision.intro}</p></div><div className="purpose-grid"><article><p className="eyebrow">{c.vision.missionLabel}</p><h3>{c.vision.missionTitle}</h3><p>{c.vision.missionText}</p></article><article><p className="eyebrow">{c.vision.visionLabel}</p><h3>{c.vision.visionTitle}</h3><p>{c.vision.visionText}</p></article></div><div className="pillars-heading"><p className="eyebrow">{c.vision.pillarsTitle}</p><p>{c.vision.pillarsIntro}</p></div><div className="pillars-grid">{c.vision.pillars.map(([title, text]) => <article className="pillar-card" key={title}><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+        <section className="section section-contact" id={c.ids.contact}><div className="container contact-card"><div><p className="eyebrow">{c.contact.eyebrow}</p><h2>{c.contact.title}</h2><p>{c.contact.text}</p></div><div className="contact-actions"><div className="contact-methods"><span className="contact-method" aria-disabled="true"><ContactIcon kind="email" />{c.contact.email}</span><span className="contact-method" aria-disabled="true"><ContactIcon kind="whatsapp" />{c.contact.whatsapp}</span></div><small>{c.contact.pending}</small></div></div></section>
       </main>
       <SiteFooter locale={locale} />
     </div>
   );
+}
+
+function ContactIcon({ kind }: { kind: "email" | "whatsapp" }) {
+  if (kind === "email") {
+    return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6.5h18v11H3z"/><path d="m4 7.5 8 6 8-6"/></svg>;
+  }
+
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 19.5l1.1-4A8 8 0 1 1 20 11.5Z"/><path d="M9 8.5c.4 3.1 2.4 5.1 5.5 5.5"/></svg>;
 }
