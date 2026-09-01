@@ -6,12 +6,20 @@ function getSiteUrl() {
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const baseUrl = getSiteUrl().replace(/\/$/, "");
+
   return [
     {
-      url: getSiteUrl(),
+      url: baseUrl,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 1,
+    },
+    {
+      url: `${baseUrl}/en`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.9,
     },
   ];
 }
