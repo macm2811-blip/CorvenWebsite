@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 import styles from "./learning-demo.module.css";
@@ -55,7 +56,14 @@ export function LearningDemo() {
     <div className={styles.demoShell}>
       <header className={styles.topbar}>
         <div className={styles.productBrand}>
-          <span className={styles.corvenLogo} role="img" aria-label="Corven" />
+          <Image
+            className={styles.corvenLogo}
+            src="/brand/corven-imagotype-purple.png"
+            alt="Corven"
+            width={360}
+            height={120}
+            priority
+          />
           <span className={styles.productName}>Learning</span>
         </div>
 
