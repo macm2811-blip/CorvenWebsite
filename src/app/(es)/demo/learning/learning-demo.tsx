@@ -55,7 +55,7 @@ export function LearningDemo() {
     <div className={styles.demoShell}>
       <header className={styles.topbar}>
         <div className={styles.productBrand}>
-          <span className={styles.corvenMark}>CORVEN<span>.</span></span>
+          <span className={styles.corvenLogo} role="img" aria-label="Corven" />
           <span className={styles.productName}>Learning</span>
         </div>
 
