@@ -3,6 +3,7 @@ import { BrandLogo } from "@/components/brand-logo";
 const navigation = {
   es: [
     ["Soluciones", "#soluciones"],
+    ["Corven Learning", "/learning"],
     ["Diagnóstico", "#diagnostico"],
     ["Cómo trabajamos", "#como-trabajamos"],
     ["Sobre CORVEN", "#sobre-corven"],

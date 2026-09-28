@@ -5,7 +5,7 @@ const footerContent = {
     statement: "Operaciones, datos y estrategia para construir mejores decisiones.",
     scope: "Alcance global",
     scopeText: "Trabajamos con empresas que quieren comprender, mejorar y proyectar su negocio.",
-    links: [["Soluciones", "#soluciones"], ["Diagnóstico Express", "#diagnostico"], ["Sobre CORVEN", "#sobre-corven"]],
+    links: [["Soluciones", "#soluciones"], ["Corven Learning", "/learning"], ["Diagnóstico Express", "#diagnostico"], ["Sobre CORVEN", "#sobre-corven"]],
     privacy: "Privacidad — próxima etapa",
     validation: "Contenido inicial sujeto a validación.",
   },
