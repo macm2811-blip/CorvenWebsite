@@ -58,6 +58,51 @@ const managedItems = [
   "Revisión programada del contenido",
 ] as const;
 
+const packages = [
+  {
+    name: "Esencial",
+    audience: "Para validar una primera necesidad",
+    setup: "$2,900",
+    monthly: "Soporte opcional desde $350/mes",
+    recommended: false,
+    features: [
+      "Learning Needs Analysis inicial",
+      "1 curso de hasta 30 minutos",
+      "1 quiz y criterios de aprobación",
+      "1 currícula para hasta 50 usuarios",
+      "Configuración y reporte de lanzamiento",
+    ],
+  },
+  {
+    name: "Gestionado",
+    audience: "Para lanzar una academia funcional",
+    setup: "$5,900",
+    monthly: "Administración desde $750/mes",
+    recommended: true,
+    features: [
+      "Learning Solution Blueprint",
+      "3 cursos de hasta 30 minutos",
+      "Evaluaciones y una currícula por rol",
+      "Configuración para hasta 150 usuarios",
+      "Panel de supervisión y reporte ejecutivo",
+    ],
+  },
+  {
+    name: "Escalable",
+    audience: "Para varias áreas o audiencias",
+    setup: "$9,500",
+    monthly: "Operación desde $1,250/mes",
+    recommended: false,
+    features: [
+      "Hasta 5 cursos o 150 minutos de contenido",
+      "Múltiples currículas y grupos",
+      "Configuración para hasta 300 usuarios",
+      "Centro de conocimiento inicial",
+      "Reportes, mantenimiento y revisión periódica",
+    ],
+  },
+] as const;
+
 export function LearningLanding() {
   return (
     <div className={styles.page}>
@@ -71,6 +116,7 @@ export function LearningLanding() {
           <nav className={styles.nav} aria-label="Navegación de Corven Learning">
             <a href="#capacidades">Capacidades</a>
             <a href="#casos-de-uso">Casos de uso</a>
+            <a href="#paquetes">Paquetes</a>
             <a href="#proceso">Cómo trabajamos</a>
           </nav>
 
@@ -89,7 +135,7 @@ export function LearningLanding() {
             <div className={styles.heroGrid}>
               <div className={styles.heroCopy}>
                 <p className={styles.eyebrow}>Managed Learning Services</p>
-                <h1>Capacitación que su empresa puede <span>ver, medir y mantener.</span></h1>
+                <h1>Capacitación <span>clara, medible y siempre actualizada.</span></h1>
                 <p className={styles.heroLead}>
                   Transformamos procesos y conocimiento experto en cursos, currículas y herramientas de consulta; después administramos la plataforma para que el aprendizaje siga funcionando.
                 </p>
@@ -224,6 +270,35 @@ export function LearningLanding() {
           </div>
         </section>
 
+        <section className={`${styles.section} ${styles.pricingSection}`} id="paquetes">
+          <div className={styles.container}>
+            <div className={styles.pricingIntro}>
+              <div>
+                <p className={styles.eyebrow}>Paquetes iniciales</p>
+                <h2>Empiece con el alcance que su empresa necesita.</h2>
+              </div>
+              <p>Los precios son referencias de lanzamiento en USD. Confirmamos el alcance final después de validar audiencia, contenido, usuarios y tecnología.</p>
+            </div>
+            <div className={styles.pricingGrid}>
+              {packages.map((item) => (
+                <article className={`${styles.pricingCard} ${item.recommended ? styles.pricingFeatured : ""}`} key={item.name}>
+                  {item.recommended && <span className={styles.recommended}>Recomendado</span>}
+                  <p>{item.audience}</p>
+                  <h3>{item.name}</h3>
+                  <div className={styles.price}><small>Proyecto desde</small><strong>{item.setup}</strong><span>USD</span></div>
+                  <ul>{item.features.map((feature) => <li key={feature}><span>✓</span>{feature}</li>)}</ul>
+                  <div className={styles.monthly}>{item.monthly}</div>
+                  <Link className={styles.packageButton} href="/#contacto">Solicitar propuesta</Link>
+                </article>
+              ))}
+            </div>
+            <div className={styles.pricingTerms}>
+              <p><strong>Forma de pago:</strong> 50% al iniciar y 50% al entregar el alcance aprobado.</p>
+              <p><strong>Se cotiza aparte:</strong> licencias, hosting, integraciones, producción audiovisual especial y cambios fuera del alcance.</p>
+            </div>
+          </div>
+        </section>
+
         <section className={`${styles.section} ${styles.managedSection}`}>
           <div className={styles.container}>
             <div className={styles.managedCard}>
@@ -247,7 +322,7 @@ export function LearningLanding() {
             <div>
               <p className={styles.eyebrow}>Véalo en acción</p>
               <h2>Explore cómo se siente una experiencia de aprendizaje administrada.</h2>
-              <p>La demo utiliza una empresa, empleados y resultados ficticios para mostrar el recorrido de aprendizaje y las vistas de supervisión.</p>
+              <p>La demo utiliza una empresa, empleados y resultados ficticios para mostrar el recorrido de aprendizaje, las evaluaciones y las vistas de supervisión.</p>
             </div>
             <div className={styles.ctaActions}>
               <Link className={styles.lightButton} href="/demo/learning">Abrir demo interactiva <span>→</span></Link>
@@ -264,7 +339,7 @@ export function LearningLanding() {
             <span>Learning</span>
           </Link>
           <p>Diseño instruccional, tecnología y operación para aprendizaje que se puede sostener.</p>
-          <div><Link href="/">Corven Consulting</Link><Link href="/demo/learning">Demo</Link><Link href="/#contacto">Contacto</Link></div>
+          <div><Link href="/">Corven Consulting</Link><Link href="#paquetes">Paquetes</Link><Link href="/demo/learning">Demo</Link><Link href="/#contacto">Contacto</Link></div>
           <small>© {new Date().getFullYear()} Corven. Contenido comercial inicial sujeto a validación.</small>
         </div>
       </footer>
