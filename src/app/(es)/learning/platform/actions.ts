@@ -167,9 +167,12 @@ export async function createAcademyAction(input: {
         courseCount: 0,
         adminCount: 0,
         monthlyRevenue: 0,
+        defaultMonthlyFee: monthlyFee,
         currency: academy.currency,
         createdAt: new Intl.DateTimeFormat("es-CR", { dateStyle: "medium", timeZone: "America/Costa_Rica" }).format(new Date(academy.created_at)),
         admins: [],
+        students: [],
+        courses: [],
       },
     };
   } catch (error) {
@@ -326,7 +329,7 @@ export async function inviteStudentAction(input: {
   dueDate: string;
   monthlyFee: number;
   courseId?: string;
-}): Promise<ActionResult<{ id: string }>> {
+}): Promise<ActionResult<{ id: string; accessStatus: "invited" | "active" }>> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
     const fullName = input.fullName.trim().slice(0, 120);
@@ -336,20 +339,47 @@ export async function inviteStudentAction(input: {
     if (!/^(A1|A2|B1|B2|C1)$/.test(level)) throw new Error("Nivel inválido.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) throw new Error("Fecha de cobro inválida.");
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-    if (!siteUrl) throw new Error("Falta NEXT_PUBLIC_SITE_URL.");
     const admin = createAdminClient();
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName },
-      redirectTo: `${siteUrl}/learning/auth/callback?next=/learning/account/update-password`,
-    });
-    if (error || !data.user) throw new Error(error?.message ?? "No se pudo crear la invitación.");
+    const { data: academy, error: academyError } = await admin
+      .from("organizations")
+      .select("id, name")
+      .eq("id", input.organizationId)
+      .single();
+    if (academyError || !academy) throw new Error("No encontramos la academia.");
+
+    const { data: existingProfile, error: profileError } = await admin
+      .from("profiles")
+      .select("id, full_name")
+      .eq("email", email)
+      .limit(1)
+      .maybeSingle();
+    if (profileError) throw profileError;
+
+    let profileId = existingProfile?.id ?? "";
+    let invitationSent = false;
+    if (!profileId) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+      if (!siteUrl) throw new Error("Falta NEXT_PUBLIC_SITE_URL.");
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+        data: { full_name: fullName },
+        redirectTo: `${siteUrl}/learning/auth/callback?next=/learning/account/update-password`,
+      });
+      if (error || !data.user) throw new Error(error?.message ?? "No se pudo crear la invitación.");
+      profileId = data.user.id;
+      invitationSent = true;
+    } else if (existingProfile?.full_name !== fullName) {
+      const { error } = await admin.from("profiles").update({ full_name: fullName }).eq("id", profileId);
+      if (error) throw error;
+    }
+
+    const { data: authData } = await admin.auth.admin.getUserById(profileId);
+    const accessStatus = authData.user?.email_confirmed_at ? "active" : "invited";
 
     const { error: membershipError } = await admin.from("memberships").upsert({
       organization_id: input.organizationId,
-      profile_id: data.user.id,
+      profile_id: profileId,
       role: "student",
-      access_status: "invited",
+      access_status: accessStatus,
       payment_status: "pending",
       billing_due_date: input.dueDate,
       monthly_fee: Math.max(0, Number(input.monthlyFee) || 0),
@@ -358,18 +388,32 @@ export async function inviteStudentAction(input: {
     if (membershipError) throw membershipError;
 
     if (input.courseId && validUuid(input.courseId)) {
+      const { data: course, error: courseError } = await admin
+        .from("courses")
+        .select("id")
+        .eq("id", input.courseId)
+        .eq("organization_id", input.organizationId)
+        .maybeSingle();
+      if (courseError) throw courseError;
+      if (!course) throw new Error("El curso no pertenece a esta academia.");
       const { error: enrollmentError } = await admin.from("enrollments").upsert({
         organization_id: input.organizationId,
         course_id: input.courseId,
-        student_id: data.user.id,
+        student_id: profileId,
         status: "enrolled",
       }, { onConflict: "course_id,student_id" });
       if (enrollmentError) throw enrollmentError;
     }
 
-    await audit(supabase, userId, input.organizationId, "student.invited", "profile", data.user.id);
+    await audit(supabase, userId, input.organizationId, invitationSent ? "student.invited" : "student.assigned", "profile", profileId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: `Invitación enviada a ${email}.`, data: { id: data.user.id } };
+    return {
+      ok: true,
+      message: invitationSent
+        ? `Invitación enviada a ${email} para ingresar a ${academy.name}.`
+        : `${fullName} fue asignado como estudiante de ${academy.name}.`,
+      data: { id: profileId, accessStatus },
+    };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No pudimos invitar al estudiante." };
   }
