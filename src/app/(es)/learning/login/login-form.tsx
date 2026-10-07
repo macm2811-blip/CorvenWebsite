@@ -31,18 +31,32 @@ export function LoginForm({ next }: { next: string }) {
       <input type="hidden" name="next" value={next} />
       <div className={styles.formHeading}>
         <span>{forgotten ? "RECUPERAR ACCESO" : "BIENVENIDO"}</span>
-        <h1>{forgotten ? "Cambia tu contraseña" : "Ingresa a tu academia"}</h1>
+        <h1>{forgotten ? "Cambia tu contraseña" : "Portal de producción"}</h1>
         <p>
           {forgotten
             ? "Te enviaremos un enlace seguro al correo registrado."
-            : "Continúa tus cursos o administra Level Up desde un solo lugar."}
+            : "Ingresa como estudiante o administrador de Level Up."}
         </p>
       </div>
 
-      <label>
-        Correo electrónico
-        <input name="email" type="email" autoComplete="email" required />
-      </label>
+      {forgotten ? (
+        <label>
+          Correo electrónico
+          <input name="email" type="email" autoComplete="email" required />
+        </label>
+      ) : (
+        <label>
+          Usuario o correo
+          <input
+            name="identifier"
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
+          />
+        </label>
+      )}
 
       {!forgotten && (
         <label>
