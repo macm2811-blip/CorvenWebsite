@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Montserrat } from "next/font/google";
 
-import { LearningDemo } from "./learning-demo";
+import { LevelUpLms } from "./level-up-lms";
 
 const displayFont = Montserrat({
   variable: "--font-demo-display",
@@ -14,16 +14,16 @@ const bodyFont = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Corven Learning | Demo comercial",
+  title: "Level Up Academy | Powered by CORVEN",
   description:
-    "Entorno demostrativo de la experiencia de aprendizaje administrada por Corven.",
+    "Portal híbrido de aprendizaje de Level Up English Academy, impulsado por CORVEN.",
   robots: { index: false, follow: false },
 };
 
 export default function LearningDemoPage() {
   return (
     <div className={`${displayFont.variable} ${bodyFont.variable}`}>
-      <LearningDemo />
+      <LevelUpLms />
     </div>
   );
 }
