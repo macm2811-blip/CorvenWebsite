@@ -3,52 +3,40 @@
 import Image from "next/image";
 import { FormEvent, useState } from "react";
 
+import type {
+  LmsBrand,
+  LmsCourse,
+  LmsInitialData,
+  LmsRole,
+  LmsStudent,
+  LmsTicket,
+} from "@/lib/lms/types";
+import {
+  addLessonAction,
+  createCourseAction,
+  createTicketAction,
+  inviteStudentAction,
+  replyTicketAction,
+  saveBrandAction,
+  sendPasswordResetAction,
+  setCoursePublishedAction,
+  signOutAction,
+  updateMonthlyFeeAction,
+  updateStudentAction,
+  uploadBrandLogoAction,
+} from "@/app/(es)/learning/platform/actions";
+
 import styles from "./level-up-lms.module.css";
 
-type Role = "student" | "admin" | "owner";
+type Role = LmsRole;
 type StudentView = "home" | "courses" | "sessions" | "billing" | "help";
 type AdminView = "overview" | "students" | "courses" | "income" | "brand" | "support";
 type OwnerView = "platform" | "academies" | "tickets" | "activity";
 type View = StudentView | AdminView | OwnerView;
 
-type Student = {
-  id: number;
-  name: string;
-  email: string;
-  initials: string;
-  level: string;
-  progress: number;
-  active: boolean;
-  payment: "Pagado" | "Pendiente" | "Vencido";
-  dueDate: string;
-  lastAccess: string;
-};
-
-type Course = {
-  id: number;
-  title: string;
-  level: string;
-  description: string;
-  progress: number;
-  lessons: number;
-  duration: string;
-  students: number;
-  youtubeUrl: string;
-  color: string;
-  published: boolean;
-};
-
-type Ticket = {
-  id: string;
-  source: "Level Up" | "Estudiante";
-  person: string;
-  title: string;
-  detail: string;
-  priority: "Alta" | "Media" | "Baja";
-  status: "Abierto" | "En proceso" | "Respondido";
-  created: string;
-  reply?: string;
-};
+type Student = LmsStudent;
+type Course = LmsCourse;
+type Ticket = LmsTicket;
 
 const initialStudents: Student[] = [
   { id: 1, name: "Sofía Rojas", email: "sofia@demo.levelup.cr", initials: "SR", level: "A1", progress: 68, active: true, payment: "Pagado", dueDate: "2026-10-15", lastAccess: "Hoy, 8:42 a. m." },
@@ -100,16 +88,17 @@ const navItems: Record<Role, { id: View; label: string; icon: string; count?: nu
 
 const roleDefaultView: Record<Role, View> = { student: "home", admin: "overview", owner: "platform" };
 
-export function LevelUpLms() {
-  const [role, setRole] = useState<Role>("student");
-  const [view, setView] = useState<View>("home");
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
-  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
+export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
+  const persistent = Boolean(initialData?.persistent);
+  const [role, setRole] = useState<Role>(initialData?.role ?? "student");
+  const [view, setView] = useState<View>(roleDefaultView[initialData?.role ?? "student"]);
+  const [students, setStudents] = useState<Student[]>(initialData?.students ?? initialStudents);
+  const [courses, setCourses] = useState<Course[]>(initialData?.courses ?? initialCourses);
+  const [tickets, setTickets] = useState<Ticket[]>(initialData?.tickets ?? initialTickets);
   const [toast, setToast] = useState<string | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [brand, setBrand] = useState({ primary: "#6d28d9", secondary: "#111827", accent: "#f97316" });
-  const [monthlyFee, setMonthlyFee] = useState(35000);
+  const [logoUrl, setLogoUrl] = useState<string | null>(initialData?.logoUrl ?? null);
+  const [brand, setBrand] = useState<LmsBrand>(initialData?.brand ?? { primary: "#6d28d9", secondary: "#111827", accent: "#f97316" });
+  const [monthlyFee, setMonthlyFee] = useState(initialData?.monthlyFee ?? 35000);
 
   const activeCount = students.filter((student) => student.active).length;
   const paidCount = students.filter((student) => student.payment === "Pagado").length;
@@ -127,41 +116,111 @@ export function LevelUpLms() {
     window.setTimeout(() => setToast(null), 2700);
   }
 
-  function updateStudent(id: number, changes: Partial<Student>) {
+  async function updateStudent(id: Student["id"], changes: Partial<Student>) {
+    const previous = students;
     setStudents((current) => current.map((student) => student.id === id ? { ...student, ...changes } : student));
+    if (!persistent || !initialData || typeof id !== "string") return;
+    const result = await updateStudentAction({
+      organizationId: initialData.organizationId,
+      studentId: id,
+      changes: {
+        active: changes.active,
+        payment: changes.payment,
+        dueDate: changes.dueDate,
+      },
+    });
+    if (!result.ok) {
+      setStudents(previous);
+      showToast(result.message);
+    }
   }
 
-  function addTicket(ticket: Omit<Ticket, "id" | "status" | "created">) {
+  async function addTicket(ticket: Omit<Ticket, "id" | "status" | "created">) {
+    if (persistent && initialData) {
+      const result = await createTicketAction({
+        organizationId: initialData.organizationId,
+        title: ticket.title,
+        description: ticket.detail,
+        priority: ticket.priority,
+      });
+      if (!result.ok || !result.data) return showToast(result.message);
+      setTickets((current) => [{ ...ticket, id: result.data!.id, status: "Abierto", created: "Ahora" }, ...current]);
+      return showToast(result.message);
+    }
     setTickets((current) => [{ ...ticket, id: "SUP-" + String(1043 + current.length), status: "Abierto", created: "Ahora" }, ...current]);
     showToast("Reporte enviado a CORVEN. Te notificaremos la respuesta.");
   }
 
-  function handleLogo(file?: File) {
+  async function handleLogo(file?: File) {
     if (!file) return;
-    setLogoUrl(URL.createObjectURL(file));
-    showToast("Logo actualizado en la vista previa");
+    const preview = URL.createObjectURL(file);
+    setLogoUrl(preview);
+    if (!persistent || !initialData) return showToast("Logo actualizado en la vista previa");
+    const formData = new FormData();
+    formData.set("organizationId", initialData.organizationId);
+    formData.set("logo", file);
+    const result = await uploadBrandLogoAction(formData);
+    if (result.ok && result.data) setLogoUrl(result.data.url);
+    showToast(result.message);
+  }
+
+  async function saveBrand() {
+    if (!persistent || !initialData) return showToast("Identidad visual guardada");
+    const result = await saveBrandAction({ organizationId: initialData.organizationId, ...brand });
+    showToast(result.message);
+  }
+
+  async function saveMonthlyFee(value: number) {
+    setMonthlyFee(value);
+    if (!persistent || !initialData) return;
+    const result = await updateMonthlyFeeAction({ organizationId: initialData.organizationId, monthlyFee: value });
+    showToast(result.message);
+  }
+
+  async function inviteStudent(input: { fullName: string; email: string; level: string; dueDate: string; courseId?: string }) {
+    if (!persistent || !initialData) return showToast("Formulario de invitación listo en el portal real");
+    const result = await inviteStudentAction({
+      organizationId: initialData.organizationId,
+      ...input,
+      monthlyFee,
+    });
+    if (result.ok && result.data) {
+      setStudents((current) => [...current, {
+        id: result.data!.id,
+        name: input.fullName,
+        email: input.email,
+        initials: initialsFor(input.fullName),
+        level: input.level,
+        progress: 0,
+        active: false,
+        payment: "Pendiente",
+        dueDate: input.dueDate,
+        lastAccess: "Invitación pendiente",
+      }]);
+    }
+    showToast(result.message);
   }
 
   return (
     <div className={styles.appShell} style={themeVariables}>
       <header className={styles.topbar}>
-        <div className={styles.mobileBrand}><TenantMark logoUrl={logoUrl} /><strong>Level Up</strong></div>
+        <div className={styles.mobileBrand}><TenantMark logoUrl={logoUrl} /><strong>{initialData?.organizationName ?? "Level Up"}</strong></div>
         <label className={styles.globalSearch}><Icon name="search" /><input aria-label="Buscar en la academia" placeholder="Buscar cursos, lecciones o estudiantes" /><kbd>⌘ K</kbd></label>
         <div className={styles.topbarTools}>
-          <span className={styles.demoBadge}>Piloto Level Up</span>
+          <span className={styles.demoBadge}>{persistent ? "Portal seguro" : "Piloto Level Up"}</span>
           <button className={styles.notificationButton} onClick={() => showToast(role === "owner" ? "2 tickets requieren atención" : "Tienes notificaciones nuevas")} aria-label="Notificaciones"><Icon name="bell" /><span>{role === "student" ? 3 : role === "admin" ? 6 : 2}</span></button>
-          <div className={styles.roleSwitch} aria-label="Cambiar perspectiva del demo">
+          {!persistent && <div className={styles.roleSwitch} aria-label="Cambiar perspectiva del demo">
             <button className={role === "student" ? styles.roleActive : ""} onClick={() => changeRole("student")}>Estudiante</button>
             <button className={role === "admin" ? styles.roleActive : ""} onClick={() => changeRole("admin")}>Level Up</button>
             <button className={role === "owner" ? styles.roleActive : ""} onClick={() => changeRole("owner")}>CORVEN</button>
-          </div>
-          <button className={styles.avatarButton} onClick={() => showToast("Menú de cuenta")}>{role === "student" ? "SR" : role === "admin" ? "AL" : "MC"}</button>
+          </div>}
+          {persistent ? <form action={signOutAction}><button className={styles.avatarButton} title="Cerrar sesión">{initialsFor(initialData?.viewerName ?? "Usuario")}</button></form> : <button className={styles.avatarButton} onClick={() => showToast("Menú de cuenta")}>{role === "student" ? "SR" : role === "admin" ? "AL" : "MC"}</button>}
         </div>
       </header>
 
       <div className={styles.workspace}>
         <aside className={styles.sidebar}>
-          <div className={styles.tenantBrand}><TenantMark logoUrl={logoUrl} /><div><strong>Level Up</strong><span>English Academy</span></div></div>
+          <div className={styles.tenantBrand}><TenantMark logoUrl={logoUrl} /><div><strong>{initialData?.organizationName ?? "Level Up"}</strong><span>English Academy</span></div></div>
           <nav className={styles.sideNav} aria-label="Navegación principal">
             {navItems[role].map((item) => <button key={item.id} className={view === item.id ? styles.navActive : ""} onClick={() => setView(item.id)}><Icon name={item.icon} /><span>{item.label}</span>{item.count ? <small>{item.count}</small> : null}</button>)}
           </nav>
@@ -170,9 +229,9 @@ export function LevelUpLms() {
         </aside>
 
         <main className={styles.mainArea}>
-          {role === "student" && <StudentExperience view={view as StudentView} setView={setView} courses={courses} onNotify={showToast} addTicket={addTicket} monthlyFee={monthlyFee} />}
-          {role === "admin" && <AdminExperience view={view as AdminView} setView={setView} students={students} courses={courses} tickets={tickets} activeCount={activeCount} paidCount={paidCount} collectedRevenue={collectedRevenue} projectedRevenue={projectedRevenue} monthlyFee={monthlyFee} setMonthlyFee={setMonthlyFee} updateStudent={updateStudent} setCourses={setCourses} brand={brand} setBrand={setBrand} logoUrl={logoUrl} handleLogo={handleLogo} addTicket={addTicket} onNotify={showToast} />}
-          {role === "owner" && <OwnerExperience view={view as OwnerView} setView={setView} students={students} courses={courses} tickets={tickets} setTickets={setTickets} collectedRevenue={collectedRevenue} onNotify={showToast} />}
+          {role === "student" && <StudentExperience view={view as StudentView} setView={setView} courses={courses} onNotify={showToast} addTicket={addTicket} monthlyFee={monthlyFee} viewerName={initialData?.viewerName ?? "Sofía Rojas"} dueDate={initialData?.viewerDueDate ?? "2026-10-15"} payment={initialData?.viewerPayment ?? "Pagado"} level={initialData?.viewerLevel ?? "A1"} />}
+          {role === "admin" && <AdminExperience view={view as AdminView} setView={setView} students={students} courses={courses} tickets={tickets} activeCount={activeCount} paidCount={paidCount} collectedRevenue={collectedRevenue} projectedRevenue={projectedRevenue} monthlyFee={monthlyFee} setMonthlyFee={saveMonthlyFee} updateStudent={updateStudent} setCourses={setCourses} inviteStudent={inviteStudent} brand={brand} setBrand={setBrand} saveBrand={saveBrand} logoUrl={logoUrl} handleLogo={handleLogo} addTicket={addTicket} onNotify={showToast} persistent={persistent} organizationId={initialData?.organizationId} viewerName={initialData?.viewerName ?? "Andrea"} />}
+          {role === "owner" && <OwnerExperience view={view as OwnerView} setView={setView} students={students} courses={courses} tickets={tickets} setTickets={setTickets} collectedRevenue={collectedRevenue} onNotify={showToast} persistent={persistent} organizationId={initialData?.organizationId} />}
           <footer className={styles.mobileFooter}><PoweredBy /></footer>
         </main>
       </div>
@@ -181,14 +240,14 @@ export function LevelUpLms() {
   );
 }
 
-function StudentExperience({ view, setView, courses, onNotify, addTicket, monthlyFee }: { view: StudentView; setView: (view: View) => void; courses: Course[]; onNotify: (message: string) => void; addTicket: (ticket: Omit<Ticket, "id" | "status" | "created">) => void; monthlyFee: number }) {
+function StudentExperience({ view, setView, courses, onNotify, addTicket, monthlyFee, viewerName, dueDate, payment, level }: { view: StudentView; setView: (view: View) => void; courses: Course[]; onNotify: (message: string) => void; addTicket: (ticket: Omit<Ticket, "id" | "status" | "created">) => void; monthlyFee: number; viewerName: string; dueDate: string; payment: Student["payment"]; level: string }) {
   if (view === "courses") return <StudentCourses courses={courses} onNotify={onNotify} />;
   if (view === "sessions") return <LiveSessions onNotify={onNotify} />;
-  if (view === "billing") return <StudentBilling monthlyFee={monthlyFee} onNotify={onNotify} />;
+  if (view === "billing") return <StudentBilling monthlyFee={monthlyFee} dueDate={dueDate} payment={payment} level={level} onNotify={onNotify} />;
   if (view === "help") return <HelpCenter addTicket={addTicket} onNotify={onNotify} />;
   return <Page>
-    <PageHeader eyebrow="Tu espacio de aprendizaje" title="Good morning, Sofía." text="Continúa tu curso, revisa tu próxima clase y mantén tu aprendizaje al día." />
-    <div className={styles.paymentReminder}><span className={styles.reminderIcon}><Icon name="card" /></span><div><strong>Tu próximo pago es el 15 de octubre</strong><p>Recuerda mantener tu mensualidad al día para conservar el acceso a tus cursos.</p></div><button onClick={() => setView("billing")}>Ver detalles</button></div>
+    <PageHeader eyebrow="Tu espacio de aprendizaje" title={`Hola, ${viewerName.split(" ")[0]}.`} text="Continúa tu curso, revisa tu próxima clase y mantén tu aprendizaje al día." />
+    <div className={styles.paymentReminder}><span className={styles.reminderIcon}><Icon name="card" /></span><div><strong>{payment === "Pagado" ? `Tu próximo pago es el ${formatDate(dueDate)}` : `Tu pago está ${payment.toLowerCase()}`}</strong><p>Recuerda mantener tu mensualidad al día para conservar el acceso a tus cursos.</p></div><button onClick={() => setView("billing")}>Ver detalles</button></div>
     <section className={styles.studentHero}><div><span className={styles.eyebrowLight}>Continúa donde quedaste</span><h2>English Foundations A1</h2><p>Unidad 4 · Daily routines and time expressions</p><div className={styles.heroProgress}><span style={{ width: "68%" }}></span></div><small>68% completado · 7 lecciones pendientes</small><button onClick={() => onNotify("Abriendo la siguiente lección")}>Continuar curso <Icon name="play" /></button></div><div className={styles.heroWord}><span>Today&apos;s word</span><strong>progress</strong><p>/ˈprɑː.ɡres/</p><small>movement toward a better or more complete state</small></div></section>
     <section className={styles.sectionBlock}><SectionHeading title="Mis cursos" text="Aprende a tu ritmo entre cada clase en vivo." action="Ver todos" onAction={() => setView("courses")} /><div className={styles.courseGrid}>{courses.filter((course) => course.published).slice(0, 3).map((course) => <CourseCard key={course.id} course={course} student onOpen={() => onNotify("Abriendo " + course.title)} />)}</div></section>
     <section className={styles.homeColumns}><div className={styles.panel}><SectionHeading title="Próxima clase en vivo" text="Sesión guiada con tu instructor." /><div className={styles.nextSession}><div className={styles.dateCard}><strong>09</strong><span>OCT</span></div><div><span className={styles.liveLabel}>EN VIVO</span><h3>Conversation Lab: Daily routines</h3><p>Jueves · 6:30 p. m. · 60 minutos</p><small>Instructor: Andrea López</small></div><button onClick={() => onNotify("El enlace se habilitará 10 minutos antes")}>Ver clase</button></div></div><div className={styles.panel}><SectionHeading title="Tu semana" text="Actividad registrada en la plataforma." /><div className={styles.weekStats}><div><strong>3</strong><span>Lecciones</span></div><div><strong>84%</strong><span>Quiz</span></div><div><strong>2h</strong><span>Estudio</span></div></div></div></section>
@@ -208,8 +267,8 @@ function LiveSessions({ onNotify }: { onNotify: (message: string) => void }) {
   return <Page><PageHeader eyebrow="Modelo híbrido" title="Clases en vivo" text="Practica con tu instructor y usa el contenido del portal para prepararte y repasar." /><div className={styles.sessionList}>{sessions.map((session) => <article key={session.title} className={styles.sessionCard}><div className={styles.dateCard}><strong>{session.day}</strong><span>{session.month}</span></div><div><span className={styles.statusTag}>{session.status}</span><h3>{session.title}</h3><p>{session.course} · {session.time} · 60 minutos</p></div><div className={styles.sessionActions}><button onClick={() => onNotify("Clase agregada a tu calendario")}>Añadir al calendario</button><button className={styles.primaryButton} onClick={() => onNotify("El enlace se habilitará antes de la clase")}>Unirme</button></div></article>)}</div><div className={styles.infoBanner}><Icon name="video" /><div><strong>¿Cómo funcionan las clases híbridas?</strong><p>Completa la preparación indicada antes de la sesión. En vivo practicarás con tu instructor; luego encontrarás la grabación o material de repaso en el curso.</p></div></div></Page>;
 }
 
-function StudentBilling({ monthlyFee, onNotify }: { monthlyFee: number; onNotify: (message: string) => void }) {
-  return <Page><PageHeader eyebrow="Cuenta y acceso" title="Pagos" text="Consulta tu mensualidad, fecha de cobro y comprobantes." /><div className={styles.billingGrid}><section className={styles.paymentCard}><span>Próximo pago</span><strong>{formatCurrency(monthlyFee)}</strong><p>Fecha límite: 15 de octubre de 2026</p><div className={styles.paymentStatus}><Icon name="check" />Cuenta al día</div><button className={styles.primaryButton} onClick={() => onNotify("El pago en línea se habilitará en una próxima etapa")}>Ver instrucciones de pago</button></section><section className={styles.panel}><SectionHeading title="Tu acceso" text="Estado de la membresía de Level Up." /><dl className={styles.definitionList}><div><dt>Estado</dt><dd><span className={styles.successPill}>Activo</span></dd></div><div><dt>Plan</dt><dd>English A1 · Mensual</dd></div><div><dt>Próxima fecha</dt><dd>15 oct. 2026</dd></div><div><dt>Recordatorio</dt><dd>5 días antes</dd></div></dl></section></div><section className={styles.panel + " " + styles.historyPanel}><SectionHeading title="Historial de pagos" text="Comprobantes registrados por la academia." /><div className={styles.simpleTable}><div className={styles.tableHead}><span>Periodo</span><span>Fecha</span><span>Monto</span><span>Estado</span></div><div><span>Octubre 2026</span><span>02 oct. 2026</span><span>{formatCurrency(monthlyFee)}</span><span className={styles.successPill}>Pagado</span></div><div><span>Septiembre 2026</span><span>01 sep. 2026</span><span>{formatCurrency(monthlyFee)}</span><span className={styles.successPill}>Pagado</span></div></div></section></Page>;
+function StudentBilling({ monthlyFee, dueDate, payment, level, onNotify }: { monthlyFee: number; dueDate: string; payment: Student["payment"]; level: string; onNotify: (message: string) => void }) {
+  return <Page><PageHeader eyebrow="Cuenta y acceso" title="Pagos" text="Consulta tu mensualidad, fecha de cobro y comprobantes." /><div className={styles.billingGrid}><section className={styles.paymentCard}><span>Próximo pago</span><strong>{formatCurrency(monthlyFee)}</strong><p>Fecha límite: {formatDate(dueDate)}</p><div className={styles.paymentStatus}><Icon name={payment === "Pagado" ? "check" : "clock"} />{payment === "Pagado" ? "Cuenta al día" : `Pago ${payment.toLowerCase()}`}</div><button className={styles.primaryButton} onClick={() => onNotify("Consulta las instrucciones de pago directamente con Level Up")}>Ver instrucciones de pago</button></section><section className={styles.panel}><SectionHeading title="Tu acceso" text="Estado de la membresía de Level Up." /><dl className={styles.definitionList}><div><dt>Estado</dt><dd><span className={payment === "Vencido" ? styles.draftPill : styles.successPill}>{payment === "Vencido" ? "Requiere atención" : "Activo"}</span></dd></div><div><dt>Plan</dt><dd>English {level} · Mensual</dd></div><div><dt>Próxima fecha</dt><dd>{formatDate(dueDate)}</dd></div><div><dt>Recordatorio</dt><dd>5 días antes</dd></div></dl></section></div><section className={styles.panel + " " + styles.historyPanel}><SectionHeading title="Historial de pagos" text="Los comprobantes aparecerán cuando Level Up registre cada pago." /><div className={styles.simpleTable}><div className={styles.tableHead}><span>Periodo</span><span>Fecha</span><span>Monto</span><span>Estado</span></div><div><span>Periodo actual</span><span>{formatDate(dueDate)}</span><span>{formatCurrency(monthlyFee)}</span><span className={payment === "Pagado" ? styles.successPill : styles.draftPill}>{payment}</span></div></div></section></Page>;
 }
 
 function HelpCenter({ addTicket, onNotify }: { addTicket: (ticket: Omit<Ticket, "id" | "status" | "created">) => void; onNotify: (message: string) => void }) {
@@ -220,42 +279,56 @@ function HelpCenter({ addTicket, onNotify }: { addTicket: (ticket: Omit<Ticket, 
 }
 
 function AdminExperience(props: {
-  view: AdminView; setView: (view: View) => void; students: Student[]; courses: Course[]; tickets: Ticket[]; activeCount: number; paidCount: number; collectedRevenue: number; projectedRevenue: number; monthlyFee: number; setMonthlyFee: (value: number) => void; updateStudent: (id: number, changes: Partial<Student>) => void; setCourses: React.Dispatch<React.SetStateAction<Course[]>>; brand: { primary: string; secondary: string; accent: string }; setBrand: React.Dispatch<React.SetStateAction<{ primary: string; secondary: string; accent: string }>>; logoUrl: string | null; handleLogo: (file?: File) => void; addTicket: (ticket: Omit<Ticket, "id" | "status" | "created">) => void; onNotify: (message: string) => void;
+  view: AdminView; setView: (view: View) => void; students: Student[]; courses: Course[]; tickets: Ticket[]; activeCount: number; paidCount: number; collectedRevenue: number; projectedRevenue: number; monthlyFee: number; setMonthlyFee: (value: number) => void | Promise<void>; updateStudent: (id: Student["id"], changes: Partial<Student>) => void | Promise<void>; setCourses: React.Dispatch<React.SetStateAction<Course[]>>; inviteStudent: (input: { fullName: string; email: string; level: string; dueDate: string; courseId?: string }) => void | Promise<void>; brand: LmsBrand; setBrand: React.Dispatch<React.SetStateAction<LmsBrand>>; saveBrand: () => void | Promise<void>; logoUrl: string | null; handleLogo: (file?: File) => void | Promise<void>; addTicket: (ticket: Omit<Ticket, "id" | "status" | "created">) => void | Promise<void>; onNotify: (message: string) => void; persistent: boolean; organizationId?: string; viewerName: string;
 }) {
-  if (props.view === "students") return <StudentManagement students={props.students} updateStudent={props.updateStudent} onNotify={props.onNotify} />;
-  if (props.view === "courses") return <CourseStudio courses={props.courses} setCourses={props.setCourses} onNotify={props.onNotify} />;
+  if (props.view === "students") return <StudentManagement students={props.students} courses={props.courses} updateStudent={props.updateStudent} inviteStudent={props.inviteStudent} onNotify={props.onNotify} />;
+  if (props.view === "courses") return <CourseStudio courses={props.courses} setCourses={props.setCourses} onNotify={props.onNotify} persistent={props.persistent} organizationId={props.organizationId} />;
   if (props.view === "income") return <IncomeDashboard students={props.students} monthlyFee={props.monthlyFee} setMonthlyFee={props.setMonthlyFee} collectedRevenue={props.collectedRevenue} projectedRevenue={props.projectedRevenue} onNotify={props.onNotify} />;
-  if (props.view === "brand") return <BrandStudio brand={props.brand} setBrand={props.setBrand} logoUrl={props.logoUrl} handleLogo={props.handleLogo} onNotify={props.onNotify} />;
+  if (props.view === "brand") return <BrandStudio brand={props.brand} setBrand={props.setBrand} saveBrand={props.saveBrand} logoUrl={props.logoUrl} handleLogo={props.handleLogo} onNotify={props.onNotify} />;
   if (props.view === "support") return <AdminSupport tickets={props.tickets} addTicket={props.addTicket} />;
-  return <Page><PageHeader eyebrow="Administración de la academia" title="Buenos días, Andrea." text="Este es el estado de Level Up hoy." action={<button className={styles.primaryButton} onClick={() => props.setView("students")}>+ Agregar estudiante</button>} /><KpiGrid items={[{ icon: "users", label: "Estudiantes activos", value: String(props.activeCount), detail: "de 10 matriculados", tone: "purple" }, { icon: "money", label: "Ingresos recibidos", value: formatCurrency(props.collectedRevenue), detail: props.paidCount + " pagos registrados", tone: "green" }, { icon: "book", label: "Cursos publicados", value: String(props.courses.filter((course) => course.published).length), detail: "1 curso en borrador", tone: "orange" }, { icon: "support", label: "Soporte pendiente", value: "1", detail: "Ticket de alta prioridad", tone: "red" }]} /><div className={styles.adminOverviewGrid}><section className={styles.panel}><SectionHeading title="Ingresos del periodo" text="Pagos registrados durante los últimos seis meses." action="Ver ingresos" onAction={() => props.setView("income")} /><RevenueChart values={[185, 210, 245, 280, 315, Math.round(props.collectedRevenue / 1000)]} /></section><section className={styles.panel}><SectionHeading title="Próximas clases" text="Sesiones híbridas programadas." action="Gestionar" onAction={() => props.onNotify("Abriendo calendario de sesiones")} /><div className={styles.compactSessions}><div><span>09 OCT</span><p><strong>Conversation Lab</strong><small>6:30 p. m. · A1 · 4 estudiantes</small></p></div><div><span>13 OCT</span><p><strong>Grammar Clinic</strong><small>6:30 p. m. · A1 · 4 estudiantes</small></p></div><div><span>15 OCT</span><p><strong>Speaking Practice</strong><small>7:00 p. m. · A2 · 4 estudiantes</small></p></div></div></section></div><section className={styles.panel + " " + styles.dashboardTable}><SectionHeading title="Atención requerida" text="Estudiantes con pago pendiente, acceso suspendido o bajo progreso." action="Ver estudiantes" onAction={() => props.setView("students")} /><StudentTable students={props.students.filter((student) => student.payment !== "Pagado" || !student.active)} updateStudent={props.updateStudent} onNotify={props.onNotify} compact /></section></Page>;
+  return <Page><PageHeader eyebrow="Administración de la academia" title={`Hola, ${props.viewerName.split(" ")[0]}.`} text="Este es el estado de Level Up hoy." action={<button className={styles.primaryButton} onClick={() => props.setView("students")}>+ Agregar estudiante</button>} /><KpiGrid items={[{ icon: "users", label: "Estudiantes activos", value: String(props.activeCount), detail: `de ${props.students.length} matriculados`, tone: "purple" }, { icon: "money", label: "Ingresos recibidos", value: formatCurrency(props.collectedRevenue), detail: props.paidCount + " pagos registrados", tone: "green" }, { icon: "book", label: "Cursos publicados", value: String(props.courses.filter((course) => course.published).length), detail: `${props.courses.filter((course) => !course.published).length} en borrador`, tone: "orange" }, { icon: "support", label: "Soporte pendiente", value: String(props.tickets.filter((ticket) => ticket.status !== "Respondido").length), detail: "Solicitudes por atender", tone: "red" }]} /><div className={styles.adminOverviewGrid}><section className={styles.panel}><SectionHeading title="Ingresos del periodo" text="Pagos registrados durante los últimos seis meses." action="Ver ingresos" onAction={() => props.setView("income")} /><RevenueChart values={[185, 210, 245, 280, 315, Math.round(props.collectedRevenue / 1000)]} /></section><section className={styles.panel}><SectionHeading title="Próximas clases" text="Sesiones híbridas programadas." action="Gestionar" onAction={() => props.onNotify("Abriendo calendario de sesiones")} /><div className={styles.compactSessions}><div><span>09 OCT</span><p><strong>Conversation Lab</strong><small>6:30 p. m. · A1 · 4 estudiantes</small></p></div><div><span>13 OCT</span><p><strong>Grammar Clinic</strong><small>6:30 p. m. · A1 · 4 estudiantes</small></p></div><div><span>15 OCT</span><p><strong>Speaking Practice</strong><small>7:00 p. m. · A2 · 4 estudiantes</small></p></div></div></section></div><section className={styles.panel + " " + styles.dashboardTable}><SectionHeading title="Atención requerida" text="Estudiantes con pago pendiente, acceso suspendido o bajo progreso." action="Ver estudiantes" onAction={() => props.setView("students")} /><StudentTable students={props.students.filter((student) => student.payment !== "Pagado" || !student.active)} updateStudent={props.updateStudent} onNotify={props.onNotify} compact /></section></Page>;
 }
 
-function StudentManagement({ students, updateStudent, onNotify }: { students: Student[]; updateStudent: (id: number, changes: Partial<Student>) => void; onNotify: (message: string) => void }) {
+function StudentManagement({ students, courses, updateStudent, inviteStudent, onNotify }: { students: Student[]; courses: Course[]; updateStudent: (id: Student["id"], changes: Partial<Student>) => void | Promise<void>; inviteStudent: (input: { fullName: string; email: string; level: string; dueDate: string; courseId?: string }) => void | Promise<void>; onNotify: (message: string) => void }) {
   const [query, setQuery] = useState("");
+  const [showInvite, setShowInvite] = useState(false);
+  const [invite, setInvite] = useState({ fullName: "", email: "", level: "A1", dueDate: new Date().toISOString().slice(0, 10), courseId: String(courses[0]?.id ?? "") });
   const filtered = students.filter((student) => (student.name + student.email).toLowerCase().includes(query.toLowerCase()));
-  return <Page><PageHeader eyebrow="Usuarios y accesos" title="Estudiantes" text="Administra matrículas, contraseñas, pagos y acceso al contenido." action={<button className={styles.primaryButton} onClick={() => onNotify("Formulario para invitar estudiante")}>+ Invitar estudiante</button>} /><div className={styles.toolbar}><label><Icon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre o correo" /></label><button onClick={() => onNotify("Filtros de estudiantes")}>Filtrar</button><button onClick={() => onNotify("Exportando estudiantes a CSV")}>Exportar</button></div><section className={styles.panel + " " + styles.tablePanel}><StudentTable students={filtered} updateStudent={updateStudent} onNotify={onNotify} /></section><div className={styles.accessNote}><Icon name="lock" /><div><strong>Control de acceso por pago</strong><p>Desactivar un estudiante bloquea el ingreso al contenido, pero conserva su progreso, notas e historial. Al reactivarlo continúa donde quedó.</p></div></div></Page>;
+  async function submitInvite(event: FormEvent) { event.preventDefault(); await inviteStudent(invite); setInvite({ fullName: "", email: "", level: "A1", dueDate: new Date().toISOString().slice(0, 10), courseId: String(courses[0]?.id ?? "") }); setShowInvite(false); }
+  return <Page><PageHeader eyebrow="Usuarios y accesos" title="Estudiantes" text="Administra matrículas, contraseñas, pagos y acceso al contenido." action={<button className={styles.primaryButton} onClick={() => setShowInvite((current) => !current)}>+ Invitar estudiante</button>} />{showInvite && <form className={styles.builderPanel} onSubmit={submitInvite}><div className={styles.builderHeader}><div><span className={styles.eyebrow}>Nuevo acceso</span><h2>Invitar estudiante</h2></div><button type="button" onClick={() => setShowInvite(false)}>×</button></div><div className={styles.formGrid}><label>Nombre completo<input value={invite.fullName} onChange={(event) => setInvite((current) => ({ ...current, fullName: event.target.value }))} required /></label><label>Correo<input type="email" value={invite.email} onChange={(event) => setInvite((current) => ({ ...current, email: event.target.value }))} required /></label><label>Nivel<select value={invite.level} onChange={(event) => setInvite((current) => ({ ...current, level: event.target.value }))}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label><label>Primera fecha de cobro<input type="date" value={invite.dueDate} onChange={(event) => setInvite((current) => ({ ...current, dueDate: event.target.value }))} required /></label><label className={styles.fullField}>Curso inicial<select value={invite.courseId} onChange={(event) => setInvite((current) => ({ ...current, courseId: event.target.value }))}><option value="">Asignar después</option>{courses.map((course) => <option key={course.id} value={String(course.id)}>{course.title}</option>)}</select></label></div><div className={styles.builderActions}><button type="button" onClick={() => setShowInvite(false)}>Cancelar</button><button className={styles.primaryButton} type="submit">Enviar invitación</button></div></form>}<div className={styles.toolbar}><label><Icon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre o correo" /></label><button onClick={() => onNotify("Filtros de estudiantes")}>Filtrar</button><button onClick={() => onNotify("Exportando estudiantes a CSV")}>Exportar</button></div><section className={styles.panel + " " + styles.tablePanel}><StudentTable students={filtered} updateStudent={updateStudent} onNotify={onNotify} /></section><div className={styles.accessNote}><Icon name="lock" /><div><strong>Control de acceso por pago</strong><p>Desactivar un estudiante bloquea el ingreso al contenido, pero conserva su progreso, notas e historial. Al reactivarlo continúa donde quedó.</p></div></div></Page>;
 }
 
-function StudentTable({ students, updateStudent, onNotify, compact = false }: { students: Student[]; updateStudent: (id: number, changes: Partial<Student>) => void; onNotify: (message: string) => void; compact?: boolean }) {
-  return <div className={styles.tableScroll}><table className={styles.dataTable}><thead><tr><th>Estudiante</th><th>Nivel</th><th>Progreso</th><th>Pago</th>{!compact && <th>Próximo cobro</th>}<th>Acceso</th>{!compact && <th>Cuenta</th>}</tr></thead><tbody>{students.map((student) => <tr key={student.id}><td><div className={styles.studentCell}><span>{student.initials}</span><p><strong>{student.name}</strong><small>{student.email}</small></p></div></td><td><span className={styles.levelPill}>{student.level}</span></td><td><div className={styles.miniProgress}><span style={{ width: student.progress + "%" }}></span></div><small>{student.progress}%</small></td><td><select className={styles.statusSelect} value={student.payment} onChange={(event) => updateStudent(student.id, { payment: event.target.value as Student["payment"] })}><option>Pagado</option><option>Pendiente</option><option>Vencido</option></select></td>{!compact && <td><input className={styles.dateInput} type="date" value={student.dueDate} onChange={(event) => { updateStudent(student.id, { dueDate: event.target.value }); onNotify("Fecha de cobro actualizada para " + student.name); }} /></td>}<td><button className={student.active ? styles.activeToggle : styles.inactiveToggle} onClick={() => { updateStudent(student.id, { active: !student.active }); onNotify((student.active ? "Acceso suspendido para " : "Acceso reactivado para ") + student.name); }}><i></i>{student.active ? "Activo" : "Suspendido"}</button></td>{!compact && <td><button className={styles.iconButton} title="Restablecer contraseña" onClick={() => onNotify("Enlace de contraseña enviado a " + student.email)}><Icon name="lock" /></button><button className={styles.iconButton} title="Reenviar acceso" onClick={() => onNotify("Acceso reenviado a " + student.email)}><Icon name="send" /></button></td>}</tr>)}</tbody></table></div>;
+function StudentTable({ students, updateStudent, onNotify, compact = false }: { students: Student[]; updateStudent: (id: Student["id"], changes: Partial<Student>) => void | Promise<void>; onNotify: (message: string) => void; compact?: boolean }) {
+  return <div className={styles.tableScroll}><table className={styles.dataTable}><thead><tr><th>Estudiante</th><th>Nivel</th><th>Progreso</th><th>Pago</th>{!compact && <th>Próximo cobro</th>}<th>Acceso</th>{!compact && <th>Cuenta</th>}</tr></thead><tbody>{students.map((student) => <tr key={student.id}><td><div className={styles.studentCell}><span>{student.initials}</span><p><strong>{student.name}</strong><small>{student.email}</small></p></div></td><td><span className={styles.levelPill}>{student.level}</span></td><td><div className={styles.miniProgress}><span style={{ width: student.progress + "%" }}></span></div><small>{student.progress}%</small></td><td><select className={styles.statusSelect} value={student.payment} onChange={(event) => updateStudent(student.id, { payment: event.target.value as Student["payment"] })}><option>Pagado</option><option>Pendiente</option><option>Vencido</option></select></td>{!compact && <td><input className={styles.dateInput} type="date" value={student.dueDate} onChange={(event) => { updateStudent(student.id, { dueDate: event.target.value }); onNotify("Fecha de cobro actualizada para " + student.name); }} /></td>}<td><button className={student.active ? styles.activeToggle : styles.inactiveToggle} onClick={() => { updateStudent(student.id, { active: !student.active }); onNotify((student.active ? "Acceso suspendido para " : "Acceso reactivado para ") + student.name); }}><i></i>{student.active ? "Activo" : "Suspendido"}</button></td>{!compact && <td><button className={styles.iconButton} title="Restablecer contraseña" onClick={async () => { const result = await sendPasswordResetAction(student.email); onNotify(result.message); }}><Icon name="lock" /></button><button className={styles.iconButton} title="Reenviar acceso" onClick={() => onNotify("Para reenviar una invitación vencida, contacta al owner de CORVEN") }><Icon name="send" /></button></td>}</tr>)}</tbody></table></div>;
 }
 
-function CourseStudio({ courses, setCourses, onNotify }: { courses: Course[]; setCourses: React.Dispatch<React.SetStateAction<Course[]>>; onNotify: (message: string) => void }) {
+function CourseStudio({ courses, setCourses, onNotify, persistent, organizationId }: { courses: Course[]; setCourses: React.Dispatch<React.SetStateAction<Course[]>>; onNotify: (message: string) => void; persistent: boolean; organizationId?: string }) {
   const [showBuilder, setShowBuilder] = useState(false);
   const [title, setTitle] = useState("");
   const [level, setLevel] = useState("A1");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [description, setDescription] = useState("");
-  function createCourse(event: FormEvent) { event.preventDefault(); if (!title.trim()) return; setCourses((current) => [...current, { id: Date.now(), title, level: level + " · Nuevo curso", description: description || "Curso creado por Level Up.", progress: 0, lessons: 1, duration: "Por definir", students: 0, youtubeUrl, color: "#6d28d9", published: false }]); setTitle(""); setYoutubeUrl(""); setDescription(""); setShowBuilder(false); onNotify("Curso creado como borrador"); }
-  return <Page><PageHeader eyebrow="Course Studio" title="Cursos y contenido" text="Crea experiencias híbridas con lecciones, enlaces de YouTube, material y evaluaciones." action={<button className={styles.primaryButton} onClick={() => setShowBuilder(!showBuilder)}>+ Crear curso</button>} />{showBuilder && <form className={styles.builderPanel} onSubmit={createCourse}><div className={styles.builderHeader}><div><span className={styles.eyebrow}>Nuevo curso</span><h2>Información inicial</h2></div><button type="button" onClick={() => setShowBuilder(false)}>×</button></div><div className={styles.formGrid}><label>Nombre del curso<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. Business English B1" required /></label><label>Nivel<select value={level} onChange={(event) => setLevel(event.target.value)}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label><label className={styles.fullField}>Descripción<textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="¿Qué logrará el estudiante?" /></label><label className={styles.fullField}>Primera clase en YouTube<input type="url" value={youtubeUrl} onChange={(event) => setYoutubeUrl(event.target.value)} placeholder="https://www.youtube.com/watch?v=..." /><small>Por ahora guardaremos enlaces de YouTube; más adelante habilitaremos almacenamiento propio.</small></label></div><div className={styles.builderActions}><button type="button" onClick={() => setShowBuilder(false)}>Cancelar</button><button className={styles.primaryButton} type="submit">Crear borrador</button></div></form>}<div className={styles.courseAdminGrid}>{courses.map((course) => <article key={course.id} className={styles.adminCourseCard}><div className={styles.courseCover} style={{ background: "linear-gradient(135deg, " + course.color + ", #111827)" }}><span>{course.level.split(" · ")[0]}</span><Icon name="book" /></div><div><span className={course.published ? styles.successPill : styles.draftPill}>{course.published ? "Publicado" : "Borrador"}</span><h3>{course.title}</h3><p>{course.lessons} lecciones · {course.duration} · {course.students} estudiantes</p><div className={styles.cardActions}><button onClick={() => onNotify("Abriendo editor de " + course.title)}>Editar contenido</button><button onClick={() => { setCourses((current) => current.map((item) => item.id === course.id ? { ...item, published: !item.published } : item)); onNotify(course.published ? "Curso movido a borrador" : "Curso publicado"); }}>{course.published ? "Ocultar" : "Publicar"}</button></div></div></article>)}</div><section className={styles.panel + " " + styles.youtubeGuide}><div className={styles.youtubeIcon}><Icon name="video" /></div><div><strong>Contenido en YouTube</strong><p>Pega el enlace público o no listado. El estudiante verá la clase dentro de su curso sin salir del portal.</p></div><button className={styles.secondaryButton} onClick={() => onNotify("Guía de video abierta")}>Ver guía</button></section></Page>;
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [lesson, setLesson] = useState({ title: "", description: "", contentType: "youtube" as "text" | "youtube" | "document" | "audio", contentUrl: "" });
+  async function createCourse(event: FormEvent) { event.preventDefault(); if (!title.trim()) return; let id: string | number = Date.now(); if (persistent && organizationId) { const result = await createCourseAction({ organizationId, title, level, description, youtubeUrl }); if (!result.ok || !result.data) return onNotify(result.message); id = result.data.id; onNotify(result.message); } else { onNotify("Curso creado como borrador"); } setCourses((current) => [...current, { id, title, level: level + " · Nuevo curso", description: description || "Curso creado por Level Up.", progress: 0, lessons: 1, duration: "Por definir", students: 0, youtubeUrl, color: "#6d28d9", published: false }]); setTitle(""); setYoutubeUrl(""); setDescription(""); setShowBuilder(false); }
+  async function toggleCourse(course: Course) { const published = !course.published; if (persistent && organizationId && typeof course.id === "string") { const result = await setCoursePublishedAction({ organizationId, courseId: course.id, published }); if (!result.ok) return onNotify(result.message); onNotify(result.message); } else { onNotify(course.published ? "Curso movido a borrador" : "Curso publicado"); } setCourses((current) => current.map((item) => item.id === course.id ? { ...item, published } : item)); }
+  async function addLesson(event: FormEvent) { event.preventDefault(); if (!editingCourse) return; if (persistent && organizationId && typeof editingCourse.id === "string") { const result = await addLessonAction({ organizationId, courseId: editingCourse.id, ...lesson }); if (!result.ok) return onNotify(result.message); onNotify(result.message); } else { onNotify("Lección agregada al demo"); } setCourses((current) => current.map((course) => course.id === editingCourse.id ? { ...course, lessons: course.lessons + 1, youtubeUrl: lesson.contentType === "youtube" ? lesson.contentUrl : course.youtubeUrl } : course)); setLesson({ title: "", description: "", contentType: "youtube", contentUrl: "" }); }
+  return <Page><PageHeader eyebrow="Course Studio" title="Cursos y contenido" text="Crea experiencias híbridas con lecciones, enlaces de YouTube, material y evaluaciones." action={<button className={styles.primaryButton} onClick={() => setShowBuilder(!showBuilder)}>+ Crear curso</button>} />{showBuilder && <form className={styles.builderPanel} onSubmit={createCourse}><div className={styles.builderHeader}><div><span className={styles.eyebrow}>Nuevo curso</span><h2>Información inicial</h2></div><button type="button" onClick={() => setShowBuilder(false)}>×</button></div><div className={styles.formGrid}><label>Nombre del curso<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. Business English B1" required /></label><label>Nivel<select value={level} onChange={(event) => setLevel(event.target.value)}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label><label className={styles.fullField}>Descripción<textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="¿Qué logrará el estudiante?" /></label><label className={styles.fullField}>Primera clase en YouTube<input type="url" value={youtubeUrl} onChange={(event) => setYoutubeUrl(event.target.value)} placeholder="https://www.youtube.com/watch?v=..." /><small>Por ahora guardaremos enlaces de YouTube; más adelante habilitaremos almacenamiento propio.</small></label></div><div className={styles.builderActions}><button type="button" onClick={() => setShowBuilder(false)}>Cancelar</button><button className={styles.primaryButton} type="submit">Crear borrador</button></div></form>}{editingCourse && <form className={styles.builderPanel} onSubmit={addLesson}><div className={styles.builderHeader}><div><span className={styles.eyebrow}>Editor de contenido</span><h2>{editingCourse.title}</h2></div><button type="button" onClick={() => setEditingCourse(null)}>×</button></div><div className={styles.formGrid}><label>Título de la lección<input value={lesson.title} onChange={(event) => setLesson((current) => ({ ...current, title: event.target.value }))} required /></label><label>Tipo<select value={lesson.contentType} onChange={(event) => setLesson((current) => ({ ...current, contentType: event.target.value as typeof lesson.contentType }))}><option value="youtube">Clase en YouTube</option><option value="text">Texto o instrucciones</option><option value="document">Documento por enlace</option><option value="audio">Audio por enlace</option></select></label><label className={styles.fullField}>Descripción<textarea value={lesson.description} onChange={(event) => setLesson((current) => ({ ...current, description: event.target.value }))} placeholder="Objetivo, instrucciones o contenido de la lección" /></label>{lesson.contentType !== "text" && <label className={styles.fullField}>Enlace del contenido<input type="url" value={lesson.contentUrl} onChange={(event) => setLesson((current) => ({ ...current, contentUrl: event.target.value }))} placeholder={lesson.contentType === "youtube" ? "https://www.youtube.com/watch?v=..." : "https://..."} required /></label>}</div><div className={styles.builderActions}><button type="button" onClick={() => setEditingCourse(null)}>Cerrar</button><button className={styles.primaryButton} type="submit">Agregar lección</button></div></form>}<div className={styles.courseAdminGrid}>{courses.map((course) => <article key={course.id} className={styles.adminCourseCard}><div className={styles.courseCover} style={{ background: "linear-gradient(135deg, " + course.color + ", #111827)" }}><span>{course.level.split(" · ")[0]}</span><Icon name="book" /></div><div><span className={course.published ? styles.successPill : styles.draftPill}>{course.published ? "Publicado" : "Borrador"}</span><h3>{course.title}</h3><p>{course.lessons} lecciones · {course.duration} · {course.students} estudiantes</p><div className={styles.cardActions}><button onClick={() => setEditingCourse(course)}>Editar contenido</button><button onClick={() => toggleCourse(course)}>{course.published ? "Ocultar" : "Publicar"}</button></div></div></article>)}</div><section className={styles.panel + " " + styles.youtubeGuide}><div className={styles.youtubeIcon}><Icon name="video" /></div><div><strong>Contenido en YouTube</strong><p>Pega el enlace público o no listado. El estudiante verá la clase dentro de su curso sin salir del portal.</p></div><button className={styles.secondaryButton} onClick={() => onNotify("Guía de video abierta")}>Ver guía</button></section></Page>;
 }
 
-function IncomeDashboard({ students, monthlyFee, setMonthlyFee, collectedRevenue, projectedRevenue, onNotify }: { students: Student[]; monthlyFee: number; setMonthlyFee: (value: number) => void; collectedRevenue: number; projectedRevenue: number; onNotify: (message: string) => void }) {
-  return <Page><PageHeader eyebrow="Gestión financiera" title="Ingresos y cobros" text="Visualiza mensualidades, pagos pendientes y fechas de cobro." action={<button className={styles.primaryButton} onClick={() => onNotify("Reporte financiero exportado")}>Exportar reporte</button>} /><div className={styles.feeControl}><div><span>Mensualidad por estudiante</span><strong>{formatCurrency(monthlyFee)}</strong></div><label>Editar monto<input type="number" min="0" step="1000" value={monthlyFee} onChange={(event) => setMonthlyFee(Number(event.target.value))} /></label></div><KpiGrid items={[{ icon: "money", label: "Ingresos recibidos", value: formatCurrency(collectedRevenue), detail: "Mes actual", tone: "green" }, { icon: "chart", label: "Ingreso proyectado", value: formatCurrency(projectedRevenue), detail: "Si pagan los 10 estudiantes", tone: "purple" }, { icon: "clock", label: "Pendiente de cobro", value: formatCurrency(students.filter((student) => student.payment !== "Pagado").length * monthlyFee), detail: "3 mensualidades", tone: "orange" }, { icon: "lock", label: "Accesos suspendidos", value: String(students.filter((student) => !student.active).length), detail: "Por pago vencido", tone: "red" }]} /><div className={styles.incomeLayout}><section className={styles.panel}><SectionHeading title="Ingresos mensuales" text="Historial de pagos registrados." /><RevenueChart values={[185, 210, 245, 280, 315, Math.round(collectedRevenue / 1000)]} /></section><section className={styles.panel}><SectionHeading title="Distribución" text="Estado de las mensualidades." /><div className={styles.donutChart} style={{ background: "conic-gradient(var(--brand-primary) 0 70%, var(--brand-accent) 70% 90%, #ef4444 90% 100%)" }}><div><strong>70%</strong><span>cobrado</span></div></div><ul className={styles.legend}><li><i className={styles.legendPaid}></i>Pagado <strong>7</strong></li><li><i className={styles.legendPending}></i>Pendiente <strong>2</strong></li><li><i className={styles.legendLate}></i>Vencido <strong>1</strong></li></ul></section></div></Page>;
+function IncomeDashboard({ students, monthlyFee, setMonthlyFee, collectedRevenue, projectedRevenue, onNotify }: { students: Student[]; monthlyFee: number; setMonthlyFee: (value: number) => void | Promise<void>; collectedRevenue: number; projectedRevenue: number; onNotify: (message: string) => void }) {
+  const [draftFee, setDraftFee] = useState(monthlyFee);
+  const paid = students.filter((student) => student.payment === "Pagado").length;
+  const pending = students.filter((student) => student.payment === "Pendiente").length;
+  const overdue = students.filter((student) => student.payment === "Vencido").length;
+  const total = Math.max(students.length, 1);
+  const paidPercentage = Math.round((paid / total) * 100);
+  const pendingPercentage = Math.round((pending / total) * 100);
+  return <Page><PageHeader eyebrow="Gestión financiera" title="Ingresos y cobros" text="Visualiza mensualidades, pagos pendientes y fechas de cobro." action={<button className={styles.primaryButton} onClick={() => onNotify("Reporte financiero exportado")}>Exportar reporte</button>} /><div className={styles.feeControl}><div><span>Mensualidad por estudiante</span><strong>{formatCurrency(monthlyFee)}</strong></div><label>Editar monto<input type="number" min="0" step="1000" value={draftFee} onChange={(event) => setDraftFee(Number(event.target.value))} onBlur={() => setMonthlyFee(draftFee)} /></label></div><KpiGrid items={[{ icon: "money", label: "Ingresos recibidos", value: formatCurrency(collectedRevenue), detail: "Mes actual", tone: "green" }, { icon: "chart", label: "Ingreso proyectado", value: formatCurrency(projectedRevenue), detail: `Si pagan los ${students.length} estudiantes`, tone: "purple" }, { icon: "clock", label: "Pendiente de cobro", value: formatCurrency((pending + overdue) * monthlyFee), detail: `${pending + overdue} mensualidades`, tone: "orange" }, { icon: "lock", label: "Accesos suspendidos", value: String(students.filter((student) => !student.active).length), detail: "Por pago vencido", tone: "red" }]} /><div className={styles.incomeLayout}><section className={styles.panel}><SectionHeading title="Ingresos mensuales" text="Historial de pagos registrados." /><RevenueChart values={[185, 210, 245, 280, 315, Math.round(collectedRevenue / 1000)]} /></section><section className={styles.panel}><SectionHeading title="Distribución" text="Estado de las mensualidades." /><div className={styles.donutChart} style={{ background: `conic-gradient(var(--brand-primary) 0 ${paidPercentage}%, var(--brand-accent) ${paidPercentage}% ${paidPercentage + pendingPercentage}%, #ef4444 ${paidPercentage + pendingPercentage}% 100%)` }}><div><strong>{paidPercentage}%</strong><span>cobrado</span></div></div><ul className={styles.legend}><li><i className={styles.legendPaid}></i>Pagado <strong>{paid}</strong></li><li><i className={styles.legendPending}></i>Pendiente <strong>{pending}</strong></li><li><i className={styles.legendLate}></i>Vencido <strong>{overdue}</strong></li></ul></section></div></Page>;
 }
 
-function BrandStudio({ brand, setBrand, logoUrl, handleLogo, onNotify }: { brand: { primary: string; secondary: string; accent: string }; setBrand: React.Dispatch<React.SetStateAction<{ primary: string; secondary: string; accent: string }>>; logoUrl: string | null; handleLogo: (file?: File) => void; onNotify: (message: string) => void }) {
-  return <Page><PageHeader eyebrow="White label" title="Identidad visual" text="Adapta el portal a la marca de Level Up. CORVEN permanecerá discretamente como proveedor tecnológico." /><div className={styles.brandGrid}><section className={styles.panel}><SectionHeading title="Marca de la academia" text="Los cambios se muestran inmediatamente." /><div className={styles.logoUploader}><TenantMark logoUrl={logoUrl} large /><div><strong>Logo de Level Up</strong><p>PNG, JPG o SVG. Recomendado: fondo transparente.</p><label>Seleccionar logo<input type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={(event) => handleLogo(event.target.files?.[0])} /></label></div></div><div className={styles.colorControls}><ColorControl label="Color principal" value={brand.primary} onChange={(value) => setBrand((current) => ({ ...current, primary: value }))} /><ColorControl label="Color secundario" value={brand.secondary} onChange={(value) => setBrand((current) => ({ ...current, secondary: value }))} /><ColorControl label="Color de acento" value={brand.accent} onChange={(value) => setBrand((current) => ({ ...current, accent: value }))} /></div><button className={styles.primaryButton} onClick={() => onNotify("Identidad visual guardada")}>Guardar identidad</button></section><section className={styles.brandPreview}><span>Vista previa</span><div className={styles.previewWindow}><div className={styles.previewTop}><TenantMark logoUrl={logoUrl} /><strong>Level Up</strong><i></i></div><div className={styles.previewBody}><small>YOUR NEXT LESSON</small><h3>English Foundations</h3><p>Keep building your confidence.</p><button>Continue learning</button><div className={styles.previewCards}><span></span><span></span></div></div><div className={styles.previewPowered}>Powered by CORVEN</div></div></section></div></Page>;
+function BrandStudio({ brand, setBrand, saveBrand, logoUrl, handleLogo }: { brand: LmsBrand; setBrand: React.Dispatch<React.SetStateAction<LmsBrand>>; saveBrand: () => void | Promise<void>; logoUrl: string | null; handleLogo: (file?: File) => void | Promise<void>; onNotify: (message: string) => void }) {
+  return <Page><PageHeader eyebrow="White label" title="Identidad visual" text="Adapta el portal a la marca de Level Up. CORVEN permanecerá discretamente como proveedor tecnológico." /><div className={styles.brandGrid}><section className={styles.panel}><SectionHeading title="Marca de la academia" text="Los cambios se muestran inmediatamente." /><div className={styles.logoUploader}><TenantMark logoUrl={logoUrl} large /><div><strong>Logo de Level Up</strong><p>PNG, JPG, WEBP o SVG. Máximo 2 MB.</p><label>Seleccionar logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(event) => handleLogo(event.target.files?.[0])} /></label></div></div><div className={styles.colorControls}><ColorControl label="Color principal" value={brand.primary} onChange={(value) => setBrand((current) => ({ ...current, primary: value }))} /><ColorControl label="Color secundario" value={brand.secondary} onChange={(value) => setBrand((current) => ({ ...current, secondary: value }))} /><ColorControl label="Color de acento" value={brand.accent} onChange={(value) => setBrand((current) => ({ ...current, accent: value }))} /></div><button className={styles.primaryButton} onClick={saveBrand}>Guardar identidad</button></section><section className={styles.brandPreview}><span>Vista previa</span><div className={styles.previewWindow}><div className={styles.previewTop}><TenantMark logoUrl={logoUrl} /><strong>Level Up</strong><i></i></div><div className={styles.previewBody}><small>YOUR NEXT LESSON</small><h3>English Foundations</h3><p>Keep building your confidence.</p><button>Continue learning</button><div className={styles.previewCards}><span></span><span></span></div></div><div className={styles.previewPowered}>Powered by CORVEN</div></div></section></div></Page>;
 }
 
 function ColorControl({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
@@ -268,17 +341,18 @@ function AdminSupport({ tickets, addTicket }: { tickets: Ticket[]; addTicket: (t
   return <Page><PageHeader eyebrow="Soporte técnico" title="Soporte CORVEN" text="Reporta errores de la plataforma y sigue la respuesta del owner." /><div className={styles.supportLayout}><form className={styles.panel + " " + styles.reportForm} onSubmit={submit}><SectionHeading title="Reportar un problema" text="Incluye los pasos que seguiste y qué esperabas que ocurriera." /><label>Asunto<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. No puedo publicar una lección" required /></label><label>Detalle<textarea value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Describe el error..." required /></label><label>Prioridad<select><option>Alta · Bloquea el trabajo</option><option>Media · Puedo continuar</option><option>Baja · Consulta o mejora</option></select></label><button className={styles.primaryButton} type="submit">Enviar a CORVEN</button></form><section className={styles.panel}><SectionHeading title="Mis solicitudes" text="Historial y estado de tus reportes." /><TicketList tickets={tickets.filter((ticket) => ticket.source === "Level Up")} /></section></div></Page>;
 }
 
-function OwnerExperience({ view, setView, students, courses, tickets, setTickets, collectedRevenue, onNotify }: { view: OwnerView; setView: (view: View) => void; students: Student[]; courses: Course[]; tickets: Ticket[]; setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; collectedRevenue: number; onNotify: (message: string) => void }) {
-  if (view === "tickets") return <OwnerTickets tickets={tickets} setTickets={setTickets} onNotify={onNotify} />;
+function OwnerExperience({ view, setView, students, courses, tickets, setTickets, collectedRevenue, onNotify, persistent, organizationId }: { view: OwnerView; setView: (view: View) => void; students: Student[]; courses: Course[]; tickets: Ticket[]; setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; collectedRevenue: number; onNotify: (message: string) => void; persistent: boolean; organizationId?: string }) {
+  if (view === "tickets") return <OwnerTickets tickets={tickets} setTickets={setTickets} onNotify={onNotify} persistent={persistent} organizationId={organizationId} />;
   if (view === "academies") return <AcademiesView students={students} courses={courses} collectedRevenue={collectedRevenue} onNotify={onNotify} />;
   if (view === "activity") return <ActivityView />;
   return <Page><PageHeader eyebrow="CORVEN Learning Platform" title="Control de la plataforma" text="Supervisa academias, actividad, soporte y salud del servicio." action={<button className={styles.primaryButton} onClick={() => setView("tickets")}>Revisar tickets</button>} /><KpiGrid items={[{ icon: "school", label: "Academias activas", value: "1", detail: "Level Up · Piloto", tone: "purple" }, { icon: "users", label: "Usuarios totales", value: "12", detail: "10 estudiantes + 2 admins", tone: "green" }, { icon: "book", label: "Cursos", value: String(courses.length), detail: courses.filter((course) => course.published).length + " publicados", tone: "orange" }, { icon: "support", label: "Tickets abiertos", value: String(tickets.filter((ticket) => ticket.status !== "Respondido").length), detail: "1 de prioridad alta", tone: "red" }]} /><div className={styles.ownerGrid}><section className={styles.panel}><SectionHeading title="Level Up English Academy" text="Salud general del cliente piloto." action="Abrir academia" onAction={() => setView("academies")} /><div className={styles.healthHeader}><div className={styles.healthScore}>96<span>%</span></div><div><strong>Servicio saludable</strong><p>Última actividad: hoy, 9:42 a. m.</p></div></div><div className={styles.healthRows}><div><span>Base de datos</span><strong className={styles.online}>Operativa</strong></div><div><span>Autenticación</span><strong className={styles.online}>Operativa</strong></div><div><span>Contenido y enlaces</span><strong className={styles.warning}>1 advertencia</strong></div><div><span>Último respaldo</span><strong>Hoy · 3:00 a. m.</strong></div></div></section><section className={styles.panel}><SectionHeading title="Soporte reciente" text="Solicitudes que requieren seguimiento." action="Ver todos" onAction={() => setView("tickets")} /><TicketList tickets={tickets.slice(0, 3)} compact /></section></div><section className={styles.panel + " " + styles.ownerActions}><SectionHeading title="Acciones de owner" text="Herramientas de operación de CORVEN." /><div><button onClick={() => onNotify("Modo de soporte para Level Up")}><Icon name="school" /><span><strong>Acceder como soporte</strong><small>Revisar configuración del cliente</small></span></button><button onClick={() => onNotify("Revisión de seguridad iniciada")}><Icon name="lock" /><span><strong>Revisar accesos</strong><small>Roles y actividad reciente</small></span></button><button onClick={() => onNotify("Reporte de uso preparado")}><Icon name="chart" /><span><strong>Reporte de uso</strong><small>Actividad y adopción del portal</small></span></button></div></section></Page>;
 }
 
-function OwnerTickets({ tickets, setTickets, onNotify }: { tickets: Ticket[]; setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; onNotify: (message: string) => void }) {
+function OwnerTickets({ tickets, setTickets, onNotify, persistent, organizationId }: { tickets: Ticket[]; setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; onNotify: (message: string) => void; persistent: boolean; organizationId?: string }) {
   const [selected, setSelected] = useState<string | null>(tickets[0]?.id ?? null); const [reply, setReply] = useState(""); const activeTicket = tickets.find((ticket) => ticket.id === selected);
-  function sendReply() { if (!activeTicket || !reply.trim()) return; setTickets((current) => current.map((ticket) => ticket.id === activeTicket.id ? { ...ticket, reply, status: "Respondido" } : ticket)); setReply(""); onNotify("Respuesta enviada a " + activeTicket.source); }
-  return <Page><PageHeader eyebrow="Mesa de soporte" title="Tickets de la plataforma" text="Recibe, prioriza y responde solicitudes de academias y estudiantes." /><div className={styles.ticketWorkspace}><div className={styles.ticketQueue}>{tickets.map((ticket) => <button key={ticket.id} className={selected === ticket.id ? styles.ticketSelected : ""} onClick={() => setSelected(ticket.id)}><div><span>{ticket.id}</span><small className={ticket.priority === "Alta" ? styles.priorityHigh : ""}>{ticket.priority}</small></div><strong>{ticket.title}</strong><p>{ticket.source} · {ticket.created}</p><em>{ticket.status}</em></button>)}</div>{activeTicket && <section className={styles.ticketDetail}><div className={styles.ticketDetailTop}><div><span>{activeTicket.id} · {activeTicket.source}</span><h2>{activeTicket.title}</h2><p>{activeTicket.person} · {activeTicket.created}</p></div><span className={activeTicket.priority === "Alta" ? styles.priorityHighPill : styles.statusTag}>{activeTicket.priority}</span></div><div className={styles.messageBubble}><strong>{activeTicket.person}</strong><p>{activeTicket.detail}</p></div>{activeTicket.reply && <div className={styles.ownerReply}><strong>CORVEN Support</strong><p>{activeTicket.reply}</p></div>}<label className={styles.replyBox}>Responder<textarea value={reply} onChange={(event) => setReply(event.target.value)} placeholder="Escribe una respuesta clara para el cliente..." /><div><button onClick={() => { setTickets((current) => current.map((ticket) => ticket.id === activeTicket.id ? { ...ticket, status: "En proceso" } : ticket)); onNotify("Ticket marcado en proceso"); }}>Marcar en proceso</button><button className={styles.primaryButton} onClick={sendReply}>Enviar respuesta</button></div></label></section>}</div></Page>;
+  async function updateTicket(status: "in_progress" | "answered", body = "") { if (!activeTicket) return; if (persistent && organizationId) { const result = await replyTicketAction({ organizationId, ticketId: activeTicket.id, body, status }); if (!result.ok) return onNotify(result.message); onNotify(result.message); } setTickets((current) => current.map((ticket) => ticket.id === activeTicket.id ? { ...ticket, reply: body || ticket.reply, status: status === "answered" ? "Respondido" : "En proceso" } : ticket)); if (status === "answered") setReply(""); }
+  function sendReply() { if (!activeTicket || !reply.trim()) return; void updateTicket("answered", reply); }
+  return <Page><PageHeader eyebrow="Mesa de soporte" title="Tickets de la plataforma" text="Recibe, prioriza y responde solicitudes de academias y estudiantes." /><div className={styles.ticketWorkspace}><div className={styles.ticketQueue}>{tickets.map((ticket) => <button key={ticket.id} className={selected === ticket.id ? styles.ticketSelected : ""} onClick={() => setSelected(ticket.id)}><div><span>{ticket.id}</span><small className={ticket.priority === "Alta" ? styles.priorityHigh : ""}>{ticket.priority}</small></div><strong>{ticket.title}</strong><p>{ticket.source} · {ticket.created}</p><em>{ticket.status}</em></button>)}</div>{activeTicket && <section className={styles.ticketDetail}><div className={styles.ticketDetailTop}><div><span>{activeTicket.id} · {activeTicket.source}</span><h2>{activeTicket.title}</h2><p>{activeTicket.person} · {activeTicket.created}</p></div><span className={activeTicket.priority === "Alta" ? styles.priorityHighPill : styles.statusTag}>{activeTicket.priority}</span></div><div className={styles.messageBubble}><strong>{activeTicket.person}</strong><p>{activeTicket.detail}</p></div>{activeTicket.reply && <div className={styles.ownerReply}><strong>CORVEN Support</strong><p>{activeTicket.reply}</p></div>}<label className={styles.replyBox}>Responder<textarea value={reply} onChange={(event) => setReply(event.target.value)} placeholder="Escribe una respuesta clara para el cliente..." /><div><button onClick={() => void updateTicket("in_progress")}>Marcar en proceso</button><button className={styles.primaryButton} onClick={sendReply}>Enviar respuesta</button></div></label></section>}</div></Page>;
 }
 
 function AcademiesView({ students, courses, collectedRevenue, onNotify }: { students: Student[]; courses: Course[]; collectedRevenue: number; onNotify: (message: string) => void }) {
@@ -319,6 +393,8 @@ function TenantMark({ logoUrl, large = false }: { logoUrl?: string | null; large
 
 function PoweredBy() { return <div className={styles.poweredBy}><span>Powered by</span><Image src="/brand/corven-imagotype-purple.png" alt="CORVEN" width={360} height={120} /></div>; }
 function formatCurrency(value: number) { return new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 0 }).format(value); }
+function formatDate(value: string) { if (!value) return "por definir"; const date = new Date(`${value}T12:00:00`); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CR", { dateStyle: "long", timeZone: "America/Costa_Rica" }).format(date); }
+function initialsFor(value: string) { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "LU"; }
 
 function Icon({ name }: { name: string }) {
   const paths: Record<string, React.ReactNode> = {
