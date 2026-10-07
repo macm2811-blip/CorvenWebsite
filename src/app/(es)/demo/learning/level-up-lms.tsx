@@ -4,6 +4,9 @@ import Image from "next/image";
 import { FormEvent, useState } from "react";
 
 import type {
+  LmsAcademy,
+  LmsAcademyAdmin,
+  LmsActivityEvent,
   LmsBrand,
   LmsCourse,
   LmsInitialData,
@@ -13,8 +16,10 @@ import type {
 } from "@/lib/lms/types";
 import {
   addLessonAction,
+  createAcademyAction,
   createCourseAction,
   createTicketAction,
+  inviteAcademyAdminAction,
   inviteStudentAction,
   replyTicketAction,
   saveBrandAction,
@@ -22,6 +27,7 @@ import {
   setCoursePublishedAction,
   signOutAction,
   updateMonthlyFeeAction,
+  updateAcademyStatusAction,
   updateStudentAction,
   uploadBrandLogoAction,
 } from "@/app/(es)/learning/platform/actions";
@@ -37,6 +43,9 @@ type View = StudentView | AdminView | OwnerView;
 type Student = LmsStudent;
 type Course = LmsCourse;
 type Ticket = LmsTicket;
+type Academy = LmsAcademy;
+type AcademyAdmin = LmsAcademyAdmin;
+type ActivityEvent = LmsActivityEvent;
 
 const initialStudents: Student[] = [
   { id: 1, name: "Sofía Rojas", email: "sofia@demo.levelup.cr", initials: "SR", level: "A1", progress: 68, active: true, payment: "Pagado", dueDate: "2026-10-15", lastAccess: "Hoy, 8:42 a. m." },
@@ -61,6 +70,21 @@ const initialTickets: Ticket[] = [
   { id: "SUP-1042", source: "Level Up", person: "Andrea · Administradora", title: "No carga el enlace de una clase", detail: "El video de la lección 4 muestra un mensaje de enlace no disponible.", priority: "Alta", status: "Abierto", created: "Hoy · 8:35 a. m." },
   { id: "SUP-1038", source: "Estudiante", person: "María Fernández", title: "No encuentro mi certificado", detail: "Completé el curso A1 y necesito descargar el certificado.", priority: "Media", status: "En proceso", created: "Ayer · 5:12 p. m." },
 ];
+
+const initialAcademies: Academy[] = [{
+  id: "demo-level-up",
+  name: "Level Up English Academy",
+  slug: "level-up",
+  status: "active",
+  learningModel: "hybrid",
+  studentCount: 10,
+  courseCount: 3,
+  adminCount: 1,
+  monthlyRevenue: 280000,
+  currency: "CRC",
+  createdAt: "7 oct. 2026",
+  admins: [{ id: "demo-admin", name: "Andrea López", email: "andrea@demo.levelup.cr", role: "academy_admin", accessStatus: "active" }],
+}];
 
 const navItems: Record<Role, { id: View; label: string; icon: string; count?: number }[]> = {
   student: [
@@ -95,6 +119,8 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
   const [students, setStudents] = useState<Student[]>(initialData?.students ?? initialStudents);
   const [courses, setCourses] = useState<Course[]>(initialData?.courses ?? initialCourses);
   const [tickets, setTickets] = useState<Ticket[]>(initialData?.tickets ?? initialTickets);
+  const [academies, setAcademies] = useState<Academy[]>(initialData?.academies ?? initialAcademies);
+  const [activity, setActivity] = useState<ActivityEvent[]>(initialData?.activity ?? []);
   const [toast, setToast] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(initialData?.logoUrl ?? null);
   const [brand, setBrand] = useState<LmsBrand>(initialData?.brand ?? { primary: "#6d28d9", secondary: "#111827", accent: "#f97316" });
@@ -201,10 +227,73 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
     showToast(result.message);
   }
 
+  async function createAcademy(input: { name: string; learningModel: Academy["learningModel"]; monthlyFee: number; primaryColor: string }) {
+    if (!persistent) {
+      const academy: Academy = {
+        id: `demo-${Date.now()}`,
+        name: input.name,
+        slug: input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+        status: "active",
+        learningModel: input.learningModel,
+        studentCount: 0,
+        courseCount: 0,
+        adminCount: 0,
+        monthlyRevenue: 0,
+        currency: "CRC",
+        createdAt: "Ahora",
+        admins: [],
+      };
+      setAcademies((current) => [...current, academy]);
+      showToast(`${input.name} fue creada en el demo.`);
+      return true;
+    }
+    const result = await createAcademyAction(input);
+    if (result.ok && result.data) {
+      setAcademies((current) => [...current, result.data!]);
+      setActivity((current) => [{ id: `local-${Date.now()}`, action: "Creó una academia", actor: initialData?.viewerName ?? "CORVEN", academy: result.data!.name, created: "Ahora" }, ...current]);
+    }
+    showToast(result.message);
+    return result.ok;
+  }
+
+  async function inviteAcademyAdmin(organizationId: string, input: { fullName: string; email: string }) {
+    if (!persistent) {
+      const admin: AcademyAdmin = { id: `demo-admin-${Date.now()}`, name: input.fullName, email: input.email, role: "academy_admin", accessStatus: "invited" };
+      setAcademies((current) => current.map((academy) => academy.id === organizationId ? { ...academy, admins: [...academy.admins, admin], adminCount: academy.adminCount + 1 } : academy));
+      showToast(`Invitación preparada para ${input.email}.`);
+      return true;
+    }
+    const result = await inviteAcademyAdminAction({ organizationId, ...input });
+    if (result.ok && result.data) {
+      setAcademies((current) => current.map((academy) => {
+        if (academy.id !== organizationId) return academy;
+        const withoutExisting = academy.admins.filter((admin) => admin.id !== result.data!.id);
+        return { ...academy, admins: [...withoutExisting, result.data!], adminCount: withoutExisting.length + 1 };
+      }));
+    }
+    showToast(result.message);
+    return result.ok;
+  }
+
+  async function updateAcademyStatus(organizationId: string, status: "active" | "suspended") {
+    if (persistent) {
+      const result = await updateAcademyStatusAction({ organizationId, status });
+      if (!result.ok) {
+        showToast(result.message);
+        return false;
+      }
+      showToast(result.message);
+    } else {
+      showToast(status === "active" ? "Academia reactivada en el demo." : "Academia suspendida en el demo.");
+    }
+    setAcademies((current) => current.map((academy) => academy.id === organizationId ? { ...academy, status } : academy));
+    return true;
+  }
+
   return (
     <div className={styles.appShell} style={themeVariables}>
       <header className={styles.topbar}>
-        <div className={styles.mobileBrand}><TenantMark logoUrl={logoUrl} /><strong>{initialData?.organizationName ?? "Level Up"}</strong></div>
+        <div className={styles.mobileBrand}>{role === "owner" ? <AcademyMark name="CORVEN" /> : <TenantMark logoUrl={logoUrl} />}<strong>{role === "owner" ? "CORVEN Learning" : initialData?.organizationName ?? "Level Up"}</strong></div>
         <label className={styles.globalSearch}><Icon name="search" /><input aria-label="Buscar en la academia" placeholder="Buscar cursos, lecciones o estudiantes" /><kbd>⌘ K</kbd></label>
         <div className={styles.topbarTools}>
           <span className={styles.demoBadge}>{persistent ? "Portal seguro" : "Piloto Level Up"}</span>
@@ -220,7 +309,7 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
 
       <div className={styles.workspace}>
         <aside className={styles.sidebar}>
-          <div className={styles.tenantBrand}><TenantMark logoUrl={logoUrl} /><div><strong>{initialData?.organizationName ?? "Level Up"}</strong><span>English Academy</span></div></div>
+          <div className={styles.tenantBrand}>{role === "owner" ? <AcademyMark name="CORVEN" /> : <TenantMark logoUrl={logoUrl} />}<div><strong>{role === "owner" ? "CORVEN" : initialData?.organizationName ?? "Level Up"}</strong><span>{role === "owner" ? "Learning Platform" : "English Academy"}</span></div></div>
           <nav className={styles.sideNav} aria-label="Navegación principal">
             {navItems[role].map((item) => <button key={item.id} className={view === item.id ? styles.navActive : ""} onClick={() => setView(item.id)}><Icon name={item.icon} /><span>{item.label}</span>{item.count ? <small>{item.count}</small> : null}</button>)}
           </nav>
@@ -231,7 +320,7 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
         <main className={styles.mainArea}>
           {role === "student" && <StudentExperience view={view as StudentView} setView={setView} courses={courses} onNotify={showToast} addTicket={addTicket} monthlyFee={monthlyFee} viewerName={initialData?.viewerName ?? "Sofía Rojas"} dueDate={initialData?.viewerDueDate ?? "2026-10-15"} payment={initialData?.viewerPayment ?? "Pagado"} level={initialData?.viewerLevel ?? "A1"} />}
           {role === "admin" && <AdminExperience view={view as AdminView} setView={setView} students={students} courses={courses} tickets={tickets} activeCount={activeCount} paidCount={paidCount} collectedRevenue={collectedRevenue} projectedRevenue={projectedRevenue} monthlyFee={monthlyFee} setMonthlyFee={saveMonthlyFee} updateStudent={updateStudent} setCourses={setCourses} inviteStudent={inviteStudent} brand={brand} setBrand={setBrand} saveBrand={saveBrand} logoUrl={logoUrl} handleLogo={handleLogo} addTicket={addTicket} onNotify={showToast} persistent={persistent} organizationId={initialData?.organizationId} viewerName={initialData?.viewerName ?? "Andrea"} />}
-          {role === "owner" && <OwnerExperience view={view as OwnerView} setView={setView} students={students} courses={courses} tickets={tickets} setTickets={setTickets} collectedRevenue={collectedRevenue} onNotify={showToast} persistent={persistent} organizationId={initialData?.organizationId} />}
+          {role === "owner" && <OwnerExperience view={view as OwnerView} setView={setView} academies={academies} activity={activity} tickets={tickets} setTickets={setTickets} onCreateAcademy={createAcademy} onInviteAdmin={inviteAcademyAdmin} onUpdateAcademyStatus={updateAcademyStatus} onNotify={showToast} persistent={persistent} organizationId={initialData?.organizationId} />}
           <footer className={styles.mobileFooter}><PoweredBy /></footer>
         </main>
       </div>
@@ -338,30 +427,96 @@ function ColorControl({ label, value, onChange }: { label: string; value: string
 function AdminSupport({ tickets, addTicket }: { tickets: Ticket[]; addTicket: (ticket: Omit<Ticket, "id" | "status" | "created">) => void }) {
   const [title, setTitle] = useState(""); const [detail, setDetail] = useState("");
   function submit(event: FormEvent) { event.preventDefault(); if (!title.trim() || !detail.trim()) return; addTicket({ source: "Level Up", person: "Andrea · Administradora", title, detail, priority: "Alta" }); setTitle(""); setDetail(""); }
-  return <Page><PageHeader eyebrow="Soporte técnico" title="Soporte CORVEN" text="Reporta errores de la plataforma y sigue la respuesta del owner." /><div className={styles.supportLayout}><form className={styles.panel + " " + styles.reportForm} onSubmit={submit}><SectionHeading title="Reportar un problema" text="Incluye los pasos que seguiste y qué esperabas que ocurriera." /><label>Asunto<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. No puedo publicar una lección" required /></label><label>Detalle<textarea value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Describe el error..." required /></label><label>Prioridad<select><option>Alta · Bloquea el trabajo</option><option>Media · Puedo continuar</option><option>Baja · Consulta o mejora</option></select></label><button className={styles.primaryButton} type="submit">Enviar a CORVEN</button></form><section className={styles.panel}><SectionHeading title="Mis solicitudes" text="Historial y estado de tus reportes." /><TicketList tickets={tickets.filter((ticket) => ticket.source === "Level Up")} /></section></div></Page>;
+  return <Page><PageHeader eyebrow="Soporte técnico" title="Soporte CORVEN" text="Reporta errores de la plataforma y sigue la respuesta del owner." /><div className={styles.supportLayout}><form className={styles.panel + " " + styles.reportForm} onSubmit={submit}><SectionHeading title="Reportar un problema" text="Incluye los pasos que seguiste y qué esperabas que ocurriera." /><label>Asunto<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. No puedo publicar una lección" required /></label><label>Detalle<textarea value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Describe el error..." required /></label><label>Prioridad<select><option>Alta · Bloquea el trabajo</option><option>Media · Puedo continuar</option><option>Baja · Consulta o mejora</option></select></label><button className={styles.primaryButton} type="submit">Enviar a CORVEN</button></form><section className={styles.panel}><SectionHeading title="Mis solicitudes" text="Historial y estado de tus reportes." /><TicketList tickets={tickets} /></section></div></Page>;
 }
 
-function OwnerExperience({ view, setView, students, courses, tickets, setTickets, collectedRevenue, onNotify, persistent, organizationId }: { view: OwnerView; setView: (view: View) => void; students: Student[]; courses: Course[]; tickets: Ticket[]; setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; collectedRevenue: number; onNotify: (message: string) => void; persistent: boolean; organizationId?: string }) {
+function OwnerExperience({ view, setView, academies, activity, tickets, setTickets, onCreateAcademy, onInviteAdmin, onUpdateAcademyStatus, onNotify, persistent, organizationId }: { view: OwnerView; setView: (view: View) => void; academies: Academy[]; activity: ActivityEvent[]; tickets: Ticket[]; setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; onCreateAcademy: (input: { name: string; learningModel: Academy["learningModel"]; monthlyFee: number; primaryColor: string }) => Promise<boolean>; onInviteAdmin: (organizationId: string, input: { fullName: string; email: string }) => Promise<boolean>; onUpdateAcademyStatus: (organizationId: string, status: "active" | "suspended") => Promise<boolean>; onNotify: (message: string) => void; persistent: boolean; organizationId?: string }) {
+  const activeAcademies = academies.filter((academy) => academy.status === "active");
+  const totalStudents = academies.reduce((total, academy) => total + academy.studentCount, 0);
+  const totalCourses = academies.reduce((total, academy) => total + academy.courseCount, 0);
+  const totalAdmins = academies.reduce((total, academy) => total + academy.adminCount, 0);
   if (view === "tickets") return <OwnerTickets tickets={tickets} setTickets={setTickets} onNotify={onNotify} persistent={persistent} organizationId={organizationId} />;
-  if (view === "academies") return <AcademiesView students={students} courses={courses} collectedRevenue={collectedRevenue} onNotify={onNotify} />;
-  if (view === "activity") return <ActivityView />;
-  return <Page><PageHeader eyebrow="CORVEN Learning Platform" title="Control de la plataforma" text="Supervisa academias, actividad, soporte y salud del servicio." action={<button className={styles.primaryButton} onClick={() => setView("tickets")}>Revisar tickets</button>} /><KpiGrid items={[{ icon: "school", label: "Academias activas", value: "1", detail: "Level Up · Piloto", tone: "purple" }, { icon: "users", label: "Usuarios totales", value: "12", detail: "10 estudiantes + 2 admins", tone: "green" }, { icon: "book", label: "Cursos", value: String(courses.length), detail: courses.filter((course) => course.published).length + " publicados", tone: "orange" }, { icon: "support", label: "Tickets abiertos", value: String(tickets.filter((ticket) => ticket.status !== "Respondido").length), detail: "1 de prioridad alta", tone: "red" }]} /><div className={styles.ownerGrid}><section className={styles.panel}><SectionHeading title="Level Up English Academy" text="Salud general del cliente piloto." action="Abrir academia" onAction={() => setView("academies")} /><div className={styles.healthHeader}><div className={styles.healthScore}>96<span>%</span></div><div><strong>Servicio saludable</strong><p>Última actividad: hoy, 9:42 a. m.</p></div></div><div className={styles.healthRows}><div><span>Base de datos</span><strong className={styles.online}>Operativa</strong></div><div><span>Autenticación</span><strong className={styles.online}>Operativa</strong></div><div><span>Contenido y enlaces</span><strong className={styles.warning}>1 advertencia</strong></div><div><span>Último respaldo</span><strong>Hoy · 3:00 a. m.</strong></div></div></section><section className={styles.panel}><SectionHeading title="Soporte reciente" text="Solicitudes que requieren seguimiento." action="Ver todos" onAction={() => setView("tickets")} /><TicketList tickets={tickets.slice(0, 3)} compact /></section></div><section className={styles.panel + " " + styles.ownerActions}><SectionHeading title="Acciones de owner" text="Herramientas de operación de CORVEN." /><div><button onClick={() => onNotify("Modo de soporte para Level Up")}><Icon name="school" /><span><strong>Acceder como soporte</strong><small>Revisar configuración del cliente</small></span></button><button onClick={() => onNotify("Revisión de seguridad iniciada")}><Icon name="lock" /><span><strong>Revisar accesos</strong><small>Roles y actividad reciente</small></span></button><button onClick={() => onNotify("Reporte de uso preparado")}><Icon name="chart" /><span><strong>Reporte de uso</strong><small>Actividad y adopción del portal</small></span></button></div></section></Page>;
+  if (view === "academies") return <AcademiesView academies={academies} onCreateAcademy={onCreateAcademy} onInviteAdmin={onInviteAdmin} onUpdateStatus={onUpdateAcademyStatus} />;
+  if (view === "activity") return <ActivityView events={activity} />;
+  return <Page><PageHeader eyebrow="CORVEN Learning Platform" title="Control de la plataforma" text="Supervisa academias, accesos, soporte y actividad desde un solo lugar." action={<button className={styles.primaryButton} onClick={() => setView("academies")}>Administrar academias</button>} /><KpiGrid items={[{ icon: "school", label: "Academias activas", value: String(activeAcademies.length), detail: `${academies.length} registradas`, tone: "purple" }, { icon: "users", label: "Estudiantes", value: String(totalStudents), detail: `${totalAdmins} administradores`, tone: "green" }, { icon: "book", label: "Cursos", value: String(totalCourses), detail: "En todas las academias", tone: "orange" }, { icon: "support", label: "Tickets abiertos", value: String(tickets.filter((ticket) => ticket.status !== "Respondido").length), detail: "Pendientes de seguimiento", tone: "red" }]} /><div className={styles.ownerGrid}><section className={styles.panel}><SectionHeading title="Portafolio de academias" text="Estado operativo de los clientes de CORVEN." action="Ver academias" onAction={() => setView("academies")} /><div className={styles.healthHeader}><div className={styles.healthScore}>{academies.length ? Math.round(activeAcademies.length / academies.length * 100) : 0}<span>%</span></div><div><strong>{activeAcademies.length === academies.length ? "Operación saludable" : "Requiere revisión"}</strong><p>{activeAcademies.length} academias activas de {academies.length}</p></div></div><div className={styles.healthRows}><div><span>Base de datos</span><strong className={styles.online}>Operativa</strong></div><div><span>Autenticación</span><strong className={styles.online}>Operativa</strong></div><div><span>Administradores asignados</span><strong>{totalAdmins}</strong></div><div><span>Actividad registrada</span><strong>{activity.length} eventos</strong></div></div></section><section className={styles.panel}><SectionHeading title="Soporte reciente" text="Solicitudes que requieren seguimiento." action="Ver todos" onAction={() => setView("tickets")} /><TicketList tickets={tickets.slice(0, 3)} compact /></section></div><section className={styles.panel + " " + styles.ownerActions}><SectionHeading title="Acciones de owner" text="Herramientas reales de administración de CORVEN." /><div><button onClick={() => setView("academies")}><Icon name="school" /><span><strong>Crear academia</strong><small>Configurar un nuevo cliente</small></span></button><button onClick={() => setView("academies")}><Icon name="lock" /><span><strong>Asignar administradores</strong><small>Invitar y revisar accesos</small></span></button><button onClick={() => setView("activity")}><Icon name="clock" /><span><strong>Revisar actividad</strong><small>Auditoría de cambios recientes</small></span></button></div></section></Page>;
 }
 
 function OwnerTickets({ tickets, setTickets, onNotify, persistent, organizationId }: { tickets: Ticket[]; setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; onNotify: (message: string) => void; persistent: boolean; organizationId?: string }) {
   const [selected, setSelected] = useState<string | null>(tickets[0]?.id ?? null); const [reply, setReply] = useState(""); const activeTicket = tickets.find((ticket) => ticket.id === selected);
-  async function updateTicket(status: "in_progress" | "answered", body = "") { if (!activeTicket) return; if (persistent && organizationId) { const result = await replyTicketAction({ organizationId, ticketId: activeTicket.id, body, status }); if (!result.ok) return onNotify(result.message); onNotify(result.message); } setTickets((current) => current.map((ticket) => ticket.id === activeTicket.id ? { ...ticket, reply: body || ticket.reply, status: status === "answered" ? "Respondido" : "En proceso" } : ticket)); if (status === "answered") setReply(""); }
+  async function updateTicket(status: "in_progress" | "answered", body = "") { if (!activeTicket) return; const ticketOrganizationId = activeTicket.organizationId ?? organizationId; if (persistent && ticketOrganizationId) { const result = await replyTicketAction({ organizationId: ticketOrganizationId, ticketId: activeTicket.id, body, status }); if (!result.ok) return onNotify(result.message); onNotify(result.message); } setTickets((current) => current.map((ticket) => ticket.id === activeTicket.id ? { ...ticket, reply: body || ticket.reply, status: status === "answered" ? "Respondido" : "En proceso" } : ticket)); if (status === "answered") setReply(""); }
   function sendReply() { if (!activeTicket || !reply.trim()) return; void updateTicket("answered", reply); }
   return <Page><PageHeader eyebrow="Mesa de soporte" title="Tickets de la plataforma" text="Recibe, prioriza y responde solicitudes de academias y estudiantes." /><div className={styles.ticketWorkspace}><div className={styles.ticketQueue}>{tickets.map((ticket) => <button key={ticket.id} className={selected === ticket.id ? styles.ticketSelected : ""} onClick={() => setSelected(ticket.id)}><div><span>{ticket.id}</span><small className={ticket.priority === "Alta" ? styles.priorityHigh : ""}>{ticket.priority}</small></div><strong>{ticket.title}</strong><p>{ticket.source} · {ticket.created}</p><em>{ticket.status}</em></button>)}</div>{activeTicket && <section className={styles.ticketDetail}><div className={styles.ticketDetailTop}><div><span>{activeTicket.id} · {activeTicket.source}</span><h2>{activeTicket.title}</h2><p>{activeTicket.person} · {activeTicket.created}</p></div><span className={activeTicket.priority === "Alta" ? styles.priorityHighPill : styles.statusTag}>{activeTicket.priority}</span></div><div className={styles.messageBubble}><strong>{activeTicket.person}</strong><p>{activeTicket.detail}</p></div>{activeTicket.reply && <div className={styles.ownerReply}><strong>CORVEN Support</strong><p>{activeTicket.reply}</p></div>}<label className={styles.replyBox}>Responder<textarea value={reply} onChange={(event) => setReply(event.target.value)} placeholder="Escribe una respuesta clara para el cliente..." /><div><button onClick={() => void updateTicket("in_progress")}>Marcar en proceso</button><button className={styles.primaryButton} onClick={sendReply}>Enviar respuesta</button></div></label></section>}</div></Page>;
 }
 
-function AcademiesView({ students, courses, collectedRevenue, onNotify }: { students: Student[]; courses: Course[]; collectedRevenue: number; onNotify: (message: string) => void }) {
-  return <Page><PageHeader eyebrow="Clientes" title="Academias" text="Administra organizaciones, planes y consumo de la plataforma." action={<button className={styles.primaryButton} onClick={() => onNotify("Formulario de nueva academia")}>+ Nueva academia</button>} /><article className={styles.academyCard}><div className={styles.academyIdentity}><TenantMark /><div><span>Cliente piloto</span><h2>Level Up English Academy</h2><p>Modalidad híbrida · Costa Rica</p></div></div><div className={styles.academyMetrics}><div><span>Estudiantes</span><strong>{students.length}</strong></div><div><span>Cursos</span><strong>{courses.length}</strong></div><div><span>Actividad</span><strong>83%</strong></div><div><span>Ingresos gestionados</span><strong>{formatCurrency(collectedRevenue)}</strong></div></div><div className={styles.academyFooter}><span><i></i> Servicio activo</span><small>Próxima revisión: 14 oct. 2026</small><button onClick={() => onNotify("Abriendo configuración de Level Up")}>Administrar →</button></div></article></Page>;
+function AcademiesView({ academies, onCreateAcademy, onInviteAdmin, onUpdateStatus }: { academies: Academy[]; onCreateAcademy: (input: { name: string; learningModel: Academy["learningModel"]; monthlyFee: number; primaryColor: string }) => Promise<boolean>; onInviteAdmin: (organizationId: string, input: { fullName: string; email: string }) => Promise<boolean>; onUpdateStatus: (organizationId: string, status: "active" | "suspended") => Promise<boolean> }) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [managedId, setManagedId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [learningModel, setLearningModel] = useState<Academy["learningModel"]>("hybrid");
+  const [monthlyFee, setMonthlyFee] = useState(35000);
+  const [primaryColor, setPrimaryColor] = useState("#6D28D9");
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submitAcademy(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    const created = await onCreateAcademy({ name, learningModel, monthlyFee, primaryColor });
+    setBusy(false);
+    if (!created) return;
+    setName("");
+    setShowCreate(false);
+  }
+
+  async function submitAdmin(event: FormEvent, academyId: string) {
+    event.preventDefault();
+    setBusy(true);
+    const invited = await onInviteAdmin(academyId, { fullName: adminName, email: adminEmail });
+    setBusy(false);
+    if (!invited) return;
+    setAdminName("");
+    setAdminEmail("");
+  }
+
+  async function toggleStatus(academy: Academy) {
+    const nextStatus = academy.status === "active" ? "suspended" : "active";
+    if (nextStatus === "suspended" && !window.confirm(`¿Suspender el acceso de ${academy.name}?`)) return;
+    setBusy(true);
+    await onUpdateStatus(academy.id, nextStatus);
+    setBusy(false);
+  }
+
+  return <Page>
+    <PageHeader eyebrow="Clientes" title="Academias" text="Crea organizaciones, asigna administradores y controla su acceso." action={<button className={styles.primaryButton} onClick={() => setShowCreate((current) => !current)}>{showCreate ? "Cerrar formulario" : "+ Nueva academia"}</button>} />
+    {showCreate && <form className={`${styles.panel} ${styles.ownerFormPanel}`} onSubmit={submitAcademy}>
+      <SectionHeading title="Crear academia" text="Configura la organización. Después podrás asignar su administrador." />
+      <div className={styles.ownerFormGrid}>
+        <label>Nombre de la academia<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Academia Horizonte" required minLength={3} /></label>
+        <label>Modalidad<select value={learningModel} onChange={(event) => setLearningModel(event.target.value as Academy["learningModel"])}><option value="hybrid">Híbrida</option><option value="self_paced">Autogestionada</option><option value="instructor_led">Dirigida por instructor</option></select></label>
+        <label>Mensualidad base (CRC)<input type="number" min="0" step="1000" value={monthlyFee} onChange={(event) => setMonthlyFee(Number(event.target.value))} /></label>
+        <label>Color principal<input className={styles.ownerColorInput} type="color" value={primaryColor} onChange={(event) => setPrimaryColor(event.target.value)} /></label>
+      </div>
+      <div className={styles.ownerFormActions}><button type="button" onClick={() => setShowCreate(false)}>Cancelar</button><button className={styles.primaryButton} type="submit" disabled={busy}>{busy ? "Creando..." : "Crear academia"}</button></div>
+    </form>}
+    <div className={styles.academyList}>
+      {academies.map((academy) => <article className={styles.academyCard} key={academy.id}>
+        <div className={styles.academyIdentity}><AcademyMark name={academy.name} /><div><span>{academy.status === "active" ? "Servicio activo" : "Servicio suspendido"}</span><h2>{academy.name}</h2><p>{learningModelLabel(academy.learningModel)} · /{academy.slug}</p></div></div>
+        <div className={styles.academyMetrics}><div><span>Estudiantes</span><strong>{academy.studentCount}</strong></div><div><span>Cursos</span><strong>{academy.courseCount}</strong></div><div><span>Administradores</span><strong>{academy.adminCount}</strong></div><div><span>Ingresos gestionados</span><strong>{formatCurrency(academy.monthlyRevenue)}</strong></div></div>
+        <div className={styles.academyFooter}><span className={academy.status === "active" ? styles.academyActive : styles.academySuspended}><i></i>{academy.status === "active" ? "Servicio activo" : "Servicio suspendido"}</span><small>Creada: {academy.createdAt}</small><button onClick={() => setManagedId((current) => current === academy.id ? null : academy.id)}>{managedId === academy.id ? "Cerrar" : "Administrar →"}</button></div>
+        {managedId === academy.id && <div className={styles.academyManager}>
+          <div className={styles.adminAccessList}><h3>Administradores y accesos</h3>{academy.admins.length ? academy.admins.map((admin) => <div key={admin.id}><AcademyMark name={admin.name} /><p><strong>{admin.name}</strong><small>{admin.email}</small></p><span data-status={admin.accessStatus}>{accessStatusLabel(admin.accessStatus)}</span></div>) : <p className={styles.mutedText}>Todavía no hay administradores asignados.</p>}</div>
+          <form className={styles.adminInviteForm} onSubmit={(event) => submitAdmin(event, academy.id)}><h3>Asignar administrador</h3><label>Nombre completo<input value={adminName} onChange={(event) => setAdminName(event.target.value)} required minLength={2} /></label><label>Correo electrónico<input type="email" value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} required /></label><button className={styles.primaryButton} type="submit" disabled={busy}>{busy ? "Procesando..." : "Invitar administrador"}</button></form>
+          <div className={styles.academyDangerZone}><div><strong>Estado del servicio</strong><p>{academy.status === "active" ? "La academia y sus usuarios pueden acceder normalmente." : "La academia está pausada hasta que CORVEN la reactive."}</p></div><button disabled={busy} onClick={() => void toggleStatus(academy)}>{academy.status === "active" ? "Suspender academia" : "Reactivar academia"}</button></div>
+        </div>}
+      </article>)}
+      {!academies.length && <section className={`${styles.panel} ${styles.emptyState}`}><Icon name="school" /><strong>Aún no hay academias</strong><p>Crea la primera organización para comenzar.</p></section>}
+    </div>
+  </Page>;
 }
 
-function ActivityView() {
-  const events = ["Andrea publicó English Foundations A1", "Sofía completó la lección Daily routines", "CORVEN recibió el ticket SUP-1042", "José fue suspendido por pago vencido", "Andrea actualizó la fecha de cobro de María", "Level Up cambió el color principal de su portal"];
-  return <Page><PageHeader eyebrow="Auditoría" title="Actividad de la plataforma" text="Registro de cambios importantes realizados por CORVEN, administradores y estudiantes." /><section className={styles.panel}><div className={styles.activityList}>{events.map((event, index) => <div key={event}><span><Icon name={index % 2 ? "users" : "clock"} /></span><p><strong>{event}</strong><small>{index < 2 ? "Hoy" : "Ayer"} · {9 - index}:2{index} a. m.</small></p></div>)}</div></section></Page>;
+function ActivityView({ events }: { events: ActivityEvent[] }) {
+  return <Page><PageHeader eyebrow="Auditoría" title="Actividad de la plataforma" text="Registro real de cambios realizados por CORVEN y los administradores." /><section className={styles.panel}>{events.length ? <div className={styles.activityList}>{events.map((event, index) => <div key={event.id}><span><Icon name={index % 2 ? "users" : "clock"} /></span><p><strong>{event.action}</strong><small>{event.actor} · {event.academy} · {event.created}</small></p></div>)}</div> : <div className={styles.emptyState}><Icon name="clock" /><strong>No hay actividad registrada todavía</strong><p>Las nuevas acciones administrativas aparecerán aquí.</p></div>}</section></Page>;
 }
 
 function CourseCard({ course, student, onOpen }: { course: Course; student?: boolean; onOpen: () => void }) {
@@ -391,10 +546,16 @@ function TenantMark({ logoUrl, large = false }: { logoUrl?: string | null; large
   return <span className={large ? styles.tenantLogoLarge : styles.tenantLogo}>LU</span>;
 }
 
+function AcademyMark({ name }: { name: string }) {
+  return <span className={styles.academyMark}>{initialsFor(name)}</span>;
+}
+
 function PoweredBy() { return <div className={styles.poweredBy}><span>Powered by</span><Image src="/brand/corven-imagotype-purple.png" alt="CORVEN" width={360} height={120} /></div>; }
 function formatCurrency(value: number) { return new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 0 }).format(value); }
 function formatDate(value: string) { if (!value) return "por definir"; const date = new Date(`${value}T12:00:00`); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("es-CR", { dateStyle: "long", timeZone: "America/Costa_Rica" }).format(date); }
 function initialsFor(value: string) { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "LU"; }
+function learningModelLabel(value: Academy["learningModel"]) { return { hybrid: "Modalidad híbrida", self_paced: "Aprendizaje autogestionado", instructor_led: "Dirigida por instructor" }[value]; }
+function accessStatusLabel(value: AcademyAdmin["accessStatus"]) { return { invited: "Invitación pendiente", active: "Activo", suspended: "Suspendido", archived: "Archivado" }[value]; }
 
 function Icon({ name }: { name: string }) {
   const paths: Record<string, React.ReactNode> = {
