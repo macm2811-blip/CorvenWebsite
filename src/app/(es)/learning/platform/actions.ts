@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import type { LmsAcademy, LmsAcademyAdmin } from "@/lib/lms/types";
 
 type ActionResult<T = undefined> = {
   ok: boolean;
@@ -72,6 +73,19 @@ async function requireStaff(organizationId: string) {
   return context;
 }
 
+async function requireOwner() {
+  const context = await actor();
+  const { data: profile, error } = await context.supabase
+    .from("profiles")
+    .select("platform_role")
+    .eq("id", context.userId)
+    .single();
+  if (error || profile?.platform_role !== "owner") {
+    throw new Error("Solo el propietario de CORVEN puede realizar esta acción.");
+  }
+  return context;
+}
+
 async function audit(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
@@ -87,6 +101,180 @@ async function audit(
     entity_type: entityType,
     entity_id: entityId ?? null,
   });
+}
+
+export async function createAcademyAction(input: {
+  name: string;
+  learningModel: LmsAcademy["learningModel"];
+  monthlyFee: number;
+  primaryColor: string;
+}): Promise<ActionResult<LmsAcademy>> {
+  try {
+    const { supabase, userId } = await requireOwner();
+    const name = input.name.trim().replace(/\s+/g, " ").slice(0, 120);
+    if (name.length < 3) throw new Error("Escribe un nombre válido para la academia.");
+    if (!(["self_paced", "instructor_led", "hybrid"] as const).includes(input.learningModel)) {
+      throw new Error("Selecciona una modalidad válida.");
+    }
+    if (!/^#[0-9a-f]{6}$/i.test(input.primaryColor)) throw new Error("Selecciona un color válido.");
+    const monthlyFee = Math.max(0, Math.min(10000000, Math.round(Number(input.monthlyFee) || 0)));
+    const baseSlug = slugify(name) || "academia";
+    const admin = createAdminClient();
+    const { data: slugRows, error: slugError } = await admin
+      .from("organizations")
+      .select("slug")
+      .like("slug", `${baseSlug}%`);
+    if (slugError) throw slugError;
+    const usedSlugs = new Set((slugRows ?? []).map((row) => row.slug));
+    let slug = baseSlug;
+    let suffix = 2;
+    while (usedSlugs.has(slug)) slug = `${baseSlug}-${suffix++}`;
+
+    const { data: academy, error } = await admin
+      .from("organizations")
+      .insert({
+        name,
+        slug,
+        status: "active",
+        learning_model: input.learningModel,
+        default_monthly_fee: monthlyFee,
+        currency: "CRC",
+      })
+      .select("id, name, slug, status, learning_model, currency, created_at")
+      .single();
+    if (error || !academy) throw error ?? new Error("No se pudo crear la academia.");
+
+    const { error: brandingError } = await admin.from("organization_branding").insert({
+      organization_id: academy.id,
+      primary_color: input.primaryColor,
+      secondary_color: "#111827",
+      accent_color: "#F97316",
+    });
+    if (brandingError) throw brandingError;
+
+    await audit(supabase, userId, academy.id, "academy.created", "organization", academy.id);
+    revalidatePath("/learning/platform");
+    return {
+      ok: true,
+      message: `${name} fue creada correctamente.`,
+      data: {
+        id: academy.id,
+        name: academy.name,
+        slug: academy.slug,
+        status: "active",
+        learningModel: academy.learning_model,
+        studentCount: 0,
+        courseCount: 0,
+        adminCount: 0,
+        monthlyRevenue: 0,
+        currency: academy.currency,
+        createdAt: new Intl.DateTimeFormat("es-CR", { dateStyle: "medium", timeZone: "America/Costa_Rica" }).format(new Date(academy.created_at)),
+        admins: [],
+      },
+    };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos crear la academia." };
+  }
+}
+
+export async function inviteAcademyAdminAction(input: {
+  organizationId: string;
+  fullName: string;
+  email: string;
+}): Promise<ActionResult<LmsAcademyAdmin>> {
+  try {
+    const { supabase, userId } = await requireOwner();
+    if (!validUuid(input.organizationId)) throw new Error("Academia inválida.");
+    const fullName = input.fullName.trim().replace(/\s+/g, " ").slice(0, 120);
+    const email = input.email.trim().toLowerCase();
+    if (fullName.length < 2 || !validEmail(email)) throw new Error("Revisa el nombre y el correo.");
+
+    const admin = createAdminClient();
+    const { data: academy, error: academyError } = await admin
+      .from("organizations")
+      .select("id, name")
+      .eq("id", input.organizationId)
+      .single();
+    if (academyError || !academy) throw new Error("No encontramos la academia.");
+
+    const { data: existingProfile, error: profileError } = await admin
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("email", email)
+      .limit(1)
+      .maybeSingle();
+    if (profileError) throw profileError;
+
+    let profileId = existingProfile?.id ?? "";
+    let invitationSent = false;
+    if (!profileId) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+      if (!siteUrl) throw new Error("Falta NEXT_PUBLIC_SITE_URL.");
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+        data: { full_name: fullName },
+        redirectTo: `${siteUrl}/learning/auth/callback?next=/learning/account/update-password`,
+      });
+      if (error || !data.user) throw new Error(error?.message ?? "No se pudo crear la invitación.");
+      profileId = data.user.id;
+      invitationSent = true;
+    } else if (existingProfile?.full_name !== fullName) {
+      const { error } = await admin.from("profiles").update({ full_name: fullName }).eq("id", profileId);
+      if (error) throw error;
+    }
+
+    const { data: authData } = await admin.auth.admin.getUserById(profileId);
+    const accessStatus = authData.user?.email_confirmed_at ? "active" as const : "invited" as const;
+    const { error: membershipError } = await admin.from("memberships").upsert({
+      organization_id: input.organizationId,
+      profile_id: profileId,
+      role: "academy_admin",
+      access_status: accessStatus,
+      payment_status: "waived",
+      monthly_fee: 0,
+      level: "A1",
+    }, { onConflict: "organization_id,profile_id" });
+    if (membershipError) throw membershipError;
+
+    await audit(supabase, userId, input.organizationId, "academy.admin_invited", "profile", profileId);
+    revalidatePath("/learning/platform");
+    return {
+      ok: true,
+      message: invitationSent
+        ? `Invitación enviada a ${email} para administrar ${academy.name}.`
+        : `${fullName} fue asignado como administrador de ${academy.name}.`,
+      data: {
+        id: profileId,
+        name: fullName,
+        email,
+        role: "academy_admin",
+        accessStatus,
+      },
+    };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos asignar al administrador." };
+  }
+}
+
+export async function updateAcademyStatusAction(input: {
+  organizationId: string;
+  status: "active" | "suspended";
+}): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireOwner();
+    if (!validUuid(input.organizationId)) throw new Error("Academia inválida.");
+    if (input.status !== "active" && input.status !== "suspended") throw new Error("Estado inválido.");
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("organizations")
+      .update({ status: input.status })
+      .eq("id", input.organizationId);
+    if (error) throw error;
+    await audit(supabase, userId, input.organizationId, "academy.status_updated", "organization", input.organizationId);
+    revalidatePath("/learning/platform");
+    return { ok: true, message: input.status === "active" ? "Academia reactivada." : "Academia suspendida." };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos actualizar la academia." };
+  }
 }
 
 export async function updateStudentAction(input: {

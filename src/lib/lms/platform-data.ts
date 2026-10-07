@@ -3,6 +3,8 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
 import type {
+  LmsAcademy,
+  LmsActivityEvent,
   LmsCourse,
   LmsInitialData,
   LmsRole,
@@ -67,6 +69,37 @@ function ticketStatus(value: unknown): LmsTicket["status"] {
   if (value === "answered" || value === "closed") return "Respondido";
   if (value === "in_progress") return "En proceso";
   return "Abierto";
+}
+
+function academyStatus(value: unknown): LmsAcademy["status"] {
+  if (value === "suspended" || value === "archived") return value;
+  return "active";
+}
+
+function learningModel(value: unknown): LmsAcademy["learningModel"] {
+  if (value === "self_paced" || value === "instructor_led") return value;
+  return "hybrid";
+}
+
+function activityLabel(value: unknown) {
+  const action = text(value);
+  const labels: Record<string, string> = {
+    "academy.created": "Creó una academia",
+    "academy.status_updated": "Actualizó el estado de una academia",
+    "academy.admin_invited": "Asignó un administrador",
+    "student.invited": "Invitó a un estudiante",
+    "student.updated": "Actualizó un estudiante",
+    "course.created": "Creó un curso",
+    "course.published": "Publicó un curso",
+    "course.unpublished": "Movió un curso a borrador",
+    "lesson.created": "Agregó una lección",
+    "branding.updated": "Actualizó la identidad visual",
+    "billing.fee_updated": "Actualizó la mensualidad",
+    "ticket.created": "Creó un ticket",
+    "ticket.in_progress": "Marcó un ticket en proceso",
+    "ticket.answered": "Respondió un ticket",
+  };
+  return labels[action] ?? (action.replaceAll(".", " ") || "Actualizó la plataforma");
 }
 
 export async function loadPlatformData(): Promise<LmsInitialData | null> {
@@ -136,6 +169,8 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       students: [],
       courses: [],
       tickets: [],
+      academies: [],
+      activity: [],
       brand: {
         primary: "#6d28d9",
         secondary: "#111827",
@@ -149,7 +184,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
   const [organizationResult, brandingResult, coursesResult, enrollmentsResult, membersResult, ticketsResult] = await Promise.all([
     supabase
       .from("organizations")
-      .select("id, name, default_monthly_fee, currency")
+      .select("id, name, status, default_monthly_fee, currency")
       .eq("id", organizationId)
       .single(),
     supabase
@@ -174,12 +209,18 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
           .eq("organization_id", organizationId)
           .eq("role", "student")
           .order("created_at", { ascending: true }),
-    supabase
-      .from("support_tickets")
-      .select("id, created_by, title, description, priority, status, created_at, profiles!support_tickets_created_by_fkey(full_name)")
-      .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false })
-      .limit(50),
+    role === "owner"
+      ? supabase
+          .from("support_tickets")
+          .select("id, organization_id, created_by, title, description, priority, status, created_at, profiles!support_tickets_created_by_fkey(full_name), organizations(name)")
+          .order("created_at", { ascending: false })
+          .limit(50)
+      : supabase
+          .from("support_tickets")
+          .select("id, organization_id, created_by, title, description, priority, status, created_at, profiles!support_tickets_created_by_fkey(full_name), organizations(name)")
+          .eq("organization_id", organizationId)
+          .order("created_at", { ascending: false })
+          .limit(50),
   ]);
 
   const firstError = [organizationResult, brandingResult, coursesResult, enrollmentsResult, membersResult, ticketsResult]
@@ -188,6 +229,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
   if (firstError) throw new Error(firstError.message);
 
   const organization = object(organizationResult.data);
+  const effectiveAccessStatus = role !== "owner" && organization.status === "suspended" ? "suspended" : accessStatus;
   const branding = object(brandingResult.data);
   const enrollments = (enrollmentsResult.data ?? []).map(object);
 
@@ -262,9 +304,13 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
   const tickets: LmsTicket[] = (ticketsResult.data ?? []).map((rawTicket) => {
     const ticket = object(rawTicket);
     const author = object(Array.isArray(ticket.profiles) ? ticket.profiles[0] : ticket.profiles);
+    const ticketOrganization = object(Array.isArray(ticket.organizations) ? ticket.organizations[0] : ticket.organizations);
     return {
       id: text(ticket.id),
-      source: text(ticket.created_by) === userId && role === "student" ? "Estudiante" : "Level Up",
+      organizationId: text(ticket.organization_id),
+      source: role === "owner"
+        ? text(ticketOrganization.name, "Academia")
+        : text(ticket.created_by) === userId && role === "student" ? "Estudiante" : text(organization.name, "Academia"),
       person: text(author.full_name, "Usuario de Level Up"),
       title: text(ticket.title, "Solicitud de soporte"),
       detail: text(ticket.description),
@@ -274,6 +320,94 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
     };
   });
 
+  let academies: LmsAcademy[] = [];
+  let activity: LmsActivityEvent[] = [];
+  if (role === "owner") {
+    const [organizationsResult, membershipsResult, academyCoursesResult, activityResult, profilesResult] = await Promise.all([
+      supabase
+        .from("organizations")
+        .select("id, name, slug, status, learning_model, default_monthly_fee, currency, created_at")
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("memberships")
+        .select("organization_id, profile_id, role, access_status, payment_status, monthly_fee, profiles(full_name, email)"),
+      supabase
+        .from("courses")
+        .select("id, organization_id"),
+      supabase
+        .from("audit_events")
+        .select("id, organization_id, actor_id, action, created_at")
+        .order("created_at", { ascending: false })
+        .limit(30),
+      supabase
+        .from("profiles")
+        .select("id, full_name"),
+    ]);
+
+    const ownerError = [organizationsResult, membershipsResult, academyCoursesResult, activityResult, profilesResult]
+      .map((result) => result.error)
+      .find(Boolean);
+    if (ownerError) throw new Error(ownerError.message);
+
+    const ownerMemberships = (membershipsResult.data ?? []).map(object);
+    const ownerCourses = (academyCoursesResult.data ?? []).map(object);
+    const ownerProfiles = new Map(
+      (profilesResult.data ?? []).map((rawProfile) => {
+        const item = object(rawProfile);
+        return [text(item.id), text(item.full_name, "Usuario CORVEN")] as const;
+      }),
+    );
+    const organizationNames = new Map<string, string>();
+
+    academies = (organizationsResult.data ?? []).map((rawOrganization) => {
+      const item = object(rawOrganization);
+      const academyId = text(item.id);
+      const academyMemberships = ownerMemberships.filter((member) => text(member.organization_id) === academyId);
+      const academyAdmins = academyMemberships.filter((member) => member.role === "academy_admin" || member.role === "instructor");
+      const academyName = text(item.name, "Academia sin nombre");
+      organizationNames.set(academyId, academyName);
+
+      return {
+        id: academyId,
+        name: academyName,
+        slug: text(item.slug),
+        status: academyStatus(item.status),
+        learningModel: learningModel(item.learning_model),
+        studentCount: academyMemberships.filter((member) => member.role === "student").length,
+        courseCount: ownerCourses.filter((course) => text(course.organization_id) === academyId).length,
+        adminCount: academyAdmins.length,
+        monthlyRevenue: academyMemberships
+          .filter((member) => member.role === "student" && (member.payment_status === "paid" || member.payment_status === "waived"))
+          .reduce((total, member) => total + number(member.monthly_fee), 0),
+        currency: text(item.currency, "CRC"),
+        createdAt: createdLabel(item.created_at),
+        admins: academyAdmins.map((member) => {
+          const adminProfile = object(Array.isArray(member.profiles) ? member.profiles[0] : member.profiles);
+          return {
+            id: text(member.profile_id),
+            name: text(adminProfile.full_name, "Administrador"),
+            email: text(adminProfile.email),
+            role: member.role === "instructor" ? "instructor" as const : "academy_admin" as const,
+            accessStatus: member.access_status === "active" || member.access_status === "suspended" || member.access_status === "archived"
+              ? member.access_status
+              : "invited",
+          };
+        }),
+      };
+    });
+
+    activity = (activityResult.data ?? []).map((rawEvent) => {
+      const event = object(rawEvent);
+      return {
+        id: text(event.id),
+        action: activityLabel(event.action),
+        actor: ownerProfiles.get(text(event.actor_id)) ?? "CORVEN",
+        academy: organizationNames.get(text(event.organization_id)) ?? "Plataforma CORVEN",
+        created: createdLabel(event.created_at),
+      };
+    });
+  }
+
   return {
     persistent: true,
     role,
@@ -282,13 +416,15 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
     viewerEmail: text(profile.email),
     organizationId,
     organizationName: text(organization.name, "Level Up English Academy"),
-    accessStatus,
+    accessStatus: effectiveAccessStatus,
     viewerLevel: text(membership.level, "A1"),
     viewerPayment: paymentLabel(membership.payment_status),
     viewerDueDate: text(membership.billing_due_date),
     students,
     courses,
     tickets,
+    academies,
+    activity,
     brand: {
       primary: text(branding.primary_color, "#6d28d9"),
       secondary: text(branding.secondary_color, "#111827"),
