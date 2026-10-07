@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Source_Sans_3 } from "next/font/google";
+import { AuthHashBridge } from "@/components/auth-hash-bridge";
 import "../globals.css";
 
 const displayFont = Manrope({ variable: "--font-display", subsets: ["latin"] });
@@ -19,5 +20,5 @@ export const metadata: Metadata = {
 };
 
 export default function SpanishRootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es" className={`${displayFont.variable} ${bodyFont.variable}`}><body>{children}</body></html>;
+  return <html lang="es" className={`${displayFont.variable} ${bodyFont.variable}`}><body><AuthHashBridge />{children}</body></html>;
 }
