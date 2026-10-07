@@ -88,6 +88,7 @@ function activityLabel(value: unknown) {
     "academy.status_updated": "Actualizó el estado de una academia",
     "academy.admin_invited": "Asignó un administrador",
     "student.invited": "Invitó a un estudiante",
+    "student.assigned": "Asignó un estudiante existente",
     "student.updated": "Actualizó un estudiante",
     "course.created": "Creó un curso",
     "course.published": "Publicó un curso",
@@ -323,17 +324,20 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
   let academies: LmsAcademy[] = [];
   let activity: LmsActivityEvent[] = [];
   if (role === "owner") {
-    const [organizationsResult, membershipsResult, academyCoursesResult, activityResult, profilesResult] = await Promise.all([
+    const [organizationsResult, membershipsResult, academyCoursesResult, academyEnrollmentsResult, activityResult, profilesResult] = await Promise.all([
       supabase
         .from("organizations")
         .select("id, name, slug, status, learning_model, default_monthly_fee, currency, created_at")
         .order("created_at", { ascending: true }),
       supabase
         .from("memberships")
-        .select("organization_id, profile_id, role, access_status, payment_status, monthly_fee, profiles(full_name, email)"),
+        .select("organization_id, profile_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, last_access_at, profiles(full_name, email)"),
       supabase
         .from("courses")
-        .select("id, organization_id"),
+        .select("id, organization_id, title, description, level, status"),
+      supabase
+        .from("enrollments")
+        .select("organization_id, course_id, student_id, progress, status"),
       supabase
         .from("audit_events")
         .select("id, organization_id, actor_id, action, created_at")
@@ -344,13 +348,26 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
         .select("id, full_name"),
     ]);
 
-    const ownerError = [organizationsResult, membershipsResult, academyCoursesResult, activityResult, profilesResult]
+    const ownerError = [organizationsResult, membershipsResult, academyCoursesResult, academyEnrollmentsResult, activityResult, profilesResult]
       .map((result) => result.error)
       .find(Boolean);
     if (ownerError) throw new Error(ownerError.message);
 
     const ownerMemberships = (membershipsResult.data ?? []).map(object);
     const ownerCourses = (academyCoursesResult.data ?? []).map(object);
+    const ownerEnrollments = (academyEnrollmentsResult.data ?? []).map(object);
+    const ownerCourseIds = ownerCourses.map((course) => text(course.id)).filter(Boolean);
+    const ownerModulesResult = ownerCourseIds.length
+      ? await supabase.from("modules").select("id, course_id").in("course_id", ownerCourseIds)
+      : { data: [], error: null };
+    if (ownerModulesResult.error) throw new Error(ownerModulesResult.error.message);
+    const ownerModules = (ownerModulesResult.data ?? []).map(object);
+    const ownerModuleIds = ownerModules.map((module) => text(module.id)).filter(Boolean);
+    const ownerLessonsResult = ownerModuleIds.length
+      ? await supabase.from("lessons").select("id, module_id, duration_minutes, youtube_url").in("module_id", ownerModuleIds)
+      : { data: [], error: null };
+    if (ownerLessonsResult.error) throw new Error(ownerLessonsResult.error.message);
+    const ownerLessons = (ownerLessonsResult.data ?? []).map(object);
     const ownerProfiles = new Map(
       (profilesResult.data ?? []).map((rawProfile) => {
         const item = object(rawProfile);
@@ -364,6 +381,8 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       const academyId = text(item.id);
       const academyMemberships = ownerMemberships.filter((member) => text(member.organization_id) === academyId);
       const academyAdmins = academyMemberships.filter((member) => member.role === "academy_admin" || member.role === "instructor");
+      const academyStudents = academyMemberships.filter((member) => member.role === "student");
+      const academyCourseRows = ownerCourses.filter((course) => text(course.organization_id) === academyId);
       const academyName = text(item.name, "Academia sin nombre");
       organizationNames.set(academyId, academyName);
 
@@ -379,6 +398,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
         monthlyRevenue: academyMemberships
           .filter((member) => member.role === "student" && (member.payment_status === "paid" || member.payment_status === "waived"))
           .reduce((total, member) => total + number(member.monthly_fee), 0),
+        defaultMonthlyFee: number(item.default_monthly_fee, 35000),
         currency: text(item.currency, "CRC"),
         createdAt: createdLabel(item.created_at),
         admins: academyAdmins.map((member) => {
@@ -391,6 +411,51 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
             accessStatus: member.access_status === "active" || member.access_status === "suspended" || member.access_status === "archived"
               ? member.access_status
               : "invited",
+          };
+        }),
+        students: academyStudents.map((member) => {
+          const studentProfile = object(Array.isArray(member.profiles) ? member.profiles[0] : member.profiles);
+          const studentId = text(member.profile_id);
+          const studentEnrollments = ownerEnrollments.filter((enrollment) => text(enrollment.student_id) === studentId && text(enrollment.organization_id) === academyId);
+          const averageProgress = studentEnrollments.length
+            ? Math.round(studentEnrollments.reduce((total, enrollment) => total + number(enrollment.progress), 0) / studentEnrollments.length)
+            : 0;
+          const studentName = text(studentProfile.full_name, "Estudiante");
+          return {
+            id: studentId,
+            name: studentName,
+            email: text(studentProfile.email),
+            initials: initials(studentName),
+            level: text(member.level, "A1"),
+            progress: averageProgress,
+            active: member.access_status === "active",
+            payment: paymentLabel(member.payment_status),
+            dueDate: text(member.billing_due_date),
+            lastAccess: relativeAccess(member.last_access_at),
+          };
+        }),
+        courses: academyCourseRows.map((course, courseIndex) => {
+          const courseId = text(course.id);
+          const courseModuleIds = new Set(
+            ownerModules
+              .filter((module) => text(module.course_id) === courseId)
+              .map((module) => text(module.id)),
+          );
+          const courseLessons = ownerLessons.filter((lesson) => courseModuleIds.has(text(lesson.module_id)));
+          const courseEnrollments = ownerEnrollments.filter((enrollment) => text(enrollment.course_id) === courseId);
+          const minutes = courseLessons.reduce((total, lesson) => total + number(lesson.duration_minutes), 0);
+          return {
+            id: courseId,
+            title: text(course.title, "Curso sin título"),
+            level: `${text(course.level, "General")} · ${course.status === "published" ? "Publicado" : "Borrador"}`,
+            description: text(course.description, "Curso de la academia."),
+            progress: 0,
+            lessons: courseLessons.length,
+            duration: minutes ? `${Math.max(1, Math.round(minutes / 60))} h` : "Por definir",
+            students: courseEnrollments.length,
+            youtubeUrl: text(courseLessons.find((lesson) => text(lesson.youtube_url))?.youtube_url),
+            color: ["#6d28d9", "#ea580c", "#0891b2"][courseIndex % 3],
+            published: course.status === "published",
           };
         }),
       };

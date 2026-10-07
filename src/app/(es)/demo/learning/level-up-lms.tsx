@@ -81,9 +81,12 @@ const initialAcademies: Academy[] = [{
   courseCount: 3,
   adminCount: 1,
   monthlyRevenue: 280000,
+  defaultMonthlyFee: 35000,
   currency: "CRC",
   createdAt: "7 oct. 2026",
   admins: [{ id: "demo-admin", name: "Andrea López", email: "andrea@demo.levelup.cr", role: "academy_admin", accessStatus: "active" }],
+  students: initialStudents,
+  courses: initialCourses,
 }];
 
 const navItems: Record<Role, { id: View; label: string; icon: string; count?: number }[]> = {
@@ -239,9 +242,12 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
         courseCount: 0,
         adminCount: 0,
         monthlyRevenue: 0,
+        defaultMonthlyFee: input.monthlyFee,
         currency: "CRC",
         createdAt: "Ahora",
         admins: [],
+        students: [],
+        courses: [],
       };
       setAcademies((current) => [...current, academy]);
       showToast(`${input.name} fue creada en el demo.`);
@@ -290,6 +296,125 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
     return true;
   }
 
+  async function inviteAcademyStudent(organizationId: string, input: { fullName: string; email: string; level: string; dueDate: string; courseId?: string }) {
+    const academy = academies.find((item) => item.id === organizationId);
+    if (!academy) return false;
+    let studentId: string | number = `demo-student-${Date.now()}`;
+    let active = false;
+    if (persistent) {
+      const result = await inviteStudentAction({
+        organizationId,
+        ...input,
+        monthlyFee: academy.defaultMonthlyFee,
+      });
+      showToast(result.message);
+      if (!result.ok || !result.data) return false;
+      studentId = result.data.id;
+      active = result.data.accessStatus === "active";
+    } else {
+      showToast(`Acceso preparado para ${input.email}.`);
+    }
+    const student: Student = {
+      id: studentId,
+      name: input.fullName,
+      email: input.email,
+      initials: initialsFor(input.fullName),
+      level: input.level,
+      progress: 0,
+      active,
+      payment: "Pendiente",
+      dueDate: input.dueDate,
+      lastAccess: active ? "Cuenta existente" : "Invitación pendiente",
+    };
+    setAcademies((current) => current.map((item) => {
+      if (item.id !== organizationId) return item;
+      const withoutExisting = item.students.filter((existing) => existing.id !== student.id);
+      return { ...item, students: [...withoutExisting, student], studentCount: withoutExisting.length + 1 };
+    }));
+    return true;
+  }
+
+  async function updateAcademyStudent(organizationId: string, studentId: Student["id"], changes: Partial<Student>) {
+    const previous = academies;
+    setAcademies((current) => current.map((academy) => academy.id === organizationId ? {
+      ...academy,
+      students: academy.students.map((student) => student.id === studentId ? { ...student, ...changes } : student),
+    } : academy));
+    if (!persistent || typeof studentId !== "string") {
+      showToast("Estudiante actualizado en el demo.");
+      return true;
+    }
+    const result = await updateStudentAction({
+      organizationId,
+      studentId,
+      changes: { active: changes.active, payment: changes.payment, dueDate: changes.dueDate },
+    });
+    showToast(result.message);
+    if (!result.ok) setAcademies(previous);
+    return result.ok;
+  }
+
+  async function createAcademyCourse(organizationId: string, input: { title: string; level: string; description: string; youtubeUrl: string }) {
+    let courseId: string | number = `demo-course-${Date.now()}`;
+    if (persistent) {
+      const result = await createCourseAction({ organizationId, ...input });
+      showToast(result.message);
+      if (!result.ok || !result.data) return false;
+      courseId = result.data.id;
+    } else {
+      showToast("Curso creado como borrador en el demo.");
+    }
+    const course: Course = {
+      id: courseId,
+      title: input.title,
+      level: `${input.level} · Borrador`,
+      description: input.description || "Curso creado por CORVEN.",
+      progress: 0,
+      lessons: 1,
+      duration: "Por definir",
+      students: 0,
+      youtubeUrl: input.youtubeUrl,
+      color: "#6d28d9",
+      published: false,
+    };
+    setAcademies((current) => current.map((academy) => academy.id === organizationId ? {
+      ...academy,
+      courses: [...academy.courses, course],
+      courseCount: academy.courses.length + 1,
+    } : academy));
+    return true;
+  }
+
+  async function publishAcademyCourse(organizationId: string, courseId: Course["id"], published: boolean) {
+    if (persistent && typeof courseId === "string") {
+      const result = await setCoursePublishedAction({ organizationId, courseId, published });
+      showToast(result.message);
+      if (!result.ok) return false;
+    } else {
+      showToast(published ? "Curso publicado en el demo." : "Curso movido a borrador en el demo.");
+    }
+    setAcademies((current) => current.map((academy) => academy.id === organizationId ? {
+      ...academy,
+      courses: academy.courses.map((course) => course.id === courseId ? { ...course, published, level: course.level.replace(/ · (Publicado|Borrador)$/, ` · ${published ? "Publicado" : "Borrador"}`) } : course),
+    } : academy));
+    return true;
+  }
+
+  async function addAcademyLesson(organizationId: string, courseId: Course["id"], input: { title: string; description: string; contentType: "text" | "youtube" | "document" | "audio"; contentUrl: string }) {
+    if (persistent && typeof courseId === "string") {
+      const result = await addLessonAction({ organizationId, courseId, ...input });
+      showToast(result.message);
+      if (!result.ok) return false;
+    } else {
+      showToast("Lección agregada en el demo.");
+    }
+    setAcademies((current) => current.map((academy) => academy.id === organizationId ? {
+      ...academy,
+      courses: academy.courses.map((course) => course.id === courseId ? { ...course, lessons: course.lessons + 1, youtubeUrl: input.contentType === "youtube" ? input.contentUrl : course.youtubeUrl } : course),
+    } : academy));
+    return true;
+  }
+
   return (
     <div className={styles.appShell} style={themeVariables}>
       <header className={styles.topbar}>
@@ -320,7 +445,7 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
         <main className={styles.mainArea}>
           {role === "student" && <StudentExperience view={view as StudentView} setView={setView} courses={courses} onNotify={showToast} addTicket={addTicket} monthlyFee={monthlyFee} viewerName={initialData?.viewerName ?? "Sofía Rojas"} dueDate={initialData?.viewerDueDate ?? "2026-10-15"} payment={initialData?.viewerPayment ?? "Pagado"} level={initialData?.viewerLevel ?? "A1"} />}
           {role === "admin" && <AdminExperience view={view as AdminView} setView={setView} students={students} courses={courses} tickets={tickets} activeCount={activeCount} paidCount={paidCount} collectedRevenue={collectedRevenue} projectedRevenue={projectedRevenue} monthlyFee={monthlyFee} setMonthlyFee={saveMonthlyFee} updateStudent={updateStudent} setCourses={setCourses} inviteStudent={inviteStudent} brand={brand} setBrand={setBrand} saveBrand={saveBrand} logoUrl={logoUrl} handleLogo={handleLogo} addTicket={addTicket} onNotify={showToast} persistent={persistent} organizationId={initialData?.organizationId} viewerName={initialData?.viewerName ?? "Andrea"} />}
-          {role === "owner" && <OwnerExperience view={view as OwnerView} setView={setView} academies={academies} activity={activity} tickets={tickets} setTickets={setTickets} onCreateAcademy={createAcademy} onInviteAdmin={inviteAcademyAdmin} onUpdateAcademyStatus={updateAcademyStatus} onNotify={showToast} persistent={persistent} organizationId={initialData?.organizationId} />}
+          {role === "owner" && <OwnerExperience view={view as OwnerView} setView={setView} academies={academies} activity={activity} tickets={tickets} setTickets={setTickets} onCreateAcademy={createAcademy} onInviteAdmin={inviteAcademyAdmin} onInviteStudent={inviteAcademyStudent} onUpdateStudent={updateAcademyStudent} onCreateCourse={createAcademyCourse} onPublishCourse={publishAcademyCourse} onAddLesson={addAcademyLesson} onUpdateAcademyStatus={updateAcademyStatus} onNotify={showToast} persistent={persistent} organizationId={initialData?.organizationId} />}
           <footer className={styles.mobileFooter}><PoweredBy /></footer>
         </main>
       </div>
@@ -430,13 +555,31 @@ function AdminSupport({ tickets, addTicket }: { tickets: Ticket[]; addTicket: (t
   return <Page><PageHeader eyebrow="Soporte técnico" title="Soporte CORVEN" text="Reporta errores de la plataforma y sigue la respuesta del owner." /><div className={styles.supportLayout}><form className={styles.panel + " " + styles.reportForm} onSubmit={submit}><SectionHeading title="Reportar un problema" text="Incluye los pasos que seguiste y qué esperabas que ocurriera." /><label>Asunto<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ej. No puedo publicar una lección" required /></label><label>Detalle<textarea value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Describe el error..." required /></label><label>Prioridad<select><option>Alta · Bloquea el trabajo</option><option>Media · Puedo continuar</option><option>Baja · Consulta o mejora</option></select></label><button className={styles.primaryButton} type="submit">Enviar a CORVEN</button></form><section className={styles.panel}><SectionHeading title="Mis solicitudes" text="Historial y estado de tus reportes." /><TicketList tickets={tickets} /></section></div></Page>;
 }
 
-function OwnerExperience({ view, setView, academies, activity, tickets, setTickets, onCreateAcademy, onInviteAdmin, onUpdateAcademyStatus, onNotify, persistent, organizationId }: { view: OwnerView; setView: (view: View) => void; academies: Academy[]; activity: ActivityEvent[]; tickets: Ticket[]; setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; onCreateAcademy: (input: { name: string; learningModel: Academy["learningModel"]; monthlyFee: number; primaryColor: string }) => Promise<boolean>; onInviteAdmin: (organizationId: string, input: { fullName: string; email: string }) => Promise<boolean>; onUpdateAcademyStatus: (organizationId: string, status: "active" | "suspended") => Promise<boolean>; onNotify: (message: string) => void; persistent: boolean; organizationId?: string }) {
+function OwnerExperience({ view, setView, academies, activity, tickets, setTickets, onCreateAcademy, onInviteAdmin, onInviteStudent, onUpdateStudent, onCreateCourse, onPublishCourse, onAddLesson, onUpdateAcademyStatus, onNotify, persistent, organizationId }: {
+  view: OwnerView;
+  setView: (view: View) => void;
+  academies: Academy[];
+  activity: ActivityEvent[];
+  tickets: Ticket[];
+  setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>;
+  onCreateAcademy: (input: { name: string; learningModel: Academy["learningModel"]; monthlyFee: number; primaryColor: string }) => Promise<boolean>;
+  onInviteAdmin: (organizationId: string, input: { fullName: string; email: string }) => Promise<boolean>;
+  onInviteStudent: (organizationId: string, input: { fullName: string; email: string; level: string; dueDate: string; courseId?: string }) => Promise<boolean>;
+  onUpdateStudent: (organizationId: string, studentId: Student["id"], changes: Partial<Student>) => Promise<boolean>;
+  onCreateCourse: (organizationId: string, input: { title: string; level: string; description: string; youtubeUrl: string }) => Promise<boolean>;
+  onPublishCourse: (organizationId: string, courseId: Course["id"], published: boolean) => Promise<boolean>;
+  onAddLesson: (organizationId: string, courseId: Course["id"], input: { title: string; description: string; contentType: "text" | "youtube" | "document" | "audio"; contentUrl: string }) => Promise<boolean>;
+  onUpdateAcademyStatus: (organizationId: string, status: "active" | "suspended") => Promise<boolean>;
+  onNotify: (message: string) => void;
+  persistent: boolean;
+  organizationId?: string;
+}) {
   const activeAcademies = academies.filter((academy) => academy.status === "active");
   const totalStudents = academies.reduce((total, academy) => total + academy.studentCount, 0);
   const totalCourses = academies.reduce((total, academy) => total + academy.courseCount, 0);
   const totalAdmins = academies.reduce((total, academy) => total + academy.adminCount, 0);
   if (view === "tickets") return <OwnerTickets tickets={tickets} setTickets={setTickets} onNotify={onNotify} persistent={persistent} organizationId={organizationId} />;
-  if (view === "academies") return <AcademiesView academies={academies} onCreateAcademy={onCreateAcademy} onInviteAdmin={onInviteAdmin} onUpdateStatus={onUpdateAcademyStatus} />;
+  if (view === "academies") return <AcademiesView academies={academies} onCreateAcademy={onCreateAcademy} onInviteAdmin={onInviteAdmin} onInviteStudent={onInviteStudent} onUpdateStudent={onUpdateStudent} onCreateCourse={onCreateCourse} onPublishCourse={onPublishCourse} onAddLesson={onAddLesson} onUpdateStatus={onUpdateAcademyStatus} onNotify={onNotify} />;
   if (view === "activity") return <ActivityView events={activity} />;
   return <Page><PageHeader eyebrow="CORVEN Learning Platform" title="Control de la plataforma" text="Supervisa academias, accesos, soporte y actividad desde un solo lugar." action={<button className={styles.primaryButton} onClick={() => setView("academies")}>Administrar academias</button>} /><KpiGrid items={[{ icon: "school", label: "Academias activas", value: String(activeAcademies.length), detail: `${academies.length} registradas`, tone: "purple" }, { icon: "users", label: "Estudiantes", value: String(totalStudents), detail: `${totalAdmins} administradores`, tone: "green" }, { icon: "book", label: "Cursos", value: String(totalCourses), detail: "En todas las academias", tone: "orange" }, { icon: "support", label: "Tickets abiertos", value: String(tickets.filter((ticket) => ticket.status !== "Respondido").length), detail: "Pendientes de seguimiento", tone: "red" }]} /><div className={styles.ownerGrid}><section className={styles.panel}><SectionHeading title="Portafolio de academias" text="Estado operativo de los clientes de CORVEN." action="Ver academias" onAction={() => setView("academies")} /><div className={styles.healthHeader}><div className={styles.healthScore}>{academies.length ? Math.round(activeAcademies.length / academies.length * 100) : 0}<span>%</span></div><div><strong>{activeAcademies.length === academies.length ? "Operación saludable" : "Requiere revisión"}</strong><p>{activeAcademies.length} academias activas de {academies.length}</p></div></div><div className={styles.healthRows}><div><span>Base de datos</span><strong className={styles.online}>Operativa</strong></div><div><span>Autenticación</span><strong className={styles.online}>Operativa</strong></div><div><span>Administradores asignados</span><strong>{totalAdmins}</strong></div><div><span>Actividad registrada</span><strong>{activity.length} eventos</strong></div></div></section><section className={styles.panel}><SectionHeading title="Soporte reciente" text="Solicitudes que requieren seguimiento." action="Ver todos" onAction={() => setView("tickets")} /><TicketList tickets={tickets.slice(0, 3)} compact /></section></div><section className={styles.panel + " " + styles.ownerActions}><SectionHeading title="Acciones de owner" text="Herramientas reales de administración de CORVEN." /><div><button onClick={() => setView("academies")}><Icon name="school" /><span><strong>Crear academia</strong><small>Configurar un nuevo cliente</small></span></button><button onClick={() => setView("academies")}><Icon name="lock" /><span><strong>Asignar administradores</strong><small>Invitar y revisar accesos</small></span></button><button onClick={() => setView("activity")}><Icon name="clock" /><span><strong>Revisar actividad</strong><small>Auditoría de cambios recientes</small></span></button></div></section></Page>;
 }
@@ -448,9 +591,21 @@ function OwnerTickets({ tickets, setTickets, onNotify, persistent, organizationI
   return <Page><PageHeader eyebrow="Mesa de soporte" title="Tickets de la plataforma" text="Recibe, prioriza y responde solicitudes de academias y estudiantes." /><div className={styles.ticketWorkspace}><div className={styles.ticketQueue}>{tickets.map((ticket) => <button key={ticket.id} className={selected === ticket.id ? styles.ticketSelected : ""} onClick={() => setSelected(ticket.id)}><div><span>{ticket.id}</span><small className={ticket.priority === "Alta" ? styles.priorityHigh : ""}>{ticket.priority}</small></div><strong>{ticket.title}</strong><p>{ticket.source} · {ticket.created}</p><em>{ticket.status}</em></button>)}</div>{activeTicket && <section className={styles.ticketDetail}><div className={styles.ticketDetailTop}><div><span>{activeTicket.id} · {activeTicket.source}</span><h2>{activeTicket.title}</h2><p>{activeTicket.person} · {activeTicket.created}</p></div><span className={activeTicket.priority === "Alta" ? styles.priorityHighPill : styles.statusTag}>{activeTicket.priority}</span></div><div className={styles.messageBubble}><strong>{activeTicket.person}</strong><p>{activeTicket.detail}</p></div>{activeTicket.reply && <div className={styles.ownerReply}><strong>CORVEN Support</strong><p>{activeTicket.reply}</p></div>}<label className={styles.replyBox}>Responder<textarea value={reply} onChange={(event) => setReply(event.target.value)} placeholder="Escribe una respuesta clara para el cliente..." /><div><button onClick={() => void updateTicket("in_progress")}>Marcar en proceso</button><button className={styles.primaryButton} onClick={sendReply}>Enviar respuesta</button></div></label></section>}</div></Page>;
 }
 
-function AcademiesView({ academies, onCreateAcademy, onInviteAdmin, onUpdateStatus }: { academies: Academy[]; onCreateAcademy: (input: { name: string; learningModel: Academy["learningModel"]; monthlyFee: number; primaryColor: string }) => Promise<boolean>; onInviteAdmin: (organizationId: string, input: { fullName: string; email: string }) => Promise<boolean>; onUpdateStatus: (organizationId: string, status: "active" | "suspended") => Promise<boolean> }) {
+function AcademiesView({ academies, onCreateAcademy, onInviteAdmin, onInviteStudent, onUpdateStudent, onCreateCourse, onPublishCourse, onAddLesson, onUpdateStatus, onNotify }: {
+  academies: Academy[];
+  onCreateAcademy: (input: { name: string; learningModel: Academy["learningModel"]; monthlyFee: number; primaryColor: string }) => Promise<boolean>;
+  onInviteAdmin: (organizationId: string, input: { fullName: string; email: string }) => Promise<boolean>;
+  onInviteStudent: (organizationId: string, input: { fullName: string; email: string; level: string; dueDate: string; courseId?: string }) => Promise<boolean>;
+  onUpdateStudent: (organizationId: string, studentId: Student["id"], changes: Partial<Student>) => Promise<boolean>;
+  onCreateCourse: (organizationId: string, input: { title: string; level: string; description: string; youtubeUrl: string }) => Promise<boolean>;
+  onPublishCourse: (organizationId: string, courseId: Course["id"], published: boolean) => Promise<boolean>;
+  onAddLesson: (organizationId: string, courseId: Course["id"], input: { title: string; description: string; contentType: "text" | "youtube" | "document" | "audio"; contentUrl: string }) => Promise<boolean>;
+  onUpdateStatus: (organizationId: string, status: "active" | "suspended") => Promise<boolean>;
+  onNotify: (message: string) => void;
+}) {
   const [showCreate, setShowCreate] = useState(false);
   const [managedId, setManagedId] = useState<string | null>(null);
+  const [operationView, setOperationView] = useState<"students" | "courses">("students");
   const [name, setName] = useState("");
   const [learningModel, setLearningModel] = useState<Academy["learningModel"]>("hybrid");
   const [monthlyFee, setMonthlyFee] = useState(35000);
@@ -503,16 +658,103 @@ function AcademiesView({ academies, onCreateAcademy, onInviteAdmin, onUpdateStat
       {academies.map((academy) => <article className={styles.academyCard} key={academy.id}>
         <div className={styles.academyIdentity}><AcademyMark name={academy.name} /><div><span>{academy.status === "active" ? "Servicio activo" : "Servicio suspendido"}</span><h2>{academy.name}</h2><p>{learningModelLabel(academy.learningModel)} · /{academy.slug}</p></div></div>
         <div className={styles.academyMetrics}><div><span>Estudiantes</span><strong>{academy.studentCount}</strong></div><div><span>Cursos</span><strong>{academy.courseCount}</strong></div><div><span>Administradores</span><strong>{academy.adminCount}</strong></div><div><span>Ingresos gestionados</span><strong>{formatCurrency(academy.monthlyRevenue)}</strong></div></div>
-        <div className={styles.academyFooter}><span className={academy.status === "active" ? styles.academyActive : styles.academySuspended}><i></i>{academy.status === "active" ? "Servicio activo" : "Servicio suspendido"}</span><small>Creada: {academy.createdAt}</small><button onClick={() => setManagedId((current) => current === academy.id ? null : academy.id)}>{managedId === academy.id ? "Cerrar" : "Administrar →"}</button></div>
+        <div className={styles.academyFooter}><span className={academy.status === "active" ? styles.academyActive : styles.academySuspended}><i></i>{academy.status === "active" ? "Servicio activo" : "Servicio suspendido"}</span><small>Creada: {academy.createdAt}</small><button onClick={() => { setManagedId((current) => current === academy.id ? null : academy.id); setOperationView("students"); }}>{managedId === academy.id ? "Cerrar" : "Administrar →"}</button></div>
         {managedId === academy.id && <div className={styles.academyManager}>
           <div className={styles.adminAccessList}><h3>Administradores y accesos</h3>{academy.admins.length ? academy.admins.map((admin) => <div key={admin.id}><AcademyMark name={admin.name} /><p><strong>{admin.name}</strong><small>{admin.email}</small></p><span data-status={admin.accessStatus}>{accessStatusLabel(admin.accessStatus)}</span></div>) : <p className={styles.mutedText}>Todavía no hay administradores asignados.</p>}</div>
           <form className={styles.adminInviteForm} onSubmit={(event) => submitAdmin(event, academy.id)}><h3>Asignar administrador</h3><label>Nombre completo<input value={adminName} onChange={(event) => setAdminName(event.target.value)} required minLength={2} /></label><label>Correo electrónico<input type="email" value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} required /></label><button className={styles.primaryButton} type="submit" disabled={busy}>{busy ? "Procesando..." : "Invitar administrador"}</button></form>
+          <section className={styles.ownerAcademyOperations}>
+            <div className={styles.ownerOperationHeader}><div><span>Operación de la academia</span><h3>Usuarios y contenido</h3></div><div><button className={operationView === "students" ? styles.ownerOperationActive : ""} onClick={() => setOperationView("students")}><Icon name="users" />Estudiantes ({academy.students.length})</button><button className={operationView === "courses" ? styles.ownerOperationActive : ""} onClick={() => setOperationView("courses")}><Icon name="book" />Cursos ({academy.courses.length})</button></div></div>
+            {operationView === "students"
+              ? <AcademyStudentOperations academy={academy} onInvite={onInviteStudent} onUpdate={onUpdateStudent} onNotify={onNotify} />
+              : <AcademyCourseOperations academy={academy} onCreate={onCreateCourse} onPublish={onPublishCourse} onAddLesson={onAddLesson} />}
+          </section>
           <div className={styles.academyDangerZone}><div><strong>Estado del servicio</strong><p>{academy.status === "active" ? "La academia y sus usuarios pueden acceder normalmente." : "La academia está pausada hasta que CORVEN la reactive."}</p></div><button disabled={busy} onClick={() => void toggleStatus(academy)}>{academy.status === "active" ? "Suspender academia" : "Reactivar academia"}</button></div>
         </div>}
       </article>)}
       {!academies.length && <section className={`${styles.panel} ${styles.emptyState}`}><Icon name="school" /><strong>Aún no hay academias</strong><p>Crea la primera organización para comenzar.</p></section>}
     </div>
   </Page>;
+}
+
+function AcademyStudentOperations({ academy, onInvite, onUpdate, onNotify }: {
+  academy: Academy;
+  onInvite: (organizationId: string, input: { fullName: string; email: string; level: string; dueDate: string; courseId?: string }) => Promise<boolean>;
+  onUpdate: (organizationId: string, studentId: Student["id"], changes: Partial<Student>) => Promise<boolean>;
+  onNotify: (message: string) => void;
+}) {
+  const [showInvite, setShowInvite] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState({ fullName: "", email: "", level: "A1", dueDate: new Date().toISOString().slice(0, 10), courseId: "" });
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    const invited = await onInvite(academy.id, { ...draft, courseId: draft.courseId || undefined });
+    setBusy(false);
+    if (!invited) return;
+    setDraft({ fullName: "", email: "", level: "A1", dueDate: new Date().toISOString().slice(0, 10), courseId: "" });
+    setShowInvite(false);
+  }
+
+  return <div className={styles.ownerOperationBody}>
+    <div className={styles.ownerOperationToolbar}><div><strong>Estudiantes de {academy.name}</strong><span>Mensualidad base: {formatCurrency(academy.defaultMonthlyFee)}</span></div><button className={styles.primaryButton} onClick={() => setShowInvite((current) => !current)}>{showInvite ? "Cerrar" : "+ Invitar estudiante"}</button></div>
+    {showInvite && <form className={styles.ownerInlineForm} onSubmit={submit}>
+      <label>Nombre completo<input value={draft.fullName} onChange={(event) => setDraft((current) => ({ ...current, fullName: event.target.value }))} required minLength={2} /></label>
+      <label>Correo electrónico<input type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} required /></label>
+      <label>Nivel<select value={draft.level} onChange={(event) => setDraft((current) => ({ ...current, level: event.target.value }))}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label>
+      <label>Primera fecha de cobro<input type="date" value={draft.dueDate} onChange={(event) => setDraft((current) => ({ ...current, dueDate: event.target.value }))} required /></label>
+      <label>Curso inicial<select value={draft.courseId} onChange={(event) => setDraft((current) => ({ ...current, courseId: event.target.value }))}><option value="">Asignar después</option>{academy.courses.map((course) => <option key={course.id} value={String(course.id)}>{course.title}</option>)}</select></label>
+      <button className={styles.primaryButton} type="submit" disabled={busy}>{busy ? "Procesando..." : "Crear acceso"}</button>
+    </form>}
+    {academy.students.length ? <div className={styles.ownerStudentTable}><table><thead><tr><th>Estudiante</th><th>Nivel</th><th>Pago</th><th>Próximo cobro</th><th>Acceso</th></tr></thead><tbody>{academy.students.map((student) => <tr key={student.id}><td><div className={styles.studentCell}><span>{student.initials}</span><p><strong>{student.name}</strong><small>{student.email}</small></p></div></td><td><span className={styles.levelPill}>{student.level}</span></td><td><select className={styles.statusSelect} value={student.payment} onChange={async (event) => { const payment = event.target.value as Student["payment"]; if (await onUpdate(academy.id, student.id, { payment })) onNotify(`Pago de ${student.name}: ${payment}.`); }}><option>Pagado</option><option>Pendiente</option><option>Vencido</option></select></td><td><input className={styles.dateInput} type="date" value={student.dueDate} onChange={async (event) => { if (await onUpdate(academy.id, student.id, { dueDate: event.target.value })) onNotify(`Fecha de cobro actualizada para ${student.name}.`); }} /></td><td><button className={student.active ? styles.activeToggle : styles.inactiveToggle} onClick={async () => { if (await onUpdate(academy.id, student.id, { active: !student.active })) onNotify(`${student.active ? "Acceso suspendido" : "Acceso reactivado"} para ${student.name}.`); }}><i></i>{student.active ? "Activo" : "Suspendido"}</button></td></tr>)}</tbody></table></div> : <div className={styles.ownerOperationEmpty}><Icon name="users" /><strong>Sin estudiantes todavía</strong><span>Invita al primer estudiante y asígnale un curso inicial.</span></div>}
+  </div>;
+}
+
+function AcademyCourseOperations({ academy, onCreate, onPublish, onAddLesson }: {
+  academy: Academy;
+  onCreate: (organizationId: string, input: { title: string; level: string; description: string; youtubeUrl: string }) => Promise<boolean>;
+  onPublish: (organizationId: string, courseId: Course["id"], published: boolean) => Promise<boolean>;
+  onAddLesson: (organizationId: string, courseId: Course["id"], input: { title: string; description: string; contentType: "text" | "youtube" | "document" | "audio"; contentUrl: string }) => Promise<boolean>;
+}) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<Course["id"] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState({ title: "", level: "A1", description: "", youtubeUrl: "" });
+  const [lesson, setLesson] = useState({ title: "", description: "", contentType: "youtube" as "text" | "youtube" | "document" | "audio", contentUrl: "" });
+  const editingCourse = academy.courses.find((course) => course.id === editingCourseId);
+
+  async function submitCourse(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    const created = await onCreate(academy.id, draft);
+    setBusy(false);
+    if (!created) return;
+    setDraft({ title: "", level: "A1", description: "", youtubeUrl: "" });
+    setShowCreate(false);
+  }
+
+  async function submitLesson(event: FormEvent) {
+    event.preventDefault();
+    if (!editingCourse) return;
+    setBusy(true);
+    const created = await onAddLesson(academy.id, editingCourse.id, lesson);
+    setBusy(false);
+    if (!created) return;
+    setLesson({ title: "", description: "", contentType: "youtube", contentUrl: "" });
+  }
+
+  return <div className={styles.ownerOperationBody}>
+    <div className={styles.ownerOperationToolbar}><div><strong>Cursos y recursos</strong><span>Crea borradores, agrega lecciones y controla su publicación.</span></div><button className={styles.primaryButton} onClick={() => setShowCreate((current) => !current)}>{showCreate ? "Cerrar" : "+ Crear curso"}</button></div>
+    {showCreate && <form className={styles.ownerInlineForm} onSubmit={submitCourse}>
+      <label>Nombre del curso<input value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} required minLength={3} /></label>
+      <label>Nivel<select value={draft.level} onChange={(event) => setDraft((current) => ({ ...current, level: event.target.value }))}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label>
+      <label className={styles.ownerFormWide}>Descripción<textarea value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Objetivo y alcance del curso" /></label>
+      <label className={styles.ownerFormWide}>Primera clase en YouTube<input type="url" value={draft.youtubeUrl} onChange={(event) => setDraft((current) => ({ ...current, youtubeUrl: event.target.value }))} placeholder="https://www.youtube.com/watch?v=..." /></label>
+      <button className={styles.primaryButton} type="submit" disabled={busy}>{busy ? "Creando..." : "Crear borrador"}</button>
+    </form>}
+    {academy.courses.length ? <div className={styles.ownerCourseGrid}>{academy.courses.map((course) => <article key={course.id}><div className={styles.ownerCourseCover} style={{ background: `linear-gradient(135deg, ${course.color}, #111827)` }}><Icon name="book" /><span>{course.level.split(" · ")[0]}</span></div><div><span className={course.published ? styles.successPill : styles.draftPill}>{course.published ? "Publicado" : "Borrador"}</span><h4>{course.title}</h4><p>{course.lessons} lecciones · {course.students} estudiantes</p><div><button onClick={() => setEditingCourseId((current) => current === course.id ? null : course.id)}>{editingCourseId === course.id ? "Cerrar editor" : "Agregar lección"}</button><button onClick={() => void onPublish(academy.id, course.id, !course.published)}>{course.published ? "Ocultar" : "Publicar"}</button></div></div></article>)}</div> : <div className={styles.ownerOperationEmpty}><Icon name="book" /><strong>Sin cursos todavía</strong><span>Crea el primer borrador y agrega contenido por enlaces.</span></div>}
+    {editingCourse && <form className={`${styles.ownerInlineForm} ${styles.ownerLessonForm}`} onSubmit={submitLesson}><div className={styles.ownerFormTitle}><span>Agregar contenido</span><strong>{editingCourse.title}</strong></div><label>Título de la lección<input value={lesson.title} onChange={(event) => setLesson((current) => ({ ...current, title: event.target.value }))} required minLength={2} /></label><label>Tipo<select value={lesson.contentType} onChange={(event) => setLesson((current) => ({ ...current, contentType: event.target.value as typeof lesson.contentType }))}><option value="youtube">YouTube</option><option value="text">Texto</option><option value="document">Documento por enlace</option><option value="audio">Audio por enlace</option></select></label><label className={styles.ownerFormWide}>Descripción<textarea value={lesson.description} onChange={(event) => setLesson((current) => ({ ...current, description: event.target.value }))} placeholder="Objetivo e instrucciones" /></label>{lesson.contentType !== "text" && <label className={styles.ownerFormWide}>Enlace HTTPS<input type="url" value={lesson.contentUrl} onChange={(event) => setLesson((current) => ({ ...current, contentUrl: event.target.value }))} required placeholder={lesson.contentType === "youtube" ? "https://www.youtube.com/watch?v=..." : "https://..."} /></label>}<button className={styles.primaryButton} type="submit" disabled={busy}>{busy ? "Guardando..." : "Agregar lección"}</button></form>}
+  </div>;
 }
 
 function ActivityView({ events }: { events: ActivityEvent[] }) {

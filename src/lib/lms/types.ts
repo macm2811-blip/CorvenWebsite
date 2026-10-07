@@ -64,9 +64,12 @@ export type LmsAcademy = {
   courseCount: number;
   adminCount: number;
   monthlyRevenue: number;
+  defaultMonthlyFee: number;
   currency: string;
   createdAt: string;
   admins: LmsAcademyAdmin[];
+  students: LmsStudent[];
+  courses: LmsCourse[];
 };
 
 export type LmsActivityEvent = {
