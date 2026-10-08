@@ -5,7 +5,13 @@ import { redirect } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import type { LmsAcademy, LmsAcademyAdmin } from "@/lib/lms/types";
+import type {
+  LmsAcademy,
+  LmsAcademyAdmin,
+  LmsCourseBlock,
+  LmsCourseBlockConfig,
+  LmsCourseBlockKind,
+} from "@/lib/lms/types";
 
 type ActionResult<T = undefined> = {
   ok: boolean;
@@ -25,6 +31,56 @@ function validUuid(value: string) {
 
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+const courseBlockKinds: LmsCourseBlockKind[] = [
+  "text",
+  "image",
+  "youtube",
+  "document",
+  "audio",
+  "quiz",
+  "exam",
+];
+
+const defaultBlockConfig: LmsCourseBlockConfig = {
+  fontFamily: "sans",
+  fontSize: "normal",
+  textColor: "#111827",
+  backgroundColor: "#FFFFFF",
+  align: "left",
+  width: "full",
+  bold: false,
+  italic: false,
+  underline: false,
+};
+
+function validHex(value: string) {
+  return /^#[0-9a-f]{6}$/i.test(value);
+}
+
+function normalizeBlockConfig(value?: Partial<LmsCourseBlockConfig>): LmsCourseBlockConfig {
+  return {
+    fontFamily: ["sans", "serif", "display"].includes(value?.fontFamily ?? "")
+      ? value!.fontFamily!
+      : defaultBlockConfig.fontFamily,
+    fontSize: ["small", "normal", "large", "title"].includes(value?.fontSize ?? "")
+      ? value!.fontSize!
+      : defaultBlockConfig.fontSize,
+    textColor: validHex(value?.textColor ?? "") ? value!.textColor! : defaultBlockConfig.textColor,
+    backgroundColor: validHex(value?.backgroundColor ?? "")
+      ? value!.backgroundColor!
+      : defaultBlockConfig.backgroundColor,
+    align: ["left", "center", "right"].includes(value?.align ?? "")
+      ? value!.align!
+      : defaultBlockConfig.align,
+    width: ["full", "half", "third"].includes(value?.width ?? "")
+      ? value!.width!
+      : defaultBlockConfig.width,
+    bold: Boolean(value?.bold),
+    italic: Boolean(value?.italic),
+    underline: Boolean(value?.underline),
+  };
 }
 
 function slugify(value: string) {
@@ -441,6 +497,7 @@ export async function createCourseAction(input: {
   level: string;
   description: string;
   youtubeUrl: string;
+  color?: string;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
@@ -459,6 +516,7 @@ export async function createCourseAction(input: {
         slug: `${slugify(title)}-${Date.now().toString(36)}`,
         description: input.description.trim().slice(0, 2000),
         level: input.level,
+        cover_url: validHex(input.color ?? "") ? `color:${input.color!.toUpperCase()}` : null,
         status: "draft",
       })
       .select("id")
@@ -583,6 +641,334 @@ export async function addLessonAction(input: {
     return { ok: true, message: "Lección agregada al curso.", data: { id: lesson.id } };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No pudimos crear la lección." };
+  }
+}
+
+export async function loadCourseStudioAction(input: {
+  organizationId: string;
+  courseId: string;
+}): Promise<ActionResult<{ blocks: LmsCourseBlock[] }>> {
+  try {
+    const { supabase } = await requireStaff(input.organizationId);
+    if (!validUuid(input.courseId)) throw new Error("Curso inválido.");
+    const { data: course, error: courseError } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("organization_id", input.organizationId)
+      .eq("id", input.courseId)
+      .single();
+    if (courseError || !course) throw new Error("No encontramos el curso.");
+
+    const { data: modules, error: modulesError } = await supabase
+      .from("modules")
+      .select("id")
+      .eq("course_id", input.courseId)
+      .order("position", { ascending: true });
+    if (modulesError) throw modulesError;
+    const moduleIds = (modules ?? []).map((module) => module.id);
+    const lessonsResult = moduleIds.length
+      ? await supabase
+          .from("lessons")
+          .select("id, title, description, content_type, body, youtube_url, resource_url, position, content_config")
+          .in("module_id", moduleIds)
+          .order("position", { ascending: true })
+      : { data: [], error: null };
+    if (lessonsResult.error) throw lessonsResult.error;
+
+    const { data: quizzes, error: quizzesError } = await supabase
+      .from("quizzes")
+      .select("id, title, description, assessment_type, passing_score, max_attempts, position, content_config")
+      .eq("course_id", input.courseId)
+      .order("position", { ascending: true });
+    if (quizzesError) throw quizzesError;
+    const quizIds = (quizzes ?? []).map((quiz) => quiz.id);
+    const questionsResult = quizIds.length
+      ? await supabase
+          .from("quiz_questions")
+          .select("id, quiz_id, prompt, options, correct_answer, position")
+          .in("quiz_id", quizIds)
+          .order("position", { ascending: true })
+      : { data: [], error: null };
+    if (questionsResult.error) throw questionsResult.error;
+
+    const lessonBlocks: LmsCourseBlock[] = (lessonsResult.data ?? []).map((lesson) => ({
+      id: lesson.id,
+      kind: courseBlockKinds.includes(lesson.content_type as LmsCourseBlockKind)
+        ? (lesson.content_type as LmsCourseBlockKind)
+        : "text",
+      title: lesson.title,
+      body: lesson.body || lesson.description || "",
+      url: lesson.youtube_url || lesson.resource_url || "",
+      position: Number(lesson.position ?? 0),
+      config: normalizeBlockConfig((lesson.content_config ?? {}) as Partial<LmsCourseBlockConfig>),
+    }));
+    const quizBlocks: LmsCourseBlock[] = (quizzes ?? []).map((quiz) => {
+      const question = (questionsResult.data ?? []).find((item) => item.quiz_id === quiz.id);
+      const options = Array.isArray(question?.options)
+        ? question.options.filter((option): option is string => typeof option === "string")
+        : [];
+      const rawAnswer = question?.correct_answer;
+      const correctAnswer = typeof rawAnswer === "string"
+        ? rawAnswer
+        : Array.isArray(rawAnswer) && typeof rawAnswer[0] === "string"
+          ? rawAnswer[0]
+          : "";
+      return {
+        id: quiz.id,
+        kind: quiz.assessment_type === "exam" ? "exam" : "quiz",
+        title: quiz.title,
+        body: quiz.description || "",
+        url: "",
+        position: Number(quiz.position ?? 0),
+        config: normalizeBlockConfig((quiz.content_config ?? {}) as Partial<LmsCourseBlockConfig>),
+        question: question?.prompt ?? "",
+        options,
+        correctAnswer,
+        passingScore: Number(quiz.passing_score ?? 80),
+        maxAttempts: Number(quiz.max_attempts ?? 3),
+      };
+    });
+    const blocks = [...lessonBlocks, ...quizBlocks].sort((a, b) => a.position - b.position);
+    return { ok: true, message: "Contenido cargado.", data: { blocks } };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos cargar el editor." };
+  }
+}
+
+export async function updateCourseDetailsAction(input: {
+  organizationId: string;
+  courseId: string;
+  title: string;
+  level: string;
+  description: string;
+  color: string;
+}): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireStaff(input.organizationId);
+    if (!validUuid(input.courseId)) throw new Error("Curso inválido.");
+    const title = input.title.trim().replace(/\s+/g, " ").slice(0, 160);
+    const level = input.level.trim().toUpperCase().slice(0, 20);
+    if (title.length < 3) throw new Error("Escribe un nombre válido para el curso.");
+    if (!/^(A1|A2|B1|B2|C1|C2)$/.test(level)) throw new Error("Selecciona un nivel válido.");
+    if (!validHex(input.color)) throw new Error("Selecciona un color válido.");
+    const { error } = await supabase
+      .from("courses")
+      .update({
+        title,
+        level,
+        description: input.description.trim().slice(0, 2000),
+        cover_url: `color:${input.color.toUpperCase()}`,
+      })
+      .eq("organization_id", input.organizationId)
+      .eq("id", input.courseId);
+    if (error) throw error;
+    await audit(supabase, userId, input.organizationId, "course.updated", "course", input.courseId);
+    revalidatePath("/learning/platform");
+    return { ok: true, message: "Configuración del curso guardada." };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos guardar el curso." };
+  }
+}
+
+export async function saveCourseBlockAction(input: {
+  organizationId: string;
+  courseId: string;
+  block: Omit<LmsCourseBlock, "id"> & { id?: string };
+}): Promise<ActionResult<{ block: LmsCourseBlock }>> {
+  try {
+    const { supabase, userId } = await requireStaff(input.organizationId);
+    if (!validUuid(input.courseId)) throw new Error("Curso inválido.");
+    if (!courseBlockKinds.includes(input.block.kind)) throw new Error("Tipo de contenido inválido.");
+    const title = input.block.title.trim().replace(/\s+/g, " ").slice(0, 180);
+    if (title.length < 2) throw new Error("Agrega un título al bloque.");
+    const body = input.block.body.trim().slice(0, 12000);
+    const url = input.block.url.trim().slice(0, 2000);
+    const config = normalizeBlockConfig(input.block.config);
+    const { data: course, error: courseError } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("organization_id", input.organizationId)
+      .eq("id", input.courseId)
+      .single();
+    if (courseError || !course) throw new Error("No encontramos el curso.");
+
+    if (["image", "document", "audio"].includes(input.block.kind) && !/^https:\/\//i.test(url)) {
+      throw new Error("Agrega un enlace HTTPS válido para el recurso.");
+    }
+    if (input.block.kind === "youtube" && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
+      throw new Error("Agrega un enlace válido de YouTube.");
+    }
+
+    const isAssessment = input.block.kind === "quiz" || input.block.kind === "exam";
+    let blockId = input.block.id ?? "";
+    const position = Math.max(1, Math.round(input.block.position || 1));
+    if (isAssessment) {
+      const options = (input.block.options ?? []).map((option) => option.trim()).filter(Boolean).slice(0, 6);
+      const question = (input.block.question ?? "").trim().slice(0, 2000);
+      const correctAnswer = (input.block.correctAnswer ?? "").trim();
+      if (question.length < 3 || options.length < 2) throw new Error("Completa la pregunta y al menos dos respuestas.");
+      if (!options.includes(correctAnswer)) throw new Error("Selecciona la respuesta correcta.");
+      const assessmentValues = {
+        title,
+        description: body,
+        assessment_type: input.block.kind,
+        passing_score: Math.max(0, Math.min(100, Math.round(input.block.passingScore ?? 80))),
+        max_attempts: Math.max(1, Math.min(20, Math.round(input.block.maxAttempts ?? 3))),
+        position,
+        content_config: config,
+      };
+      if (blockId && validUuid(blockId)) {
+        const { error } = await supabase
+          .from("quizzes")
+          .update(assessmentValues)
+          .eq("id", blockId)
+          .eq("course_id", input.courseId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("quizzes")
+          .insert({ course_id: input.courseId, ...assessmentValues })
+          .select("id")
+          .single();
+        if (error || !data) throw error ?? new Error("No se creó la evaluación.");
+        blockId = data.id;
+      }
+      const { data: existingQuestion, error: questionLookupError } = await supabase
+        .from("quiz_questions")
+        .select("id")
+        .eq("quiz_id", blockId)
+        .order("position", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (questionLookupError) throw questionLookupError;
+      const questionValues = {
+        prompt: question,
+        question_type: "single_choice",
+        options,
+        correct_answer: correctAnswer,
+        position: 1,
+      };
+      const questionResult = existingQuestion
+        ? await supabase.from("quiz_questions").update(questionValues).eq("id", existingQuestion.id)
+        : await supabase.from("quiz_questions").insert({ quiz_id: blockId, ...questionValues });
+      if (questionResult.error) throw questionResult.error;
+    } else {
+      const moduleLookup = await supabase
+        .from("modules")
+        .select("id")
+        .eq("course_id", input.courseId)
+        .order("position", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (moduleLookup.error) throw moduleLookup.error;
+      let courseModule = moduleLookup.data;
+      if (!courseModule) {
+        const created = await supabase
+          .from("modules")
+          .insert({ course_id: input.courseId, title: "Contenido", position: 1 })
+          .select("id")
+          .single();
+        if (created.error || !created.data) throw created.error ?? new Error("No se creó el módulo.");
+        courseModule = created.data;
+      }
+      const lessonValues = {
+        title,
+        description: body.slice(0, 3000),
+        content_type: input.block.kind,
+        body: input.block.kind === "text" ? body : body || null,
+        youtube_url: input.block.kind === "youtube" ? url : null,
+        resource_url: ["image", "document", "audio"].includes(input.block.kind) ? url : null,
+        position,
+        content_config: config,
+      };
+      if (blockId && validUuid(blockId)) {
+        const { error } = await supabase
+          .from("lessons")
+          .update(lessonValues)
+          .eq("id", blockId)
+          .eq("module_id", courseModule.id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("lessons")
+          .insert({ module_id: courseModule.id, ...lessonValues })
+          .select("id")
+          .single();
+        if (error || !data) throw error ?? new Error("No se creó el bloque.");
+        blockId = data.id;
+      }
+    }
+
+    const savedBlock: LmsCourseBlock = {
+      ...input.block,
+      id: blockId,
+      title,
+      body,
+      url,
+      position,
+      config,
+    };
+    await audit(supabase, userId, input.organizationId, "course.block_saved", isAssessment ? "quiz" : "lesson", blockId);
+    revalidatePath("/learning/platform");
+    return { ok: true, message: `${input.block.kind === "exam" ? "Examen" : input.block.kind === "quiz" ? "Quiz" : "Contenido"} guardado.`, data: { block: savedBlock } };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos guardar el contenido." };
+  }
+}
+
+export async function deleteCourseBlockAction(input: {
+  organizationId: string;
+  courseId: string;
+  blockId: string;
+  kind: LmsCourseBlockKind;
+}): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await requireStaff(input.organizationId);
+    if (!validUuid(input.courseId) || !validUuid(input.blockId)) throw new Error("Contenido inválido.");
+    const isAssessment = input.kind === "quiz" || input.kind === "exam";
+    if (isAssessment) {
+      const { error } = await supabase.from("quizzes").delete().eq("id", input.blockId).eq("course_id", input.courseId);
+      if (error) throw error;
+    } else {
+      const { data: modules, error: moduleError } = await supabase.from("modules").select("id").eq("course_id", input.courseId);
+      if (moduleError) throw moduleError;
+      const moduleIds = (modules ?? []).map((module) => module.id);
+      if (!moduleIds.length) throw new Error("No encontramos el contenido.");
+      const { error } = await supabase.from("lessons").delete().eq("id", input.blockId).in("module_id", moduleIds);
+      if (error) throw error;
+    }
+    await audit(supabase, userId, input.organizationId, "course.block_deleted", isAssessment ? "quiz" : "lesson", input.blockId);
+    revalidatePath("/learning/platform");
+    return { ok: true, message: "Bloque eliminado." };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos eliminar el contenido." };
+  }
+}
+
+export async function uploadCourseImageAction(formData: FormData): Promise<ActionResult<{ url: string }>> {
+  try {
+    const organizationId = String(formData.get("organizationId") ?? "");
+    const courseId = String(formData.get("courseId") ?? "");
+    await requireStaff(organizationId);
+    if (!validUuid(courseId)) throw new Error("Curso inválido.");
+    const file = formData.get("image");
+    if (!(file instanceof File) || !file.size) throw new Error("Selecciona una imagen.");
+    if (file.size > 2 * 1024 * 1024) throw new Error("La imagen no puede superar 2 MB.");
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      throw new Error("Usa una imagen PNG, JPG o WEBP.");
+    }
+    const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${organizationId}/courses/${courseId}/${crypto.randomUUID()}.${extension}`;
+    const admin = createAdminClient();
+    const { error } = await admin.storage.from("organization-assets").upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+    if (error) throw error;
+    const { data } = admin.storage.from("organization-assets").getPublicUrl(path);
+    return { ok: true, message: "Imagen cargada.", data: { url: data.publicUrl } };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos cargar la imagen." };
   }
 }
 

@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -30,16 +29,11 @@ export default async function LoginPage({
   return (
     <main className={styles.page}>
       <section className={styles.brandPanel}>
-        <div className={styles.brandTop}>
-          <span className={styles.academyMark}>LU</span>
-        </div>
-        <div className={styles.brandMessage}>
-          <span>LEVEL UP ENGLISH ACADEMY</span>
-          <h2>Learn. Practice. Level up.</h2>
-          <p>
-            Clases en vivo y aprendizaje autónomo, organizados en un mismo
-            espacio.
-          </p>
+        <div className={styles.levelUpBrand}>
+          <span className={styles.logoPlaceholder} aria-label="Espacio reservado para el logo de LevelUp">
+            LU
+          </span>
+          <strong>LevelUp</strong>
         </div>
         <div className={styles.powered}>
           <span>Powered by</span>
@@ -67,7 +61,6 @@ export default async function LoginPage({
               NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY{"\n"}
               SUPABASE_SECRET_KEY
             </code>
-            <Link href="/demo/learning">Abrir la demostración →</Link>
           </div>
         )}
       </section>

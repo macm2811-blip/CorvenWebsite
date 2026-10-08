@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import {
@@ -30,12 +29,12 @@ export function LoginForm({ next }: { next: string }) {
     <form className={styles.form} action={forgotten ? resetAction : loginAction}>
       <input type="hidden" name="next" value={next} />
       <div className={styles.formHeading}>
-        <span>{forgotten ? "RECUPERAR ACCESO" : "BIENVENIDO"}</span>
-        <h1>{forgotten ? "Cambia tu contraseña" : "Portal de producción"}</h1>
+        <span>{forgotten ? "RECUPERAR ACCESO" : "LEVELUP"}</span>
+        <h1>{forgotten ? "Cambia tu contraseña" : "Login"}</h1>
         <p>
           {forgotten
             ? "Te enviaremos un enlace seguro al correo registrado."
-            : "Ingresa como estudiante o administrador de Level Up."}
+            : "Ingresa con tu usuario o correo."}
         </p>
       </div>
 
@@ -90,9 +89,6 @@ export function LoginForm({ next }: { next: string }) {
         {forgotten ? "Volver al inicio de sesión" : "Olvidé mi contraseña"}
       </button>
 
-      <Link className={styles.demoLink} href="/demo/learning">
-        Explorar la demostración
-      </Link>
     </form>
   );
 }

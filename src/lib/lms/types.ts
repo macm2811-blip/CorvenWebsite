@@ -27,6 +27,42 @@ export type LmsCourse = {
   published: boolean;
 };
 
+export type LmsCourseBlockKind =
+  | "text"
+  | "image"
+  | "youtube"
+  | "document"
+  | "audio"
+  | "quiz"
+  | "exam";
+
+export type LmsCourseBlockConfig = {
+  fontFamily: "sans" | "serif" | "display";
+  fontSize: "small" | "normal" | "large" | "title";
+  textColor: string;
+  backgroundColor: string;
+  align: "left" | "center" | "right";
+  width: "full" | "half" | "third";
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+};
+
+export type LmsCourseBlock = {
+  id: string;
+  kind: LmsCourseBlockKind;
+  title: string;
+  body: string;
+  url: string;
+  position: number;
+  config: LmsCourseBlockConfig;
+  question?: string;
+  options?: string[];
+  correctAnswer?: string;
+  passingScore?: number;
+  maxAttempts?: number;
+};
+
 export type LmsTicket = {
   id: string;
   organizationId?: string;
