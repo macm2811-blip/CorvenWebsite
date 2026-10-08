@@ -32,16 +32,52 @@ type Props = {
 };
 
 const defaultConfig: LmsCourseBlockConfig = {
-  fontFamily: "sans",
+  fontFamily: "inter",
   fontSize: "normal",
   textColor: "#111827",
   backgroundColor: "#FFFFFF",
+  borderColor: "#D0D5DD",
   align: "left",
   width: "full",
+  textStyle: "paragraph",
+  lineHeight: "normal",
+  letterSpacing: "normal",
+  padding: "normal",
+  radius: "medium",
+  borderStyle: "none",
   bold: false,
   italic: false,
   underline: false,
+  strikethrough: false,
+  uppercase: false,
 };
+
+const fontOptions: { value: LmsCourseBlockConfig["fontFamily"]; label: string; stack: string }[] = [
+  { value: "inter", label: "Inter", stack: "Inter, Arial, sans-serif" },
+  { value: "arial", label: "Arial", stack: "Arial, sans-serif" },
+  { value: "helvetica", label: "Helvetica", stack: "Helvetica, Arial, sans-serif" },
+  { value: "verdana", label: "Verdana", stack: "Verdana, sans-serif" },
+  { value: "tahoma", label: "Tahoma", stack: "Tahoma, sans-serif" },
+  { value: "trebuchet", label: "Trebuchet MS", stack: "'Trebuchet MS', sans-serif" },
+  { value: "georgia", label: "Georgia", stack: "Georgia, serif" },
+  { value: "times", label: "Times New Roman", stack: "'Times New Roman', serif" },
+  { value: "garamond", label: "Garamond", stack: "Garamond, serif" },
+  { value: "palatino", label: "Palatino", stack: "Palatino, serif" },
+  { value: "bookman", label: "Bookman", stack: "Bookman, serif" },
+  { value: "courier", label: "Courier New", stack: "'Courier New', monospace" },
+  { value: "monaco", label: "Monaco", stack: "Monaco, monospace" },
+  { value: "roboto", label: "Roboto", stack: "Roboto, Arial, sans-serif" },
+  { value: "open-sans", label: "Open Sans", stack: "'Open Sans', Arial, sans-serif" },
+  { value: "lato", label: "Lato", stack: "Lato, Arial, sans-serif" },
+  { value: "montserrat", label: "Montserrat", stack: "Montserrat, Arial, sans-serif" },
+  { value: "poppins", label: "Poppins", stack: "Poppins, Arial, sans-serif" },
+  { value: "merriweather", label: "Merriweather", stack: "Merriweather, Georgia, serif" },
+  { value: "playfair", label: "Playfair Display", stack: "'Playfair Display', Georgia, serif" },
+];
+
+function fontStack(font: LmsCourseBlockConfig["fontFamily"]) {
+  return fontOptions.find((option) => option.value === font)?.stack ?? fontOptions[0].stack;
+}
 
 const blockTools: { kind: LmsCourseBlockKind; label: string; mark: string }[] = [
   { kind: "text", label: "Texto", mark: "T" },
@@ -72,6 +108,8 @@ function emptyBlock(kind: LmsCourseBlockKind, position: number): DraftBlock {
 
 export function CourseStudioWorkspace({ courses, setCourses, onNotify, persistent, organizationId }: Props) {
   const [showCreate, setShowCreate] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<LmsCourse | null>(null);
   const [blocks, setBlocks] = useState<LmsCourseBlock[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -84,6 +122,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     description: "",
     youtubeUrl: "",
     color: "#6D28D9",
+    template: "guided" as "blank" | "guided" | "single",
+    passingScore: 80,
   });
   const [settings, setSettings] = useState({ title: "", level: "A1", description: "", color: "#6D28D9" });
 
@@ -130,7 +170,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       level: `${newCourse.level} · Borrador`,
       description: newCourse.description.trim() || "Curso de LevelUp.",
       progress: 0,
-      lessons: persistent ? 1 : 0,
+      lessons: newCourse.template === "guided" ? 3 : newCourse.template === "single" || newCourse.youtubeUrl ? 1 : 0,
       duration: "Por definir",
       students: 0,
       youtubeUrl: newCourse.youtubeUrl,
@@ -138,7 +178,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       published: false,
     };
     setCourses((current) => [...current, course]);
-    setNewCourse({ title: "", level: "A1", description: "", youtubeUrl: "", color: "#6D28D9" });
+    setNewCourse({ title: "", level: "A1", description: "", youtubeUrl: "", color: "#6D28D9", template: "guided", passingScore: 80 });
     setShowCreate(false);
     setBusy(false);
     await openCourse(course);
@@ -188,8 +228,9 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
 
   function startBlock(kind: LmsCourseBlockKind) {
     const nextPosition = Math.max(0, ...blocks.map((block) => block.position)) + 1;
-    setSelectedId(null);
+    setSelectedId("new");
     setDraft(emptyBlock(kind, nextPosition));
+    setShowPicker(false);
   }
 
   function selectBlock(block: LmsCourseBlock) {
@@ -283,7 +324,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
           </div>
           <div className={styles.headerActions}>
             <span className={editingCourse.published ? styles.published : styles.draftStatus}>{editingCourse.published ? "Publicado" : "Borrador"}</span>
-            <button type="button" className={styles.previewButton} onClick={() => onNotify("Vista del estudiante preparada")}>Vista previa</button>
+            <button type="button" className={styles.previewButton} onClick={() => setPreviewOpen(true)}>Vista previa</button>
             <button type="button" className={styles.publishButton} disabled={busy} onClick={() => void togglePublished(editingCourse)}>
               {editingCourse.published ? "Ocultar" : "Publicar"}
             </button>
@@ -304,7 +345,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
                 </button>
               ))}
             </div>
-            <button className={styles.addOutline} type="button" onClick={() => startBlock("text")}>+ Agregar contenido</button>
+            <button className={styles.addOutline} type="button" aria-expanded={showPicker} onClick={() => setShowPicker((current) => !current)}>+ Agregar contenido</button>
+            {showPicker && <div className={styles.outlinePicker} aria-label="Seleccionar tipo de contenido">{blockTools.map((tool) => <button key={tool.kind} type="button" onClick={() => startBlock(tool.kind)}><i>{tool.mark}</i><span>{tool.label}</span></button>)}</div>}
           </aside>
 
           <main className={styles.canvasPanel}>
@@ -337,7 +379,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             )}
           </main>
 
-          <aside className={styles.inspectorPanel}>
+          <aside className={styles.inspectorPanel} id="course-properties">
             {selectedId === "settings" ? (
               <CourseSettingsForm settings={settings} setSettings={setSettings} busy={busy} onSubmit={saveCourseSettings} />
             ) : draft ? (
@@ -351,6 +393,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             )}
           </aside>
         </div>
+        {previewOpen && <CoursePreviewModal course={editingCourse} blocks={blocks} draft={draft?.id ? null : draft} onClose={() => setPreviewOpen(false)} />}
       </section>
     );
   }
@@ -370,6 +413,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             <label className={styles.wide}>Nombre del curso<input value={newCourse.title} onChange={(event) => setNewCourse((current) => ({ ...current, title: event.target.value }))} placeholder="Ej. Business English B1" required /></label>
             <label>Nivel<select value={newCourse.level} onChange={(event) => setNewCourse((current) => ({ ...current, level: event.target.value }))}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label>
             <label>Color de portada<div className={styles.colorInput}><input type="color" value={newCourse.color} onChange={(event) => setNewCourse((current) => ({ ...current, color: event.target.value }))} /><span>{newCourse.color.toUpperCase()}</span></div></label>
+            <label>Plantilla inicial<select value={newCourse.template} onChange={(event) => setNewCourse((current) => ({ ...current, template: event.target.value as "blank" | "guided" | "single" }))}><option value="guided">Estructura guiada</option><option value="single">Una lección inicial</option><option value="blank">Curso en blanco</option></select></label>
+            <label>Nota mínima<input type="number" min="0" max="100" value={newCourse.passingScore} onChange={(event) => setNewCourse((current) => ({ ...current, passingScore: Number(event.target.value) }))} /></label>
             <label className={styles.full}>Descripción<textarea value={newCourse.description} onChange={(event) => setNewCourse((current) => ({ ...current, description: event.target.value }))} placeholder="¿Qué aprenderá el estudiante?" /></label>
             <label className={styles.full}>Video inicial de YouTube <small>(opcional)</small><input type="url" value={newCourse.youtubeUrl} onChange={(event) => setNewCourse((current) => ({ ...current, youtubeUrl: event.target.value }))} placeholder="https://www.youtube.com/watch?v=..." /></label>
           </div>
@@ -415,23 +460,73 @@ function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
 }) {
   const assessment = draft.kind === "quiz" || draft.kind === "exam";
   const updateConfig = <K extends keyof LmsCourseBlockConfig>(key: K, value: LmsCourseBlockConfig[K]) => setDraft((current) => current ? { ...current, config: { ...current.config, [key]: value } } : current);
-  return <form className={styles.inspectorForm} onSubmit={onSubmit}><div className={styles.inspectorTitle}><span>{kindLabel(draft.kind).toUpperCase()}</span><strong>{draft.id ? "Editar bloque" : "Nuevo bloque"}</strong></div><label>Título<input value={draft.title} onChange={(event) => setDraft((current) => current ? { ...current, title: event.target.value } : current)} required /></label>{draft.kind === "text" && <><div className={styles.formatToolbar}><select aria-label="Fuente" value={draft.config.fontFamily} onChange={(event) => updateConfig("fontFamily", event.target.value as LmsCourseBlockConfig["fontFamily"])}><option value="sans">Sans serif</option><option value="serif">Serif</option><option value="display">Display</option></select><select aria-label="Tamaño" value={draft.config.fontSize} onChange={(event) => updateConfig("fontSize", event.target.value as LmsCourseBlockConfig["fontSize"])}><option value="small">Pequeño</option><option value="normal">Normal</option><option value="large">Grande</option><option value="title">Título</option></select><button className={draft.config.bold ? styles.formatActive : ""} type="button" onClick={() => updateConfig("bold", !draft.config.bold)}><b>B</b></button><button className={draft.config.italic ? styles.formatActive : ""} type="button" onClick={() => updateConfig("italic", !draft.config.italic)}><i>I</i></button><button className={draft.config.underline ? styles.formatActive : ""} type="button" onClick={() => updateConfig("underline", !draft.config.underline)}><u>U</u></button></div><div className={styles.alignmentToolbar}><span>Alinear</span>{(["left", "center", "right"] as const).map((align) => <button className={draft.config.align === align ? styles.formatActive : ""} key={align} type="button" onClick={() => updateConfig("align", align)}>{align === "left" ? "≡" : align === "center" ? "≣" : "☰"}</button>)}</div><label>Contenido<textarea className={styles.contentTextarea} value={draft.body} onChange={(event) => setDraft((current) => current ? { ...current, body: event.target.value } : current)} placeholder="Escribe el contenido de la lección…" /></label></>}{draft.kind === "image" && <><label className={styles.uploadBox}>Cargar imagen<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void onUpload(event.target.files?.[0])} /><span>PNG, JPG o WEBP · máximo 2 MB</span></label><label>O usar enlace<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." /></label><label>Texto alternativo<textarea value={draft.body} onChange={(event) => setDraft((current) => current ? { ...current, body: event.target.value } : current)} placeholder="Describe la imagen" /></label></>}{draft.kind === "youtube" && <><label>Enlace de YouTube<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://www.youtube.com/watch?v=..." required /></label><label>Instrucciones<textarea value={draft.body} onChange={(event) => setDraft((current) => current ? { ...current, body: event.target.value } : current)} /></label></>}{draft.kind === "document" && <><label>Enlace del archivo<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Descripción<textarea value={draft.body} onChange={(event) => setDraft((current) => current ? { ...current, body: event.target.value } : current)} /></label></>}{draft.kind === "audio" && <><label>Enlace del audio<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Descripción o transcripción<textarea value={draft.body} onChange={(event) => setDraft((current) => current ? { ...current, body: event.target.value } : current)} /></label></>}{assessment && <><label>Instrucciones<textarea value={draft.body} onChange={(event) => setDraft((current) => current ? { ...current, body: event.target.value } : current)} placeholder="Indicaciones para el estudiante" /></label><label>Pregunta<textarea value={draft.question ?? ""} onChange={(event) => setDraft((current) => current ? { ...current, question: event.target.value } : current)} required /></label><fieldset className={styles.optionsField}><legend>Opciones de respuesta</legend>{(draft.options ?? []).map((option, index) => <label key={index}><span>{String.fromCharCode(65 + index)}</span><input value={option} onChange={(event) => setDraft((current) => { if (!current) return current; const options = [...(current.options ?? [])]; options[index] = event.target.value; return { ...current, options }; })} required={index < 2} /></label>)}</fieldset><label>Respuesta correcta<select value={draft.correctAnswer ?? ""} onChange={(event) => setDraft((current) => current ? { ...current, correctAnswer: event.target.value } : current)} required><option value="">Seleccionar</option>{(draft.options ?? []).filter(Boolean).map((option, index) => <option key={`${option}-${index}`} value={option}>{option}</option>)}</select></label><div className={styles.twoFields}><label>Nota mínima<input type="number" min="0" max="100" value={draft.passingScore ?? 80} onChange={(event) => setDraft((current) => current ? { ...current, passingScore: Number(event.target.value) } : current)} /></label><label>Intentos<input type="number" min="1" max="20" value={draft.maxAttempts ?? 3} onChange={(event) => setDraft((current) => current ? { ...current, maxAttempts: Number(event.target.value) } : current)} /></label></div></>}
-    <div className={styles.designSection}><span>DISEÑO DEL BLOQUE</span><label>Ancho<select value={draft.config.width} onChange={(event) => updateConfig("width", event.target.value as LmsCourseBlockConfig["width"])}><option value="full">Ancho completo</option><option value="half">Mitad</option><option value="third">Un tercio</option></select></label><div className={styles.twoFields}><label>Texto<input type="color" value={draft.config.textColor} onChange={(event) => updateConfig("textColor", event.target.value)} /></label><label>Fondo<input type="color" value={draft.config.backgroundColor} onChange={(event) => updateConfig("backgroundColor", event.target.value)} /></label></div></div><button className={styles.saveButton} disabled={busy} type="submit">{busy ? "Guardando…" : draft.id ? "Guardar cambios" : `Agregar ${kindLabel(draft.kind).toLowerCase()}`}</button></form>;
+  const updateBody = (body: string) => setDraft((current) => current ? { ...current, body } : current);
+  const toggleList = (ordered: boolean) => {
+    const lines = (draft.body || "Elemento").split("\n");
+    const pattern = ordered ? /^\d+\.\s/ : /^•\s/;
+    const active = lines.every((line) => !line.trim() || pattern.test(line));
+    updateBody(lines.map((line, index) => active ? line.replace(pattern, "") : `${ordered ? `${index + 1}.` : "•"} ${line.replace(/^((\d+\.)|•)\s/, "")}`).join("\n"));
+  };
+  return <form className={styles.inspectorForm} onSubmit={onSubmit}>
+    <div className={styles.inspectorTitle}><span>{kindLabel(draft.kind).toUpperCase()}</span><strong>{draft.id ? "Editar bloque" : "Nuevo bloque"}</strong></div>
+    <label>Título<input value={draft.title} onChange={(event) => setDraft((current) => current ? { ...current, title: event.target.value } : current)} required /></label>
+    {draft.kind === "text" && <>
+      <label>Estilo de texto<select aria-label="Estilo de texto" value={draft.config.textStyle} onChange={(event) => updateConfig("textStyle", event.target.value as LmsCourseBlockConfig["textStyle"])}><option value="paragraph">Párrafo</option><option value="heading1">Título principal</option><option value="heading2">Título de sección</option><option value="heading3">Subtítulo</option><option value="quote">Cita</option><option value="callout">Destacado</option></select></label>
+      <div className={styles.formatToolbar}>
+        <select aria-label="Fuente" value={draft.config.fontFamily} onChange={(event) => updateConfig("fontFamily", event.target.value as LmsCourseBlockConfig["fontFamily"])}>{fontOptions.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}</select>
+        <select aria-label="Tamaño" value={draft.config.fontSize} onChange={(event) => updateConfig("fontSize", event.target.value as LmsCourseBlockConfig["fontSize"])}><option value="xs">Extra pequeño</option><option value="small">Pequeño</option><option value="normal">Normal</option><option value="large">Grande</option><option value="xl">Extra grande</option><option value="title">Título</option><option value="display">Display</option></select>
+        <button title="Negrita" className={draft.config.bold ? styles.formatActive : ""} type="button" onClick={() => updateConfig("bold", !draft.config.bold)}><b>B</b></button>
+        <button title="Cursiva" className={draft.config.italic ? styles.formatActive : ""} type="button" onClick={() => updateConfig("italic", !draft.config.italic)}><i>I</i></button>
+        <button title="Subrayado" className={draft.config.underline ? styles.formatActive : ""} type="button" onClick={() => updateConfig("underline", !draft.config.underline)}><u>U</u></button>
+      </div>
+      <div className={styles.extendedToolbar}><button title="Tachado" className={draft.config.strikethrough ? styles.formatActive : ""} type="button" onClick={() => updateConfig("strikethrough", !draft.config.strikethrough)}>S̶</button><button title="Mayúsculas" className={draft.config.uppercase ? styles.formatActive : ""} type="button" onClick={() => updateConfig("uppercase", !draft.config.uppercase)}>AA</button><button type="button" onClick={() => toggleList(false)}>• Lista</button><button type="button" onClick={() => toggleList(true)}>1. Lista</button><button type="button" onClick={() => updateBody(`${draft.body}${draft.body ? "\n" : ""}[Texto del enlace](https://)`)}>Enlace</button></div>
+      <div className={styles.alignmentToolbar}><span>Alinear</span>{(["left", "center", "right", "justify"] as const).map((align) => <button title={align} className={draft.config.align === align ? styles.formatActive : ""} key={align} type="button" onClick={() => updateConfig("align", align)}>{align === "left" ? "≡" : align === "center" ? "≣" : align === "right" ? "☰" : "▤"}</button>)}</div>
+      <label>Contenido<textarea className={styles.contentTextarea} value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Escribe el contenido de la lección…" /></label>
+      <div className={styles.liveSample} style={blockVisualStyle({ ...draft, id: draft.id ?? "draft" })}><small>VISTA EN VIVO</small><strong>{draft.title || "Título del bloque"}</strong><p>{draft.body || "El formato seleccionado se mostrará aquí."}</p></div>
+    </>}
+    {draft.kind === "image" && <><label className={styles.uploadBox}>Cargar imagen<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void onUpload(event.target.files?.[0])} /><span>PNG, JPG o WEBP · máximo 2 MB</span></label><label>O usar enlace<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." /></label><label>Texto alternativo<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Describe la imagen" /></label></>}
+    {draft.kind === "youtube" && <><label>Enlace de YouTube<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://www.youtube.com/watch?v=..." required /></label><label>Instrucciones<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
+    {draft.kind === "document" && <><label>Enlace del archivo<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Descripción<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
+    {draft.kind === "audio" && <><label>Enlace del audio<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Descripción o transcripción<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
+    {assessment && <><label>Instrucciones<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Indicaciones para el estudiante" /></label><label>Pregunta<textarea value={draft.question ?? ""} onChange={(event) => setDraft((current) => current ? { ...current, question: event.target.value } : current)} required /></label><fieldset className={styles.optionsField}><legend>Opciones de respuesta</legend>{(draft.options ?? []).map((option, index) => <label key={index}><span>{String.fromCharCode(65 + index)}</span><input value={option} onChange={(event) => setDraft((current) => { if (!current) return current; const options = [...(current.options ?? [])]; options[index] = event.target.value; return { ...current, options }; })} required={index < 2} /></label>)}{(draft.options?.length ?? 0) < 6 && <button type="button" onClick={() => setDraft((current) => current ? { ...current, options: [...(current.options ?? []), ""] } : current)}>+ Agregar opción</button>}</fieldset><label>Respuesta correcta<select value={draft.correctAnswer ?? ""} onChange={(event) => setDraft((current) => current ? { ...current, correctAnswer: event.target.value } : current)} required><option value="">Seleccionar</option>{(draft.options ?? []).filter(Boolean).map((option, index) => <option key={`${option}-${index}`} value={option}>{option}</option>)}</select></label><div className={styles.twoFields}><label>Nota mínima<input type="number" min="0" max="100" value={draft.passingScore ?? 80} onChange={(event) => setDraft((current) => current ? { ...current, passingScore: Number(event.target.value) } : current)} /></label><label>Intentos<input type="number" min="1" max="20" value={draft.maxAttempts ?? 3} onChange={(event) => setDraft((current) => current ? { ...current, maxAttempts: Number(event.target.value) } : current)} /></label></div></>}
+    <div className={styles.designSection}><span>DISEÑO DEL BLOQUE</span><label>Ancho<select value={draft.config.width} onChange={(event) => updateConfig("width", event.target.value as LmsCourseBlockConfig["width"])}><option value="full">Ancho completo</option><option value="half">Mitad</option><option value="third">Un tercio</option></select></label><div className={styles.twoFields}><label>Interlineado<select value={draft.config.lineHeight} onChange={(event) => updateConfig("lineHeight", event.target.value as LmsCourseBlockConfig["lineHeight"])}><option value="compact">Compacto</option><option value="normal">Normal</option><option value="relaxed">Relajado</option><option value="spacious">Amplio</option></select></label><label>Espaciado<select value={draft.config.letterSpacing} onChange={(event) => updateConfig("letterSpacing", event.target.value as LmsCourseBlockConfig["letterSpacing"])}><option value="tight">Cerrado</option><option value="normal">Normal</option><option value="wide">Amplio</option></select></label><label>Relleno<select value={draft.config.padding} onChange={(event) => updateConfig("padding", event.target.value as LmsCourseBlockConfig["padding"])}><option value="none">Sin relleno</option><option value="compact">Compacto</option><option value="normal">Normal</option><option value="roomy">Amplio</option></select></label><label>Esquinas<select value={draft.config.radius} onChange={(event) => updateConfig("radius", event.target.value as LmsCourseBlockConfig["radius"])}><option value="none">Rectas</option><option value="small">Pequeñas</option><option value="medium">Medianas</option><option value="large">Grandes</option></select></label><label>Borde<select value={draft.config.borderStyle} onChange={(event) => updateConfig("borderStyle", event.target.value as LmsCourseBlockConfig["borderStyle"])}><option value="none">Sin borde</option><option value="solid">Sólido</option><option value="dashed">Discontinuo</option></select></label></div><div className={styles.threeFields}><label>Texto<input type="color" value={draft.config.textColor} onChange={(event) => updateConfig("textColor", event.target.value)} /></label><label>Fondo<input type="color" value={draft.config.backgroundColor} onChange={(event) => updateConfig("backgroundColor", event.target.value)} /></label><label>Borde<input type="color" value={draft.config.borderColor} onChange={(event) => updateConfig("borderColor", event.target.value)} /></label></div></div>
+    <button className={styles.saveButton} disabled={busy} type="submit">{busy ? "Guardando…" : draft.id ? "Guardar cambios" : `Agregar ${kindLabel(draft.kind).toLowerCase()}`}</button>
+  </form>;
+}
+
+function blockVisualStyle(block: LmsCourseBlock): React.CSSProperties {
+  const decoration = [block.config.underline && "underline", block.config.strikethrough && "line-through"].filter(Boolean).join(" ") || "none";
+  return {
+    color: block.config.textColor,
+    backgroundColor: block.config.backgroundColor,
+    border: block.config.borderStyle === "none" ? "none" : `1px ${block.config.borderStyle} ${block.config.borderColor}`,
+    borderRadius: { none: 0, small: 5, medium: 10, large: 18 }[block.config.radius],
+    padding: { none: 0, compact: 12, normal: 18, roomy: 28 }[block.config.padding],
+    textAlign: block.config.align,
+    fontFamily: fontStack(block.config.fontFamily),
+    fontSize: { xs: "11px", small: "13px", normal: "15px", large: "19px", xl: "23px", title: "29px", display: "38px" }[block.config.fontSize],
+    fontWeight: block.config.bold || block.config.textStyle.startsWith("heading") ? 800 : 500,
+    fontStyle: block.config.italic || block.config.textStyle === "quote" ? "italic" : "normal",
+    textDecoration: decoration,
+    textTransform: block.config.uppercase ? "uppercase" : "none",
+    lineHeight: { compact: 1.25, normal: 1.55, relaxed: 1.75, spacious: 2 }[block.config.lineHeight],
+    letterSpacing: { tight: "-.02em", normal: "normal", wide: ".08em" }[block.config.letterSpacing],
+    boxShadow: block.config.textStyle === "callout" ? `inset 4px 0 ${block.config.borderColor}` : undefined,
+  };
 }
 
 function CourseBlockPreview({ block, selected, onEdit, onDelete }: { block: LmsCourseBlock; selected: boolean; onEdit: () => void; onDelete: () => void }) {
   const widthClass = block.config.width === "half" ? styles.blockHalf : block.config.width === "third" ? styles.blockThird : styles.blockFull;
-  const visualStyle: React.CSSProperties = {
-    color: block.config.textColor,
-    backgroundColor: block.config.backgroundColor,
-    textAlign: block.config.align,
-    fontFamily: block.config.fontFamily === "serif" ? "Georgia, serif" : block.config.fontFamily === "display" ? "var(--font-demo-display), sans-serif" : "inherit",
-    fontSize: { small: "13px", normal: "15px", large: "19px", title: "27px" }[block.config.fontSize],
-    fontWeight: block.config.bold ? 800 : 500,
-    fontStyle: block.config.italic ? "italic" : "normal",
-    textDecoration: block.config.underline ? "underline" : "none",
-  };
-  return <article className={`${styles.canvasBlock} ${widthClass} ${selected ? styles.canvasBlockSelected : ""}`} onClick={onEdit}><div className={styles.blockTop}><span>{kindLabel(block.kind)}</span><div><button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Editar</button><button type="button" onClick={(event) => { event.stopPropagation(); onDelete(); }}>Eliminar</button></div></div><div className={styles.blockVisual} style={visualStyle}><strong>{block.title}</strong>{block.kind === "text" && <p>{block.body || "Agrega contenido desde el panel de propiedades."}</p>}{block.kind === "image" && (block.url ? <Image src={block.url} alt={block.body || block.title} width={900} height={500} unoptimized /> : <div className={styles.mediaPlaceholder}>Imagen</div>)}{block.kind === "youtube" && <div className={styles.videoPreview}><i>▶</i><span>{block.url ? "Video de YouTube" : "Agrega el enlace del video"}</span></div>}{block.kind === "document" && <div className={styles.resourcePreview}><i>DOC</i><span>{block.body || "Documento descargable"}</span></div>}{block.kind === "audio" && <div className={styles.resourcePreview}><i>♪</i><span>{block.body || "Recurso de audio"}</span></div>}{(block.kind === "quiz" || block.kind === "exam") && <div className={styles.assessmentPreview}><span>{block.kind === "exam" ? "EVALUACIÓN FINAL" : "COMPROBACIÓN"}</span><p>{block.question || "Agrega la pregunta en el panel de propiedades."}</p>{(block.options ?? []).filter(Boolean).slice(0, 4).map((option, index) => <small key={`${option}-${index}`}>{String.fromCharCode(65 + index)}. {option}</small>)}</div>}</div></article>;
+  return <article className={`${styles.canvasBlock} ${widthClass} ${selected ? styles.canvasBlockSelected : ""}`} onClick={onEdit}><div className={styles.blockTop}><span>{kindLabel(block.kind)}</span><div><button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Editar</button><button type="button" onClick={(event) => { event.stopPropagation(); onDelete(); }}>Eliminar</button></div></div><BlockContent block={block} /></article>;
+}
+
+function BlockContent({ block }: { block: LmsCourseBlock }) {
+  return <div className={`${styles.blockVisual} ${block.config.textStyle === "quote" ? styles.quoteBlock : ""}`} style={blockVisualStyle(block)}><strong>{block.title}</strong>{block.kind === "text" && <p>{block.body || "Agrega contenido desde el panel de propiedades."}</p>}{block.kind === "image" && (block.url ? <Image src={block.url} alt={block.body || block.title} width={900} height={500} unoptimized /> : <div className={styles.mediaPlaceholder}>Imagen</div>)}{block.kind === "youtube" && <div className={styles.videoPreview}><i>▶</i><span>{block.url ? "Video de YouTube" : "Agrega el enlace del video"}</span></div>}{block.kind === "document" && <div className={styles.resourcePreview}><i>DOC</i><span>{block.body || "Documento descargable"}</span></div>}{block.kind === "audio" && <div className={styles.resourcePreview}><i>♪</i><span>{block.body || "Recurso de audio"}</span></div>}{(block.kind === "quiz" || block.kind === "exam") && <div className={styles.assessmentPreview}><span>{block.kind === "exam" ? "EVALUACIÓN FINAL" : "COMPROBACIÓN"}</span><p>{block.question || "Agrega la pregunta en el panel de propiedades."}</p>{(block.options ?? []).filter(Boolean).slice(0, 6).map((option, index) => <small key={`${option}-${index}`}>{String.fromCharCode(65 + index)}. {option}</small>)}</div>}</div>;
+}
+
+function CoursePreviewModal({ course, blocks, draft, onClose }: { course: LmsCourse; blocks: LmsCourseBlock[]; draft: DraftBlock | null; onClose: () => void }) {
+  const previewBlocks = draft ? [...blocks, { ...draft, id: "preview-draft" } as LmsCourseBlock] : blocks;
+  return <div className={styles.previewOverlay} role="dialog" aria-modal="true" aria-label="Vista previa del curso"><div className={styles.previewShell}><header><div><span>VISTA DEL ESTUDIANTE</span><h2>{course.title}</h2><p>{course.description}</p></div><button type="button" onClick={onClose} aria-label="Cerrar vista previa">×</button></header><div className={styles.previewMeta}><span>{course.level.split(" · ")[0]}</span><span>{previewBlocks.length} contenidos</span><span>{course.published ? "Publicado" : "Borrador"}</span></div><main className={styles.studentPreviewGrid}>{previewBlocks.length ? previewBlocks.map((block) => <article className={block.config.width === "half" ? styles.blockHalf : block.config.width === "third" ? styles.blockThird : styles.blockFull} key={block.id}><BlockContent block={block} /></article>) : <div className={styles.previewEmpty}>Este curso todavía no tiene contenido.</div>}</main><footer><button type="button" onClick={onClose}>Volver al editor</button></footer></div></div>;
 }
 
 function kindLabel(kind: LmsCourseBlockKind) {

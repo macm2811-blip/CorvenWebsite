@@ -44,16 +44,31 @@ const courseBlockKinds: LmsCourseBlockKind[] = [
 ];
 
 const defaultBlockConfig: LmsCourseBlockConfig = {
-  fontFamily: "sans",
+  fontFamily: "inter",
   fontSize: "normal",
   textColor: "#111827",
   backgroundColor: "#FFFFFF",
+  borderColor: "#D0D5DD",
   align: "left",
   width: "full",
+  textStyle: "paragraph",
+  lineHeight: "normal",
+  letterSpacing: "normal",
+  padding: "normal",
+  radius: "medium",
+  borderStyle: "none",
   bold: false,
   italic: false,
   underline: false,
+  strikethrough: false,
+  uppercase: false,
 };
+
+const fontFamilies: LmsCourseBlockConfig["fontFamily"][] = [
+  "inter", "arial", "helvetica", "verdana", "tahoma", "trebuchet", "georgia",
+  "times", "garamond", "palatino", "bookman", "courier", "monaco", "roboto",
+  "open-sans", "lato", "montserrat", "poppins", "merriweather", "playfair",
+];
 
 function validHex(value: string) {
   return /^#[0-9a-f]{6}$/i.test(value);
@@ -61,25 +76,34 @@ function validHex(value: string) {
 
 function normalizeBlockConfig(value?: Partial<LmsCourseBlockConfig>): LmsCourseBlockConfig {
   return {
-    fontFamily: ["sans", "serif", "display"].includes(value?.fontFamily ?? "")
+    fontFamily: fontFamilies.includes(value?.fontFamily ?? defaultBlockConfig.fontFamily)
       ? value!.fontFamily!
       : defaultBlockConfig.fontFamily,
-    fontSize: ["small", "normal", "large", "title"].includes(value?.fontSize ?? "")
+    fontSize: ["xs", "small", "normal", "large", "xl", "title", "display"].includes(value?.fontSize ?? "")
       ? value!.fontSize!
       : defaultBlockConfig.fontSize,
     textColor: validHex(value?.textColor ?? "") ? value!.textColor! : defaultBlockConfig.textColor,
     backgroundColor: validHex(value?.backgroundColor ?? "")
       ? value!.backgroundColor!
       : defaultBlockConfig.backgroundColor,
-    align: ["left", "center", "right"].includes(value?.align ?? "")
+    borderColor: validHex(value?.borderColor ?? "") ? value!.borderColor! : defaultBlockConfig.borderColor,
+    align: ["left", "center", "right", "justify"].includes(value?.align ?? "")
       ? value!.align!
       : defaultBlockConfig.align,
     width: ["full", "half", "third"].includes(value?.width ?? "")
       ? value!.width!
       : defaultBlockConfig.width,
+    textStyle: ["paragraph", "heading1", "heading2", "heading3", "quote", "callout"].includes(value?.textStyle ?? "") ? value!.textStyle! : defaultBlockConfig.textStyle,
+    lineHeight: ["compact", "normal", "relaxed", "spacious"].includes(value?.lineHeight ?? "") ? value!.lineHeight! : defaultBlockConfig.lineHeight,
+    letterSpacing: ["tight", "normal", "wide"].includes(value?.letterSpacing ?? "") ? value!.letterSpacing! : defaultBlockConfig.letterSpacing,
+    padding: ["none", "compact", "normal", "roomy"].includes(value?.padding ?? "") ? value!.padding! : defaultBlockConfig.padding,
+    radius: ["none", "small", "medium", "large"].includes(value?.radius ?? "") ? value!.radius! : defaultBlockConfig.radius,
+    borderStyle: ["none", "solid", "dashed"].includes(value?.borderStyle ?? "") ? value!.borderStyle! : defaultBlockConfig.borderStyle,
     bold: Boolean(value?.bold),
     italic: Boolean(value?.italic),
     underline: Boolean(value?.underline),
+    strikethrough: Boolean(value?.strikethrough),
+    uppercase: Boolean(value?.uppercase),
   };
 }
 
@@ -498,6 +522,8 @@ export async function createCourseAction(input: {
   description: string;
   youtubeUrl: string;
   color?: string;
+  template?: "blank" | "guided" | "single";
+  passingScore?: number;
 }): Promise<ActionResult<{ id: string }>> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
@@ -518,6 +544,7 @@ export async function createCourseAction(input: {
         level: input.level,
         cover_url: validHex(input.color ?? "") ? `color:${input.color!.toUpperCase()}` : null,
         status: "draft",
+        passing_score: Math.max(0, Math.min(100, Math.round(input.passingScore ?? 80))),
       })
       .select("id")
       .single();
@@ -530,15 +557,32 @@ export async function createCourseAction(input: {
       .single();
     if (moduleError || !module) throw moduleError ?? new Error("No se creó el módulo inicial.");
 
-    const { error: lessonError } = await supabase.from("lessons").insert({
-      module_id: module.id,
-      title: "Primera clase",
-      description: "Contenido inicial del curso.",
-      content_type: input.youtubeUrl ? "youtube" : "text",
-      youtube_url: input.youtubeUrl || null,
-      position: 1,
-    });
-    if (lessonError) throw lessonError;
+    const template = input.template ?? "guided";
+    const lessons: Array<{
+      module_id: string;
+      title: string;
+      description: string;
+      content_type: string;
+      body: string | null;
+      youtube_url: string | null;
+      resource_url: string | null;
+      position: number;
+      content_config: LmsCourseBlockConfig;
+    }> = input.youtubeUrl
+      ? [{ module_id: module.id, title: "Video de bienvenida", description: "Introducción al curso.", content_type: "youtube", body: null, youtube_url: input.youtubeUrl, resource_url: null, position: 1, content_config: defaultBlockConfig }]
+      : template === "guided"
+        ? [
+            { module_id: module.id, title: "Bienvenida", description: "Presenta el propósito y la experiencia del curso.", content_type: "text", body: "Te damos la bienvenida. Edita este bloque para presentar el curso.", youtube_url: null, resource_url: null, position: 1, content_config: defaultBlockConfig },
+            { module_id: module.id, title: "Objetivos de aprendizaje", description: "Define resultados claros y medibles.", content_type: "text", body: "Al finalizar este curso, el estudiante podrá:\n• Objetivo 1\n• Objetivo 2\n• Objetivo 3", youtube_url: null, resource_url: null, position: 2, content_config: { ...defaultBlockConfig, textStyle: "callout" as const } },
+            { module_id: module.id, title: "Contenido principal", description: "Desarrolla aquí la primera unidad.", content_type: "text", body: "Comienza a desarrollar el contenido de la primera unidad.", youtube_url: null, resource_url: null, position: 3, content_config: defaultBlockConfig },
+          ]
+        : template === "single"
+          ? [{ module_id: module.id, title: "Primera lección", description: "Contenido inicial del curso.", content_type: "text", body: "Escribe aquí el contenido de la primera lección.", youtube_url: null, resource_url: null, position: 1, content_config: defaultBlockConfig }]
+          : [];
+    if (lessons.length) {
+      const { error: lessonError } = await supabase.from("lessons").insert(lessons);
+      if (lessonError) throw lessonError;
+    }
 
     await audit(supabase, userId, input.organizationId, "course.created", "course", course.id);
     revalidatePath("/learning/platform");
