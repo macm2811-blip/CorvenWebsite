@@ -273,7 +273,9 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       duration: minutes ? `${Math.max(1, Math.round(minutes / 60))} h` : "Por definir",
       students: courseEnrollments.length,
       youtubeUrl: text(courseLessons.find((lesson) => text(lesson.youtube_url))?.youtube_url),
-      color: ["#6d28d9", "#ea580c", "#0891b2"][index % 3],
+      color: text(course.cover_url).startsWith("color:")
+        ? text(course.cover_url).slice(6)
+        : ["#6d28d9", "#ea580c", "#0891b2"][index % 3],
       published: course.status === "published",
     };
   });
