@@ -37,15 +37,28 @@ export type LmsCourseBlockKind =
   | "exam";
 
 export type LmsCourseBlockConfig = {
-  fontFamily: "sans" | "serif" | "display";
-  fontSize: "small" | "normal" | "large" | "title";
+  fontFamily:
+    | "inter" | "arial" | "helvetica" | "verdana" | "tahoma" | "trebuchet"
+    | "georgia" | "times" | "garamond" | "palatino" | "bookman"
+    | "courier" | "monaco" | "roboto" | "open-sans" | "lato"
+    | "montserrat" | "poppins" | "merriweather" | "playfair";
+  fontSize: "xs" | "small" | "normal" | "large" | "xl" | "title" | "display";
   textColor: string;
   backgroundColor: string;
-  align: "left" | "center" | "right";
+  borderColor: string;
+  align: "left" | "center" | "right" | "justify";
   width: "full" | "half" | "third";
+  textStyle: "paragraph" | "heading1" | "heading2" | "heading3" | "quote" | "callout";
+  lineHeight: "compact" | "normal" | "relaxed" | "spacious";
+  letterSpacing: "tight" | "normal" | "wide";
+  padding: "none" | "compact" | "normal" | "roomy";
+  radius: "none" | "small" | "medium" | "large";
+  borderStyle: "none" | "solid" | "dashed";
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  strikethrough: boolean;
+  uppercase: boolean;
 };
 
 export type LmsCourseBlock = {
