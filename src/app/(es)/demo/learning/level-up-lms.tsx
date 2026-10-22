@@ -104,6 +104,7 @@ const navItems: Record<Role, { id: View; label: string; icon: string; count?: nu
     { id: "overview", label: "Resumen", icon: "home" },
     { id: "students", label: "Estudiantes", icon: "users", count: 1 },
     { id: "courses", label: "Cursos", icon: "book" },
+    { id: "sessions", label: "Clases en vivo", icon: "calendar" },
     { id: "income", label: "Ingresos", icon: "money", count: 3 },
     { id: "brand", label: "Identidad visual", icon: "palette" },
     { id: "support", label: "Soporte CORVEN", icon: "support", count: 1 },

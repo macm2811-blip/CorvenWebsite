@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type CSSProperties } from "react";
 import type { LmsCourse, LmsInitialData } from "@/lib/lms/types";
 import { CourseVideo } from "@/components/course-video";
 import { createTicketAction } from "./actions";
@@ -629,19 +629,32 @@ export function StudentWorkspace({
 function LessonContent({ lesson }: { lesson: CourseData["lessons"][number] }) {
   const config = lesson.content_config as Record<string, unknown> | null;
   const url = lesson.youtube_url || lesson.resource_url || "";
+  const families: Record<string,string> = { inter:"Inter,Arial,sans-serif",arial:"Arial,sans-serif",helvetica:"Helvetica,Arial,sans-serif",verdana:"Verdana,sans-serif",tahoma:"Tahoma,sans-serif",trebuchet:"'Trebuchet MS',sans-serif",georgia:"Georgia,serif",times:"'Times New Roman',serif",garamond:"Garamond,serif",palatino:"Palatino,serif",bookman:"Bookman,serif",courier:"'Courier New',monospace",monaco:"Monaco,monospace",roboto:"Roboto,Arial,sans-serif","open-sans":"'Open Sans',Arial,sans-serif",lato:"Lato,Arial,sans-serif",montserrat:"Montserrat,Arial,sans-serif",poppins:"Poppins,Arial,sans-serif",merriweather:"Merriweather,Georgia,serif",playfair:"'Playfair Display',Georgia,serif" };
+  const size: Record<string,number>={xs:12,small:14,normal:16,large:20,xl:24,title:32,display:44};
+  const radius:Record<string,number>={none:0,small:6,medium:12,large:20};
+  const padding:Record<string,number>={none:0,compact:10,normal:18,roomy:28};
+  const height:Record<string,number>={compact:1.25,normal:1.55,relaxed:1.75,spacious:2};
   return (
     <div
       style={{
         whiteSpace: "pre-wrap",
-        lineHeight: 1.8,
+        lineHeight: height[String(config?.lineHeight)]??1.55,
+        fontFamily:families[String(config?.fontFamily)],
+        fontSize:size[String(config?.fontSize)]??16,
+        fontWeight:config?.bold?700:400,
+        fontStyle:config?.italic?"italic":"normal",
+        textDecoration:[config?.underline?"underline":"",config?.strikethrough?"line-through":""].filter(Boolean).join(" ")||"none",
+        textTransform:config?.uppercase?"uppercase":"none",
+        textAlign:(["left","center","right","justify"].includes(String(config?.align))?config?.align:"left") as CSSProperties["textAlign"],
         color:
           typeof config?.textColor === "string" ? config.textColor : undefined,
         background:
           typeof config?.backgroundColor === "string"
             ? config.backgroundColor
             : undefined,
-        padding: 16,
-        borderRadius: 12,
+        padding: padding[String(config?.padding)]??18,
+        borderRadius: radius[String(config?.radius)]??12,
+        border:config?.borderStyle==="solid"||config?.borderStyle==="dashed"?`1px ${config.borderStyle} ${String(config.borderColor??"#d0d5dd")}`:undefined,
       }}
     >
       {lesson.content_type === "youtube" && (
@@ -665,7 +678,7 @@ function LessonContent({ lesson }: { lesson: CourseData["lessons"][number] }) {
           Abrir documento ↗
         </a>
       )}
-      <p>{lesson.body || lesson.description}</p>
+      <p>{(lesson.body||lesson.description||"").split(/(\[[^\]]+\]\(https:\/\/[^\s)]+\))/g).map((part: string,index: number)=>{const match=part.match(/^\[([^\]]+)\]\((https:\/\/[^\s)]+)\)$/);return match?<a key={index} href={match[2]} target="_blank" rel="noopener noreferrer">{match[1]}</a>:part;})}</p>
     </div>
   );
 }
