@@ -409,9 +409,9 @@ export function StudentWorkspace({
               <div className={styles.welcome}>
                 {view === "home" && (
                   <Image
-                    src="/brand/level-up/mascot-wave.jpg"
-                    width={1008}
-                    height={1008}
+                    src="/brand/level-up/mascot-wave-transparent.png"
+                    width={1254}
+                    height={1254}
                     alt=""
                   />
                 )}
@@ -439,20 +439,20 @@ export function StudentWorkspace({
                     dashboard?.enrollments.find((e) => e.course_id === c.id)
                       ?.progress ?? 0;
                   return (
-                    <article className={styles.panel} key={c.id}>
-                      <small>{c.level.split(" · ")[0]}</small>
+                    <article className={styles.courseCard} key={c.id}>
+                      <div className={styles.courseCover} style={{ background: `linear-gradient(130deg,${c.color},#30205e)` }}><span>{c.level.split(" · ")[0]}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1m0-15c3-2 6-2 9-1v15c-3-1-6-1-9 1V5Z"/></svg><small>LEVEL UP ACADEMY</small></div>
+                      <div className={styles.courseCardBody}>
                       <h2>{c.title}</h2>
                       <p>{c.description}</p>
-                      <p>
-                        {c.lessons} lecciones · {progress}% completado
-                      </p>
-                      <progress max={100} value={progress} />
+                      <div className={styles.courseMeta}><span>{c.lessons} lecciones</span><strong>{progress}% completado</strong></div>
+                      <progress aria-label={`Progreso de ${c.title}`} max={100} value={progress} />
                       <button
                         disabled={busy}
                         onClick={() => void openCourse(c)}
                       >
-                        {progress > 0 ? "Continuar curso" : "Abrir curso"}
+                        {progress > 0 ? "Continuar curso" : "Abrir curso"} <span aria-hidden="true">→</span>
                       </button>
+                      </div>
                     </article>
                   );
                 })}
@@ -508,7 +508,7 @@ export function StudentWorkspace({
                   </article>
                 ))
               ) : (
-                <p>No hay clases programadas.</p>
+                  <div className={styles.emptyState}><span aria-hidden="true">◷</span><strong>Aún no hay clases programadas</strong><p>Aquí aparecerán los horarios y enlaces que publique tu academia.</p></div>
               )}
             </section>
           )}
