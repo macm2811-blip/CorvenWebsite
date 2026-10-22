@@ -63,6 +63,7 @@ export type LmsCourseBlockConfig = {
 
 export type LmsCourseBlock = {
   id: string;
+  moduleId?: string;
   kind: LmsCourseBlockKind;
   title: string;
   body: string;

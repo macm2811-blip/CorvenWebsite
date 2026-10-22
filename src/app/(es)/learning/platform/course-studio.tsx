@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { CourseVideo } from "@/components/course-video";
 import { FormEvent, useState } from "react";
 
 import type {
@@ -18,6 +19,7 @@ import {
   setCoursePublishedAction,
   updateCourseDetailsAction,
   uploadCourseImageAction,
+  createCourseModuleAction,
 } from "./actions";
 import styles from "./course-studio.module.css";
 
@@ -109,9 +111,15 @@ function emptyBlock(kind: LmsCourseBlockKind, position: number): DraftBlock {
 export function CourseStudioWorkspace({ courses, setCourses, onNotify, persistent, organizationId }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerCategory, setPickerCategory] = useState<"standard" | "activities" | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("Todos");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<LmsCourse | null>(null);
   const [blocks, setBlocks] = useState<LmsCourseBlock[]>([]);
+  const [modules, setModules] = useState<{ id: string; title: string; position: number }[]>([]);
+  const [moduleId, setModuleId] = useState("");
+  const [moduleTitle, setModuleTitle] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftBlock | null>(null);
   const [busy, setBusy] = useState(false);
@@ -146,6 +154,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     setLoading(false);
     if (!result.ok || !result.data) return onNotify(result.message);
     setBlocks(result.data.blocks);
+    setModules(result.data.modules);
+    setModuleId(result.data.modules[0]?.id ?? "");
   }
 
   async function createCourse(event: FormEvent) {
@@ -229,11 +239,12 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   function startBlock(kind: LmsCourseBlockKind) {
     const nextPosition = Math.max(0, ...blocks.map((block) => block.position)) + 1;
     setSelectedId("new");
-    setDraft(emptyBlock(kind, nextPosition));
+    setDraft({ ...emptyBlock(kind, nextPosition), moduleId: moduleId || undefined });
     setShowPicker(false);
   }
 
   function selectBlock(block: LmsCourseBlock) {
+    if (block.moduleId) setModuleId(block.moduleId);
     setSelectedId(block.id);
     setDraft({ ...block, config: { ...block.config }, options: [...(block.options ?? [])] });
   }
@@ -260,6 +271,13 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       : [...current, saved].sort((a, b) => a.position - b.position));
     setSelectedId(saved.id);
     setDraft({ ...saved, options: [...(saved.options ?? [])] });
+    if (saved.moduleId && !modules.some((item) => item.id === saved.moduleId) && persistent && organizationId && typeof editingCourse.id === "string") {
+      const refreshed = await loadCourseStudioAction({ organizationId, courseId: editingCourse.id });
+      if (refreshed.ok && refreshed.data) {
+        setModules(refreshed.data.modules);
+        setModuleId(saved.moduleId);
+      }
+    }
     if (!alreadyExists && !["quiz", "exam"].includes(saved.kind)) {
       setCourses((current) => current.map((course) => course.id === editingCourse.id ? { ...course, lessons: course.lessons + 1 } : course));
       setEditingCourse((current) => current ? { ...current, lessons: current.lessons + 1 } : current);
@@ -311,7 +329,23 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     onNotify(result.message);
   }
 
+  async function addModule(event: FormEvent) {
+    event.preventDefault();
+    if (!editingCourse || !moduleTitle.trim() || !organizationId || typeof editingCourse.id !== "string") return;
+    setBusy(true);
+    const result = await createCourseModuleAction({ organizationId, courseId: editingCourse.id, title: moduleTitle });
+    setBusy(false);
+    if (!result.ok || !result.data) return onNotify(result.message);
+    setModules((current) => [...current, result.data!]);
+    setModuleId(result.data.id);
+    setModuleTitle("");
+    setDraft(null);
+    setShowPicker(false);
+  }
+
   if (editingCourse) {
+    const visibleBlocks = blocks.filter((block) => !block.moduleId || !moduleId || block.moduleId === moduleId);
+    const currentModule = modules.find((item) => item.id === moduleId);
     return (
       <section className={styles.studio}>
         <header className={styles.studioHeader}>
@@ -337,21 +371,27 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             <button className={selectedId === "settings" ? styles.outlineActive : ""} onClick={() => { setSelectedId("settings"); setDraft(null); }} type="button">
               <i>⚙</i><span><strong>Configuración</strong><small>Nombre, nivel y portada</small></span>
             </button>
-            <div className={styles.moduleLabel}><span>MÓDULO 1</span><small>{blocks.length} bloques</small></div>
+            <button className={styles.addOutline} type="button" aria-expanded={showPicker} onClick={() => { setShowPicker((current) => !current); setPickerCategory(null); }}>+ Agregar</button>
+            {showPicker && <div className={styles.addMenu}>
+              <button type="button" onClick={() => setPickerCategory("standard")}><strong>Contenido estándar →</strong><small>Texto, video, imagen, archivo o audio</small></button>
+              <button type="button" onClick={() => setPickerCategory("activities")}><strong>Actividades de aprendizaje →</strong><small>Quiz y examen</small></button>
+              {pickerCategory && blockTools.filter((tool) => pickerCategory === "activities" ? ["quiz", "exam"].includes(tool.kind) : !["quiz", "exam"].includes(tool.kind)).map((tool) => <button key={tool.kind} type="button" onClick={() => startBlock(tool.kind)}>{tool.mark} {tool.label}</button>)}
+              <form onSubmit={addModule}><label>Nuevo módulo<input value={moduleTitle} onChange={(event) => setModuleTitle(event.target.value)} required maxLength={180} /></label><button type="submit" disabled={busy}>Agregar módulo</button></form>
+            </div>}
+            {modules.map((item) => <button type="button" key={item.id} className={moduleId === item.id ? styles.outlineActive : ""} onClick={() => { setModuleId(item.id); setDraft(null); setSelectedId(null); }}><i>▤</i><span><strong>{item.title}</strong><small>{blocks.filter((block) => block.moduleId === item.id).length} contenidos</small></span></button>)}
+            <div className={styles.moduleLabel}><span>{currentModule?.title ?? "CONTENIDO"}</span><small>{visibleBlocks.length} bloques</small></div>
             <div className={styles.outlineList}>
-              {blocks.map((block, index) => (
+              {visibleBlocks.map((block, index) => (
                 <button className={selectedId === block.id ? styles.outlineActive : ""} key={block.id} type="button" onClick={() => selectBlock(block)}>
                   <i>{index + 1}</i><span><strong>{block.title}</strong><small>{kindLabel(block.kind)}</small></span>
                 </button>
               ))}
             </div>
-            <button className={styles.addOutline} type="button" aria-expanded={showPicker} onClick={() => setShowPicker((current) => !current)}>+ Agregar contenido</button>
-            {showPicker && <div className={styles.outlinePicker} aria-label="Seleccionar tipo de contenido">{blockTools.map((tool) => <button key={tool.kind} type="button" onClick={() => startBlock(tool.kind)}><i>{tool.mark}</i><span>{tool.label}</span></button>)}</div>}
           </aside>
 
           <main className={styles.canvasPanel}>
             <div className={styles.canvasTop}>
-              <div><span>LIENZO DEL CURSO</span><strong>Módulo 1</strong></div>
+              <div><span>LIENZO DEL CURSO</span><strong>{currentModule?.title ?? "Contenido"}</strong></div>
               <span>{blocks.length} elementos</span>
             </div>
             <div className={styles.toolShelf} aria-label="Agregar contenido">
@@ -359,7 +399,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             </div>
             {loading ? <div className={styles.loadingState}>Cargando contenido…</div> : blocks.length ? (
               <div className={styles.canvasGrid}>
-                {blocks.map((block) => (
+                {visibleBlocks.map((block) => (
                   <CourseBlockPreview
                     block={block}
                     key={block.id}
@@ -401,8 +441,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   return (
     <section className={styles.catalog}>
       <div className={styles.catalogToolbar}>
-        <label><span>⌕</span><input placeholder="Buscar cursos" /></label>
-        <div><button type="button">Todos</button><button type="button">Publicados</button><button type="button">Borradores</button></div>
+        <label><span>⌕</span><input placeholder="Buscar cursos" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <div>{["Todos", "Publicados", "Borradores"].map((item) => <button type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div>
         <button className={styles.createButton} type="button" onClick={() => setShowCreate((current) => !current)}>{showCreate ? "Cerrar" : "+ Crear curso"}</button>
       </div>
 
@@ -416,14 +456,14 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             <label>Plantilla inicial<select value={newCourse.template} onChange={(event) => setNewCourse((current) => ({ ...current, template: event.target.value as "blank" | "guided" | "single" }))}><option value="guided">Estructura guiada</option><option value="single">Una lección inicial</option><option value="blank">Curso en blanco</option></select></label>
             <label>Nota mínima<input type="number" min="0" max="100" value={newCourse.passingScore} onChange={(event) => setNewCourse((current) => ({ ...current, passingScore: Number(event.target.value) }))} /></label>
             <label className={styles.full}>Descripción<textarea value={newCourse.description} onChange={(event) => setNewCourse((current) => ({ ...current, description: event.target.value }))} placeholder="¿Qué aprenderá el estudiante?" /></label>
-            <label className={styles.full}>Video inicial de YouTube <small>(opcional)</small><input type="url" value={newCourse.youtubeUrl} onChange={(event) => setNewCourse((current) => ({ ...current, youtubeUrl: event.target.value }))} placeholder="https://www.youtube.com/watch?v=..." /></label>
+            <label className={styles.full}>Video inicial (YouTube o OneDrive) <small>(opcional)</small><input type="url" value={newCourse.youtubeUrl} onChange={(event) => setNewCourse((current) => ({ ...current, youtubeUrl: event.target.value }))} placeholder="https://..." /></label>
           </div>
           <div className={styles.createActions}><button type="button" onClick={() => setShowCreate(false)}>Cancelar</button><button className={styles.createButton} disabled={busy} type="submit">{busy ? "Creando…" : "Crear y abrir editor"}</button></div>
         </form>
       )}
 
       <div className={styles.courseGrid}>
-        {courses.map((course) => (
+        {courses.filter((course) => course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "Todos" || (filter === "Publicados" ? course.published : !course.published))).map((course) => (
           <article className={styles.courseCard} key={course.id}>
             <button className={styles.courseCover} style={{ background: `linear-gradient(135deg, ${course.color}, #111827)` }} type="button" onClick={() => void openCourse(course)}>
               <span>{course.level.split(" · ")[0]}</span><i>▤</i><small>{course.published ? "PUBLICADO" : "BORRADOR"}</small>
@@ -485,7 +525,7 @@ function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
       <div className={styles.liveSample} style={blockVisualStyle({ ...draft, id: draft.id ?? "draft" })}><small>VISTA EN VIVO</small><strong>{draft.title || "Título del bloque"}</strong><p>{draft.body || "El formato seleccionado se mostrará aquí."}</p></div>
     </>}
     {draft.kind === "image" && <><label className={styles.uploadBox}>Cargar imagen<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void onUpload(event.target.files?.[0])} /><span>PNG, JPG o WEBP · máximo 2 MB</span></label><label>O usar enlace<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." /></label><label>Texto alternativo<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Describe la imagen" /></label></>}
-    {draft.kind === "youtube" && <><label>Enlace de YouTube<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://www.youtube.com/watch?v=..." required /></label><label>Instrucciones<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
+    {draft.kind === "youtube" && <><label>Enlace de video (YouTube, OneDrive o MP4/WebM)<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Instrucciones<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
     {draft.kind === "document" && <><label>Enlace del archivo<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Descripción<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
     {draft.kind === "audio" && <><label>Enlace del audio<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Descripción o transcripción<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
     {assessment && <><label>Instrucciones<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Indicaciones para el estudiante" /></label><label>Pregunta<textarea value={draft.question ?? ""} onChange={(event) => setDraft((current) => current ? { ...current, question: event.target.value } : current)} required /></label><fieldset className={styles.optionsField}><legend>Opciones de respuesta</legend>{(draft.options ?? []).map((option, index) => <label key={index}><span>{String.fromCharCode(65 + index)}</span><input value={option} onChange={(event) => setDraft((current) => { if (!current) return current; const options = [...(current.options ?? [])]; options[index] = event.target.value; return { ...current, options }; })} required={index < 2} /></label>)}{(draft.options?.length ?? 0) < 6 && <button type="button" onClick={() => setDraft((current) => current ? { ...current, options: [...(current.options ?? []), ""] } : current)}>+ Agregar opción</button>}</fieldset><label>Respuesta correcta<select value={draft.correctAnswer ?? ""} onChange={(event) => setDraft((current) => current ? { ...current, correctAnswer: event.target.value } : current)} required><option value="">Seleccionar</option>{(draft.options ?? []).filter(Boolean).map((option, index) => <option key={`${option}-${index}`} value={option}>{option}</option>)}</select></label><div className={styles.twoFields}><label>Nota mínima<input type="number" min="0" max="100" value={draft.passingScore ?? 80} onChange={(event) => setDraft((current) => current ? { ...current, passingScore: Number(event.target.value) } : current)} /></label><label>Intentos<input type="number" min="1" max="20" value={draft.maxAttempts ?? 3} onChange={(event) => setDraft((current) => current ? { ...current, maxAttempts: Number(event.target.value) } : current)} /></label></div></>}
@@ -521,7 +561,7 @@ function CourseBlockPreview({ block, selected, onEdit, onDelete }: { block: LmsC
 }
 
 function BlockContent({ block }: { block: LmsCourseBlock }) {
-  return <div className={`${styles.blockVisual} ${block.config.textStyle === "quote" ? styles.quoteBlock : ""}`} style={blockVisualStyle(block)}><strong>{block.title}</strong>{block.kind === "text" && <p>{block.body || "Agrega contenido desde el panel de propiedades."}</p>}{block.kind === "image" && (block.url ? <Image src={block.url} alt={block.body || block.title} width={900} height={500} unoptimized /> : <div className={styles.mediaPlaceholder}>Imagen</div>)}{block.kind === "youtube" && <div className={styles.videoPreview}><i>▶</i><span>{block.url ? "Video de YouTube" : "Agrega el enlace del video"}</span></div>}{block.kind === "document" && <div className={styles.resourcePreview}><i>DOC</i><span>{block.body || "Documento descargable"}</span></div>}{block.kind === "audio" && <div className={styles.resourcePreview}><i>♪</i><span>{block.body || "Recurso de audio"}</span></div>}{(block.kind === "quiz" || block.kind === "exam") && <div className={styles.assessmentPreview}><span>{block.kind === "exam" ? "EVALUACIÓN FINAL" : "COMPROBACIÓN"}</span><p>{block.question || "Agrega la pregunta en el panel de propiedades."}</p>{(block.options ?? []).filter(Boolean).slice(0, 6).map((option, index) => <small key={`${option}-${index}`}>{String.fromCharCode(65 + index)}. {option}</small>)}</div>}</div>;
+  return <div className={`${styles.blockVisual} ${block.config.textStyle === "quote" ? styles.quoteBlock : ""}`} style={blockVisualStyle(block)}><strong>{block.title}</strong>{block.kind === "text" && <p>{block.body || "Agrega contenido desde el panel de propiedades."}</p>}{block.kind === "image" && (block.url ? <Image src={block.url} alt={block.body || block.title} width={900} height={500} unoptimized /> : <div className={styles.mediaPlaceholder}>Imagen</div>)}{block.kind === "youtube" && <CourseVideo url={block.url} title={block.title} />}{block.kind === "document" && <div className={styles.resourcePreview}><i>DOC</i><span>{block.body || "Documento descargable"}</span></div>}{block.kind === "audio" && <div className={styles.resourcePreview}><i>♪</i><span>{block.body || "Recurso de audio"}</span></div>}{(block.kind === "quiz" || block.kind === "exam") && <div className={styles.assessmentPreview}><span>{block.kind === "exam" ? "EVALUACIÓN FINAL" : "COMPROBACIÓN"}</span><p>{block.question || "Agrega la pregunta en el panel de propiedades."}</p>{(block.options ?? []).filter(Boolean).slice(0, 6).map((option, index) => <small key={`${option}-${index}`}>{String.fromCharCode(65 + index)}. {option}</small>)}</div>}</div>;
 }
 
 function CoursePreviewModal({ course, blocks, draft, onClose }: { course: LmsCourse; blocks: LmsCourseBlock[]; draft: DraftBlock | null; onClose: () => void }) {
