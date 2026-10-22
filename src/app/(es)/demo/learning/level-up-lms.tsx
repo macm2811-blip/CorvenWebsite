@@ -122,6 +122,7 @@ const roleDefaultView: Record<Role, View> = { student: "home", admin: "overview"
 export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
   const persistent = Boolean(initialData?.persistent);
   const [role, setRole] = useState<Role>(initialData?.role ?? "student");
+  const [accountOpen, setAccountOpen] = useState(false);
   const [view, setView] = useState<View>(roleDefaultView[initialData?.role ?? "student"]);
   const [students, setStudents] = useState<Student[]>(initialData?.students ?? initialStudents);
   const [courses, setCourses] = useState<Course[]>(initialData?.courses ?? initialCourses);
@@ -432,7 +433,7 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
             <button className={role === "admin" ? styles.roleActive : ""} onClick={() => changeRole("admin")}>Level Up</button>
             <button className={role === "owner" ? styles.roleActive : ""} onClick={() => changeRole("owner")}>CORVEN</button>
           </div>}
-          {persistent ? <form action={signOutAction}><button className={styles.avatarButton} title="Cerrar sesión">{initialsFor(initialData?.viewerName ?? "Usuario")}</button></form> : <button className={styles.avatarButton} onClick={() => showToast("Menú de cuenta")}>{role === "student" ? "SR" : role === "admin" ? "AL" : "MC"}</button>}
+          {persistent ? <div className={styles.accountMenu} onKeyDown={(event) => { if (event.key === "Escape") setAccountOpen(false); }}><button className={`${styles.avatarButton} ${role !== "owner" ? styles.levelUpAvatar : ""}`} type="button" aria-label="Abrir menú de perfil" aria-expanded={accountOpen} onClick={() => setAccountOpen((current) => !current)}>{role === "owner" ? initialsFor(initialData?.viewerName ?? "Usuario") : <Image src="/brand/level-up/mark-transparent.png" alt="Level Up" width={1451} height={1084} sizes="40px" />}</button>{accountOpen && <div className={styles.accountDropdown}><strong>{initialData?.viewerName ?? "Mi cuenta"}</strong><span>{role === "student" ? "Estudiante" : role === "admin" ? "Administración de la academia" : "CORVEN Learning"}</span><form action={signOutAction}><button type="submit">Cerrar sesión ↗</button></form></div>}</div> : <button className={styles.avatarButton} onClick={() => showToast("Menú de cuenta")}>{role === "student" ? "SR" : role === "admin" ? "AL" : "MC"}</button>}
         </div>
       </header>
 
@@ -795,7 +796,7 @@ function SectionHeading({ title, text, action, onAction }: { title: string; text
 
 function TenantMark({ logoUrl, large = false }: { logoUrl?: string | null; large?: boolean }) {
   if (logoUrl) return <span className={large ? styles.tenantLogoLarge : styles.tenantLogo}><Image src={logoUrl} alt="Logo de Level Up" fill unoptimized /></span>;
-  return <span className={`${large ? styles.tenantLogoLarge : styles.tenantLogo} ${styles.levelUpMark}`}><Image src="/brand/level-up/mark.jpg" alt="Level Up" fill sizes={large ? "78px" : "42px"} /></span>;
+  return <span className={`${large ? styles.tenantLogoLarge : styles.tenantLogo} ${styles.levelUpMark}`}><Image src="/brand/level-up/mark-transparent.png" alt="Level Up" fill sizes={large ? "78px" : "42px"} /></span>;
 }
 
 function AcademyMark({ name }: { name: string }) {

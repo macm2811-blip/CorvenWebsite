@@ -30,11 +30,11 @@ export function LoginForm({ next }: { next: string }) {
       <input type="hidden" name="next" value={next} />
       <div className={styles.formHeading}>
         <span>{forgotten ? "RECUPERAR ACCESO" : "LEVELUP"}</span>
-        <h1>{forgotten ? "Cambia tu contraseña" : "Login"}</h1>
+        <h1>{forgotten ? "Recupera tu acceso" : "Bienvenido de nuevo"}</h1>
         <p>
           {forgotten
             ? "Te enviaremos un enlace seguro al correo registrado."
-            : "Ingresa con tu usuario o correo."}
+            : "Continúa tu aprendizaje. Ingresa con tu usuario o correo."}
         </p>
       </div>
 
