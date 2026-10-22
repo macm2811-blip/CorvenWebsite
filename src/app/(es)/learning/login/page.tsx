@@ -32,7 +32,6 @@ export default async function LoginPage({
         <div className={styles.levelUpBrand}>
           <div className={styles.logoPlate}><Image className={styles.levelUpLogo} src="/brand/level-up/logo-horizontal-transparent.png" alt="Level Up English Academy" width={2109} height={745} sizes="(max-width: 850px) 250px, 380px" preload /></div>
           <Image className={styles.mascot} src="/brand/level-up/mascot-wave-transparent.png" alt="La mascota de Level Up te da la bienvenida" width={1254} height={1254} sizes="(max-width: 850px) 140px, 270px" />
-          <p className={styles.brandTagline}>Tu siguiente nivel empieza aquí.</p>
         </div>
         <div className={styles.powered}>
           <span>Powered by</span>
