@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { videoSource } from "@/lib/lms/video";
 import type {
   LmsAcademy,
   LmsAcademyAdmin,
@@ -529,7 +530,7 @@ export async function createCourseAction(input: {
     const { supabase, userId } = await requireStaff(input.organizationId);
     const title = input.title.trim().slice(0, 160);
     if (title.length < 3) throw new Error("Escribe un nombre para el curso.");
-    if (input.youtubeUrl && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(input.youtubeUrl)) {
+    if (input.youtubeUrl && !videoSource(input.youtubeUrl)) {
       throw new Error("Usa un enlace válido de YouTube.");
     }
 
@@ -625,7 +626,7 @@ export async function addLessonAction(input: {
     const { supabase, userId } = await requireStaff(input.organizationId);
     const title = input.title.trim().slice(0, 180);
     if (title.length < 2) throw new Error("Escribe el nombre de la lección.");
-    if (input.contentType === "youtube" && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(input.contentUrl ?? "")) {
+    if (input.contentType === "youtube" && !videoSource(input.contentUrl ?? "")) {
       throw new Error("Usa un enlace válido de YouTube.");
     }
     if ((input.contentType === "document" || input.contentType === "audio") && !/^https:\/\//i.test(input.contentUrl ?? "")) {
@@ -691,7 +692,7 @@ export async function addLessonAction(input: {
 export async function loadCourseStudioAction(input: {
   organizationId: string;
   courseId: string;
-}): Promise<ActionResult<{ blocks: LmsCourseBlock[] }>> {
+}): Promise<ActionResult<{ blocks: LmsCourseBlock[]; modules: { id: string; title: string; position: number }[] }>> {
   try {
     const { supabase } = await requireStaff(input.organizationId);
     if (!validUuid(input.courseId)) throw new Error("Curso inválido.");
@@ -705,7 +706,7 @@ export async function loadCourseStudioAction(input: {
 
     const { data: modules, error: modulesError } = await supabase
       .from("modules")
-      .select("id")
+      .select("id, title, position")
       .eq("course_id", input.courseId)
       .order("position", { ascending: true });
     if (modulesError) throw modulesError;
@@ -713,7 +714,7 @@ export async function loadCourseStudioAction(input: {
     const lessonsResult = moduleIds.length
       ? await supabase
           .from("lessons")
-          .select("id, title, description, content_type, body, youtube_url, resource_url, position, content_config")
+          .select("id, module_id, title, description, content_type, body, youtube_url, resource_url, position, content_config")
           .in("module_id", moduleIds)
           .order("position", { ascending: true })
       : { data: [], error: null };
@@ -737,6 +738,7 @@ export async function loadCourseStudioAction(input: {
 
     const lessonBlocks: LmsCourseBlock[] = (lessonsResult.data ?? []).map((lesson) => ({
       id: lesson.id,
+      moduleId: lesson.module_id,
       kind: courseBlockKinds.includes(lesson.content_type as LmsCourseBlockKind)
         ? (lesson.content_type as LmsCourseBlockKind)
         : "text",
@@ -773,7 +775,7 @@ export async function loadCourseStudioAction(input: {
       };
     });
     const blocks = [...lessonBlocks, ...quizBlocks].sort((a, b) => a.position - b.position);
-    return { ok: true, message: "Contenido cargado.", data: { blocks } };
+    return { ok: true, message: "Contenido cargado.", data: { blocks, modules: modules ?? [] } };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No pudimos cargar el editor." };
   }
@@ -839,12 +841,13 @@ export async function saveCourseBlockAction(input: {
     if (["image", "document", "audio"].includes(input.block.kind) && !/^https:\/\//i.test(url)) {
       throw new Error("Agrega un enlace HTTPS válido para el recurso.");
     }
-    if (input.block.kind === "youtube" && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
-      throw new Error("Agrega un enlace válido de YouTube.");
+    if (input.block.kind === "youtube" && !videoSource(url)) {
+      throw new Error("Agrega un enlace válido de YouTube, OneDrive o un archivo MP4/WebM por HTTPS.");
     }
 
     const isAssessment = input.block.kind === "quiz" || input.block.kind === "exam";
     let blockId = input.block.id ?? "";
+    let savedModuleId = isAssessment ? undefined : input.block.moduleId;
     const position = Math.max(1, Math.round(input.block.position || 1));
     if (isAssessment) {
       const options = (input.block.options ?? []).map((option) => option.trim()).filter(Boolean).slice(0, 6);
@@ -866,7 +869,7 @@ export async function saveCourseBlockAction(input: {
           .from("quizzes")
           .update(assessmentValues)
           .eq("id", blockId)
-          .eq("course_id", input.courseId);
+          .eq("course_id", input.courseId).select("id").single();
         if (error) throw error;
       } else {
         const { data, error } = await supabase
@@ -906,6 +909,11 @@ export async function saveCourseBlockAction(input: {
         .maybeSingle();
       if (moduleLookup.error) throw moduleLookup.error;
       let courseModule = moduleLookup.data;
+      if (input.block.moduleId) {
+        const target = await supabase.from("modules").select("id").eq("id", input.block.moduleId).eq("course_id", input.courseId).single();
+        if (target.error || !target.data) throw new Error("Módulo inválido.");
+        courseModule = target.data;
+      }
       if (!courseModule) {
         const created = await supabase
           .from("modules")
@@ -925,12 +933,13 @@ export async function saveCourseBlockAction(input: {
         position,
         content_config: config,
       };
+      savedModuleId = courseModule.id;
       if (blockId && validUuid(blockId)) {
         const { error } = await supabase
           .from("lessons")
           .update(lessonValues)
           .eq("id", blockId)
-          .eq("module_id", courseModule.id);
+          .eq("module_id", courseModule.id).select("id").single();
         if (error) throw error;
       } else {
         const { data, error } = await supabase
@@ -945,6 +954,7 @@ export async function saveCourseBlockAction(input: {
 
     const savedBlock: LmsCourseBlock = {
       ...input.block,
+      moduleId: savedModuleId,
       id: blockId,
       title,
       body,
@@ -1161,4 +1171,20 @@ export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/learning/login");
+}
+
+export async function createCourseModuleAction(input: { organizationId: string; courseId: string; title: string }): Promise<ActionResult<{ id: string; title: string; position: number }>> {
+  try {
+    const { supabase } = await requireStaff(input.organizationId);
+    const title = input.title.trim().slice(0, 180);
+    if (title.length < 2) throw new Error("Agrega un nombre al módulo.");
+    const course = await supabase.from("courses").select("id").eq("id", input.courseId).eq("organization_id", input.organizationId).single();
+    if (course.error || !course.data) throw new Error("Curso no disponible.");
+    const last = await supabase.from("modules").select("position").eq("course_id", input.courseId).order("position", { ascending: false }).limit(1).maybeSingle();
+    if (last.error) throw last.error;
+    const result = await supabase.from("modules").insert({ course_id: input.courseId, title, position: (last.data?.position ?? 0) + 1 }).select("id,title,position").single();
+    if (result.error) throw result.error;
+    revalidatePath("/learning/platform");
+    return { ok: true, message: "Módulo creado.", data: result.data };
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "No se pudo crear el módulo." }; }
 }
