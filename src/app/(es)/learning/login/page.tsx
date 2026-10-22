@@ -30,10 +30,8 @@ export default async function LoginPage({
     <main className={styles.page}>
       <section className={styles.brandPanel}>
         <div className={styles.levelUpBrand}>
-          <span className={styles.logoPlaceholder} aria-label="Espacio reservado para el logo de LevelUp">
-            LU
-          </span>
-          <strong>LevelUp</strong>
+          <Image className={styles.levelUpLogo} src="/brand/level-up/logo-horizontal.jpg" alt="Level Up English Academy" width={1006} height={359} sizes="(max-width: 850px) 260px, 420px" preload />
+          <Image className={styles.mascot} src="/brand/level-up/mascot-wave.jpg" alt="La mascota de Level Up te da la bienvenida" width={1008} height={1008} sizes="(max-width: 850px) 120px, 260px" />
         </div>
         <div className={styles.powered}>
           <span>Powered by</span>

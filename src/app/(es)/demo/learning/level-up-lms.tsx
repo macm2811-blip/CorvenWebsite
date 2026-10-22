@@ -461,7 +461,7 @@ function StudentExperience({ view, setView, courses, onNotify, addTicket, monthl
   if (view === "billing") return <StudentBilling monthlyFee={monthlyFee} dueDate={dueDate} payment={payment} level={level} onNotify={onNotify} />;
   if (view === "help") return <HelpCenter addTicket={addTicket} onNotify={onNotify} />;
   return <Page>
-    <PageHeader eyebrow="Tu espacio de aprendizaje" title={`Hola, ${viewerName.split(" ")[0]}.`} text="Continúa tu curso, revisa tu próxima clase y mantén tu aprendizaje al día." />
+    <PageHeader eyebrow="Tu espacio de aprendizaje" title={`Hola, ${viewerName.split(" ")[0]}.`} text="Continúa tu curso, revisa tu próxima clase y mantén tu aprendizaje al día." action={<Image className={styles.welcomeMascot} src="/brand/level-up/mascot-relaxed.jpg" alt="" width={1536} height={1024} sizes="(max-width: 760px) 120px, 180px" />} />
     <div className={styles.paymentReminder}><span className={styles.reminderIcon}><Icon name="card" /></span><div><strong>{payment === "Pagado" ? `Tu próximo pago es el ${formatDate(dueDate)}` : `Tu pago está ${payment.toLowerCase()}`}</strong><p>Recuerda mantener tu mensualidad al día para conservar el acceso a tus cursos.</p></div><button onClick={() => setView("billing")}>Ver detalles</button></div>
     <section className={styles.studentHero}><div><span className={styles.eyebrowLight}>Continúa donde quedaste</span><h2>English Foundations A1</h2><p>Unidad 4 · Daily routines and time expressions</p><div className={styles.heroProgress}><span style={{ width: "68%" }}></span></div><small>68% completado · 7 lecciones pendientes</small><button onClick={() => onNotify("Abriendo la siguiente lección")}>Continuar curso <Icon name="play" /></button></div><div className={styles.heroWord}><span>Today&apos;s word</span><strong>progress</strong><p>/ˈprɑː.ɡres/</p><small>movement toward a better or more complete state</small></div></section>
     <section className={styles.sectionBlock}><SectionHeading title="Mis cursos" text="Aprende a tu ritmo entre cada clase en vivo." action="Ver todos" onAction={() => setView("courses")} /><div className={styles.courseGrid}>{courses.filter((course) => course.published).slice(0, 3).map((course) => <CourseCard key={course.id} course={course} student onOpen={() => onNotify("Abriendo " + course.title)} />)}</div></section>
@@ -788,7 +788,7 @@ function SectionHeading({ title, text, action, onAction }: { title: string; text
 
 function TenantMark({ logoUrl, large = false }: { logoUrl?: string | null; large?: boolean }) {
   if (logoUrl) return <span className={large ? styles.tenantLogoLarge : styles.tenantLogo}><Image src={logoUrl} alt="Logo de Level Up" fill unoptimized /></span>;
-  return <span className={large ? styles.tenantLogoLarge : styles.tenantLogo}>LU</span>;
+  return <span className={`${large ? styles.tenantLogoLarge : styles.tenantLogo} ${styles.levelUpMark}`}><Image src="/brand/level-up/mark.jpg" alt="Level Up" fill sizes={large ? "78px" : "42px"} /></span>;
 }
 
 function AcademyMark({ name }: { name: string }) {
