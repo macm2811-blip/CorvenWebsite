@@ -173,7 +173,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       id = result.data.id;
       onNotify(result.message);
     } else {
-      onNotify("Curso creado como borrador");
+      onNotify("Course created as a draft");
     }
     const course: LmsCourse = {
       id,
@@ -204,7 +204,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       if (!result.ok) return onNotify(result.message);
       onNotify(result.message);
     } else {
-      onNotify(published ? "Curso publicado" : "Curso movido a borrador");
+      onNotify(published ? "Course published" : "Course moved to draft");
     }
     const updated = { ...course, published };
     setEditingCourse((current) => current?.id === course.id ? updated : current);
@@ -264,7 +264,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       saved = result.data.block;
       onNotify(result.message);
     } else {
-      onNotify(`${kindLabel(draft.kind)} guardado`);
+      onNotify(`${kindLabel(draft.kind)} saved`);
     }
     const alreadyExists = blocks.some((block) => block.id === saved.id);
     setBlocks((current) => alreadyExists
@@ -302,7 +302,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       }
       onNotify(result.message);
     } else {
-      onNotify("Bloque eliminado");
+      onNotify("Block deleted");
     }
     setBlocks((current) => current.filter((item) => item.id !== block.id));
     if (selectedId === block.id) {
@@ -380,7 +380,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
               <form onSubmit={addModule}><label>New module<input value={moduleTitle} onChange={(event) => setModuleTitle(event.target.value)} required maxLength={180} /></label><button type="submit" disabled={busy}>Add module</button></form>
             </div>}
             {modules.map((item) => <button type="button" key={item.id} className={moduleId === item.id ? styles.outlineActive : ""} onClick={() => { setModuleId(item.id); setDraft(null); setSelectedId(null); }}><i>▤</i><span><strong>{item.title}</strong><small>{blocks.filter((block) => block.moduleId === item.id).length} items</small></span></button>)}
-            <div className={styles.moduleLabel}><span>{currentModule?.title ?? "CONTENIDO"}</span><small>{visibleBlocks.length} bloques</small></div>
+            <div className={styles.moduleLabel}><span>{currentModule?.title ?? "CONTENT"}</span><small>{visibleBlocks.length} blocks</small></div>
             <div className={styles.outlineList}>
               {visibleBlocks.map((block, index) => (
                 <button className={selectedId === block.id ? styles.outlineActive : ""} key={block.id} type="button" onClick={() => selectBlock(block)}>
@@ -392,8 +392,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
 
           <main className={styles.canvasPanel}>
             <div className={styles.canvasTop}>
-              <div><span>LIENZO DEL CURSO</span><strong>{currentModule?.title ?? "Content"}</strong></div>
-              <span>{blocks.length} elementos</span>
+              <div><span>COURSE CANVAS</span><strong>{currentModule?.title ?? "Content"}</strong></div>
+              <span>{blocks.length} items</span>
             </div>
             <div className={styles.toolShelf} aria-label="Add content">
               {blockTools.map((tool) => <button key={tool.kind} type="button" onClick={() => startBlock(tool.kind)}><i>{tool.mark}</i><span>{tool.label}</span></button>)}
@@ -427,7 +427,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
               <BlockInspector draft={draft} setDraft={setDraft} busy={busy} onSubmit={saveBlock} onUpload={uploadImage} />
             ) : (
               <div className={styles.inspectorEmpty}>
-                <span>PROPIEDADES</span>
+                <span>PROPERTIES</span>
                 <strong>Select a block</strong>
                 <p>Editing tools will appear here.</p>
               </div>
@@ -443,7 +443,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     <section className={styles.catalog}>
       <div className={styles.catalogToolbar}>
         <label><span>⌕</span><input placeholder="Search courses" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-        <div>{["All", "Publicados", "Borradores"].map((item) => <button type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div>
+        <div>{["All", "Published", "Drafts"].map((item) => <button type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div>
         <button className={styles.createButton} type="button" onClick={() => setShowCreate((current) => !current)}>{showCreate ? "Close" : "+ Create course"}</button>
       </div>
 
@@ -464,7 +464,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       )}
 
       <div className={styles.courseGrid}>
-        {courses.filter((course) => course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Publicados" ? course.published : !course.published))).map((course) => (
+        {courses.filter((course) => course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Published" ? course.published : !course.published))).map((course) => (
           <article className={styles.courseCard} key={course.id}>
             <button className={styles.courseCover} style={{ background: `linear-gradient(135deg, ${course.color}, #111827)` }} type="button" onClick={() => void openCourse(course)}>
               <span>{course.level.split(" · ")[0]}</span><i>▤</i><small>{course.published ? "PUBLISHED" : "DRAFT"}</small>

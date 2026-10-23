@@ -27,7 +27,7 @@ export default async function LoginPage({
   }
 
   return (
-    <main className={styles.page}>
+    <main lang="en" className={styles.page}>
       <section className={styles.brandPanel}>
         <div className={styles.levelUpBrand}>
           <div className={styles.logoPlate}><Image className={styles.levelUpLogo} src="/brand/level-up/logo-horizontal-transparent.png" alt="Level Up English Academy" width={2109} height={745} sizes="(max-width: 850px) 250px, 380px" preload /></div>

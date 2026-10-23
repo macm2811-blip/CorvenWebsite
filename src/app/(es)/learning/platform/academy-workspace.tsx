@@ -120,10 +120,10 @@ export function AcademyWorkspace({
     <div className={styles.workspace}>
       <h1>
         {view === "overview"
-          ? "Resumen de la academia"
+          ? "Academy overview"
           : view === "sessions"
             ? "Live classes"
-            : "Pagos e ingresos"}
+            : "Payments and income"}
       </h1>
       {error && (
         <p role="alert" className={styles.error}>

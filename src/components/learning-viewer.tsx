@@ -34,17 +34,22 @@ export function LearningViewer({ title, children, onClose, contentClassName }: {
   }
   async function resize() {
     if (document.fullscreenElement) await document.exitFullscreen();
+    setError("");
     setExpanded(!expanded);
+  }
+  async function close() {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    onClose?.();
   }
   const content = <>
     <header className={styles.toolbar}><strong>{title}</strong><div>
       <button type="button" onClick={() => void resize()}>{expanded ? "Restore view" : "Expand view"}</button>
       <button type="button" onClick={() => void toggleFullscreen()}>{fullscreen ? "Exit full screen" : "Full screen"}</button>
-      {onClose && <button type="button" onClick={onClose} aria-label="Close viewer">Close ×</button>}
+      {onClose && <button type="button" onClick={() => void close()} aria-label="Close viewer">Close ×</button>}
     </div></header>
     {error && <p role="status">{error}</p>}
     <div className={styles.content}><div className={contentClassName}>{children}</div></div>
   </>;
   if (!ready) return null;
-  return expanded ? createPortal(<dialog lang="en" ref={dialog} className={`${styles.dialog} ${fullscreen ? styles.fullscreen : ""}`} aria-label={title} onCancel={(event) => { event.preventDefault(); if (onClose) onClose(); else setExpanded(false); }}>{content}</dialog>, document.body) : <div lang="en" ref={inline} className={styles.inline}>{content}</div>;
+  return expanded ? createPortal(<dialog lang="en" ref={dialog} className={`${styles.dialog} ${fullscreen ? styles.fullscreen : ""}`} aria-label={title} onCancel={(event) => { event.preventDefault(); if (onClose) void close(); else setExpanded(false); }}>{content}</dialog>, document.body) : <div lang="en" ref={inline} className={styles.inline}>{content}</div>;
 }

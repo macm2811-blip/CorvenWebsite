@@ -50,7 +50,7 @@ export async function signIn(
   formData: FormData,
 ): Promise<AuthActionState> {
   if (!isSupabaseConfigured()) {
-    return { error: "La conexión con Supabase todavía no está activada." };
+    return { error: "The platform connection is not configured yet." };
   }
 
   const identifier = String(formData.get("identifier") ?? "")
@@ -59,19 +59,19 @@ export async function signIn(
   const password = String(formData.get("password") ?? "");
 
   if ((!validEmail(identifier) && !validUsername(identifier)) || password.length < 8) {
-    return { error: "Revisa tus datos e inténtalo otra vez." };
+    return { error: "Check your details and try again." };
   }
 
   const email = await resolveEmail(identifier);
   if (!email) {
-    return { error: "No pudimos iniciar sesión. Revisa tus datos e inténtalo otra vez." };
+    return { error: "Unable to sign in. Check your details and try again." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: "No pudimos iniciar sesión. Revisa tus datos e inténtalo otra vez." };
+    return { error: "Unable to sign in. Check your details and try again." };
   }
 
   redirect(safeNext(formData.get("next")));
@@ -82,14 +82,14 @@ export async function requestPasswordReset(
   formData: FormData,
 ): Promise<AuthActionState> {
   if (!isSupabaseConfigured()) {
-    return { error: "La conexión con Supabase todavía no está activada." };
+    return { error: "The platform connection is not configured yet." };
   }
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  if (!validEmail(email)) return { error: "Escribe un correo válido." };
+  if (!validEmail(email)) return { error: "Enter a valid email address." };
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (!siteUrl) return { error: "Falta configurar la URL pública de la plataforma." };
+  if (!siteUrl) return { error: "The platform public URL is not configured." };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -97,11 +97,11 @@ export async function requestPasswordReset(
   });
 
   if (error) {
-    return { error: "No pudimos enviar el enlace. Inténtalo nuevamente." };
+    return { error: "Unable to send the link. Please try again." };
   }
 
   return {
     success:
-      "Si existe una cuenta con ese correo, recibirás un enlace para cambiar la contraseña.",
+      "If an account exists with this email, you will receive a password reset link.",
   };
 }
