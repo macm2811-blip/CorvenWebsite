@@ -21,7 +21,7 @@ const bodyFont = DM_Sans({
 
 export const metadata: Metadata = {
   title: "Level Up Academy | Portal",
-  description: "Portal privado de Level Up English Academy.",
+  description: "Private portal for Level Up English Academy.",
   robots: { index: false, follow: false },
 };
 
@@ -36,14 +36,14 @@ export default async function PlatformPage() {
       <main className={`${displayFont.variable} ${bodyFont.variable} ${styles.statePage}`}>
         <section className={styles.card}>
           <div className={styles.mark}>LU</div>
-          <span>ACCESO PAUSADO</span>
-          <h1>Tu cuenta está temporalmente suspendida</h1>
+          <span>ACCESS PAUSED</span>
+          <h1>Your account is temporarily suspended</h1>
           <p>
-            Tu progreso permanece guardado. Contacta a Level Up para revisar el
-            estado de la mensualidad y reactivar el acceso.
+            Your progress is saved. Contact Level Up to review your
+            payment status and restore access.
           </p>
           <form action={signOutAction}>
-            <button type="submit">Cerrar sesión</button>
+            <button type="submit">Sign out</button>
           </form>
         </section>
       </main>

@@ -192,3 +192,5 @@
 .courseMeta{color:#766783}.emptyState>p{color:#81728f}.workspace th{color:#7d6d8d}
 
 .cards{grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))}
+
+.reader{grid-template-columns:230px minmax(0,1fr)}.reader main{min-height:65dvh}.reader main iframe{min-height:360px}.reader aside{align-self:start}@media(max-width:800px){.reader{grid-template-columns:1fr}.reader main iframe{min-height:0}.reader aside{max-height:230px;overflow:auto}}

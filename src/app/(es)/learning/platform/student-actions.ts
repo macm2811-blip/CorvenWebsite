@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 async function member(organizationId: string) {
   const db = await createClient();
   const { data: auth, error } = await db.auth.getUser();
-  if (error || !auth.user) throw new Error("Vuelve a iniciar sesión.");
+  if (error || !auth.user) throw new Error("Please sign in again.");
   const membership = await db
     .from("memberships")
     .select("role,access_status")
@@ -24,7 +24,7 @@ async function member(organizationId: string) {
     membership.data?.access_status !== "active" ||
     org.data?.status !== "active"
   )
-    throw new Error("Tu acceso a la academia no está activo.");
+    throw new Error("Your academy access is not active.");
   return { db, userId: auth.user.id, role: membership.data.role };
 }
 
@@ -99,7 +99,7 @@ async function courseAccess(organizationId: string, courseId: string) {
     .neq("status", "cancelled")
     .single();
   if (course.error || enrollment.error)
-    throw new Error("No tienes matrícula activa en este curso publicado.");
+    throw new Error("You do not have an active enrollment in this published course.");
   return { ...context, course: course.data, enrollment: enrollment.data };
 }
 
@@ -160,7 +160,7 @@ export async function studentCourseAction(
         .order("submitted_at", { ascending: false })
     : { data: [], error: null };
   if (questions.error || attempts.error)
-    throw new Error("No se pudieron cargar las evaluaciones.");
+    throw new Error("Unable to load assessments.");
   return {
     course,
     modules: modules.data ?? [],
@@ -210,7 +210,7 @@ export async function readNotificationsAction(organizationId: string) {
 export async function academySessionsAction(organizationId: string) {
   const { db, role } = await member(organizationId);
   if (!["academy_admin", "instructor"].includes(role))
-    throw new Error("Acceso reservado al equipo académico.");
+    throw new Error("Access restricted to academy staff.");
   const result = await db
     .from("live_sessions")
     .select("id,title,starts_at,duration_minutes,meeting_url,status,course_id")
@@ -232,7 +232,7 @@ export async function saveSessionAction(input: {
 }) {
   const { db, userId, role } = await member(input.organizationId);
   if (!["academy_admin", "instructor"].includes(role))
-    throw new Error("Acceso reservado al equipo académico.");
+    throw new Error("Access restricted to academy staff.");
   const starts = new Date(input.startsAt);
   const link = new URL(input.meetingUrl);
   if (
@@ -240,7 +240,7 @@ export async function saveSessionAction(input: {
     !Number.isFinite(starts.getTime()) ||
     input.title.trim().length < 2
   )
-    throw new Error("Revisa el título, fecha y enlace HTTPS.");
+    throw new Error("Check the title, date and HTTPS link.");
   if (input.courseId) {
     const course = await db
       .from("courses")
@@ -248,7 +248,7 @@ export async function saveSessionAction(input: {
       .eq("id", input.courseId)
       .eq("organization_id", input.organizationId)
       .single();
-    if (course.error) throw new Error("Curso inválido.");
+    if (course.error) throw new Error("Invalid course.");
   }
   const values = {
     title: input.title.trim().slice(0, 180),
@@ -278,7 +278,7 @@ export async function saveSessionAction(input: {
 export async function academyOperationsAction(organizationId: string) {
   const { db, role } = await member(organizationId);
   if (!["academy_admin", "instructor"].includes(role))
-    throw new Error("Acceso reservado al equipo académico.");
+    throw new Error("Access restricted to academy staff.");
   const payments = await db
     .from("payments")
     .select("id,student_id,amount,currency,due_date,paid_at,status,reference")
@@ -292,7 +292,7 @@ export async function academyOperationsAction(organizationId: string) {
 export async function academyTicketsAction(organizationId: string) {
   const { db, role } = await member(organizationId);
   if (!["academy_admin", "instructor"].includes(role))
-    throw new Error("Acceso reservado al equipo académico.");
+    throw new Error("Access restricted to academy staff.");
   const result = await db
     .from("support_tickets")
     .select(
@@ -311,7 +311,7 @@ export async function enrollExistingStudentAction(input: {
 }) {
   const { db, role } = await member(input.organizationId);
   if (!["academy_admin", "instructor"].includes(role))
-    throw new Error("Acceso reservado al equipo académico.");
+    throw new Error("Access restricted to academy staff.");
   const student = await db
     .from("memberships")
     .select("profile_id")
@@ -326,7 +326,7 @@ export async function enrollExistingStudentAction(input: {
     .eq("organization_id", input.organizationId)
     .single();
   if (student.error || course.error)
-    throw new Error("Estudiante o curso inválido.");
+    throw new Error("Invalid student or course.");
   const existing = await db
     .from("enrollments")
     .select("id,status")
@@ -361,14 +361,14 @@ export async function recordPaymentAction(input: {
 }) {
   const { db, role } = await member(input.organizationId);
   if (role !== "academy_admin")
-    throw new Error("Solo el administrador puede registrar pagos.");
+    throw new Error("Only an administrator can record payments.");
   if (
     !Number.isFinite(input.amount) ||
     input.amount < 0 ||
     !/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) ||
     !["paid", "pending", "overdue", "waived"].includes(input.status)
   )
-    throw new Error("Revisa el monto, la fecha y el estado.");
+    throw new Error("Check the amount, date and status.");
   const student = await db
     .from("memberships")
     .select("profile_id")
@@ -376,7 +376,7 @@ export async function recordPaymentAction(input: {
     .eq("profile_id", input.studentId)
     .eq("role", "student")
     .single();
-  if (student.error) throw new Error("Estudiante inválido.");
+  if (student.error) throw new Error("Invalid student.");
   const org = await db
     .from("organizations")
     .select("currency")

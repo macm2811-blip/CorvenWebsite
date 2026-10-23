@@ -122,12 +122,12 @@ async function actor() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : "";
-  if (error || !userId) throw new Error("Tu sesión expiró. Vuelve a iniciar sesión.");
+  if (error || !userId) throw new Error("Your session expired. Please sign in again.");
   return { supabase, userId };
 }
 
 async function requireStaff(organizationId: string) {
-  if (!validUuid(organizationId)) throw new Error("Academia inválida.");
+  if (!validUuid(organizationId)) throw new Error("Invalid academy.");
   const context = await actor();
   const [{ data: profile }, { data: membership }] = await Promise.all([
     context.supabase
@@ -150,7 +150,7 @@ async function requireStaff(organizationId: string) {
     ((membership?.role === "academy_admin" || membership?.role === "instructor") &&
       membership?.access_status === "active");
 
-  if (!allowed) throw new Error("No tienes permiso para realizar esta acción.");
+  if (!allowed) throw new Error("You do not have permission to perform this action.");
   return context;
 }
 
@@ -162,7 +162,7 @@ async function requireOwner() {
     .eq("id", context.userId)
     .single();
   if (error || profile?.platform_role !== "owner") {
-    throw new Error("Solo el propietario de CORVEN puede realizar esta acción.");
+    throw new Error("Only the CORVEN owner can perform this action.");
   }
   return context;
 }
@@ -193,11 +193,11 @@ export async function createAcademyAction(input: {
   try {
     const { supabase, userId } = await requireOwner();
     const name = input.name.trim().replace(/\s+/g, " ").slice(0, 120);
-    if (name.length < 3) throw new Error("Escribe un nombre válido para la academia.");
+    if (name.length < 3) throw new Error("Enter a valid academy name.");
     if (!(["self_paced", "instructor_led", "hybrid"] as const).includes(input.learningModel)) {
-      throw new Error("Selecciona una modalidad válida.");
+      throw new Error("Select a valid learning model.");
     }
-    if (!/^#[0-9a-f]{6}$/i.test(input.primaryColor)) throw new Error("Selecciona un color válido.");
+    if (!/^#[0-9a-f]{6}$/i.test(input.primaryColor)) throw new Error("Select a valid color.");
     const monthlyFee = Math.max(0, Math.min(10000000, Math.round(Number(input.monthlyFee) || 0)));
     const baseSlug = slugify(name) || "academia";
     const admin = createAdminClient();
@@ -223,7 +223,7 @@ export async function createAcademyAction(input: {
       })
       .select("id, name, slug, status, learning_model, currency, created_at")
       .single();
-    if (error || !academy) throw error ?? new Error("No se pudo crear la academia.");
+    if (error || !academy) throw error ?? new Error("Unable to create the academy.");
 
     const { error: brandingError } = await admin.from("organization_branding").insert({
       organization_id: academy.id,
@@ -237,7 +237,7 @@ export async function createAcademyAction(input: {
     revalidatePath("/learning/platform");
     return {
       ok: true,
-      message: `${name} fue creada correctamente.`,
+      message: `${name} was created successfully.`,
       data: {
         id: academy.id,
         name: academy.name,
@@ -257,7 +257,7 @@ export async function createAcademyAction(input: {
       },
     };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos crear la academia." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to create the academy." };
   }
 }
 
@@ -268,10 +268,10 @@ export async function inviteAcademyAdminAction(input: {
 }): Promise<ActionResult<LmsAcademyAdmin>> {
   try {
     const { supabase, userId } = await requireOwner();
-    if (!validUuid(input.organizationId)) throw new Error("Academia inválida.");
+    if (!validUuid(input.organizationId)) throw new Error("Invalid academy.");
     const fullName = input.fullName.trim().replace(/\s+/g, " ").slice(0, 120);
     const email = input.email.trim().toLowerCase();
-    if (fullName.length < 2 || !validEmail(email)) throw new Error("Revisa el nombre y el correo.");
+    if (fullName.length < 2 || !validEmail(email)) throw new Error("Check the name and email address.");
 
     const admin = createAdminClient();
     const { data: academy, error: academyError } = await admin
@@ -279,7 +279,7 @@ export async function inviteAcademyAdminAction(input: {
       .select("id, name")
       .eq("id", input.organizationId)
       .single();
-    if (academyError || !academy) throw new Error("No encontramos la academia.");
+    if (academyError || !academy) throw new Error("Academy not found.");
 
     const { data: existingProfile, error: profileError } = await admin
       .from("profiles")
@@ -298,7 +298,7 @@ export async function inviteAcademyAdminAction(input: {
         data: { full_name: fullName },
         redirectTo: `${siteUrl}/learning/auth/callback?next=/learning/account/update-password`,
       });
-      if (error || !data.user) throw new Error(error?.message ?? "No se pudo crear la invitación.");
+      if (error || !data.user) throw new Error(error?.message ?? "Unable to create the invitation.");
       profileId = data.user.id;
       invitationSent = true;
     } else if (existingProfile?.full_name !== fullName) {
@@ -324,7 +324,7 @@ export async function inviteAcademyAdminAction(input: {
     return {
       ok: true,
       message: invitationSent
-        ? `Invitación enviada a ${email} para administrar ${academy.name}.`
+        ? `Invitation sent to ${email} to administer ${academy.name}.`
         : `${fullName} fue asignado como administrador de ${academy.name}.`,
       data: {
         id: profileId,
@@ -335,7 +335,7 @@ export async function inviteAcademyAdminAction(input: {
       },
     };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos asignar al administrador." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to assign the administrator." };
   }
 }
 
@@ -345,8 +345,8 @@ export async function updateAcademyStatusAction(input: {
 }): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireOwner();
-    if (!validUuid(input.organizationId)) throw new Error("Academia inválida.");
-    if (input.status !== "active" && input.status !== "suspended") throw new Error("Estado inválido.");
+    if (!validUuid(input.organizationId)) throw new Error("Invalid academy.");
+    if (input.status !== "active" && input.status !== "suspended") throw new Error("Invalid status.");
     const admin = createAdminClient();
     const { error } = await admin
       .from("organizations")
@@ -355,9 +355,9 @@ export async function updateAcademyStatusAction(input: {
     if (error) throw error;
     await audit(supabase, userId, input.organizationId, "academy.status_updated", "organization", input.organizationId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: input.status === "active" ? "Academia reactivada." : "Academia suspendida." };
+    return { ok: true, message: input.status === "active" ? "Academy reactivated." : "Academy suspended." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos actualizar la academia." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to update the academy." };
   }
 }
 
@@ -368,7 +368,7 @@ export async function updateStudentAction(input: {
 }): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
-    if (!validUuid(input.studentId)) throw new Error("Estudiante inválido.");
+    if (!validUuid(input.studentId)) throw new Error("Invalid student.");
 
     const updates: Record<string, string> = {};
     if (typeof input.changes.active === "boolean") {
@@ -384,7 +384,7 @@ export async function updateStudentAction(input: {
     if (input.changes.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(input.changes.dueDate)) {
       updates.billing_due_date = input.changes.dueDate;
     }
-    if (!Object.keys(updates).length) throw new Error("No hay cambios válidos.");
+    if (!Object.keys(updates).length) throw new Error("No valid changes.");
 
     const { error } = await supabase
       .from("memberships")
@@ -396,9 +396,9 @@ export async function updateStudentAction(input: {
 
     await audit(supabase, userId, input.organizationId, "student.updated", "membership", input.studentId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Estudiante actualizado." };
+    return { ok: true, message: "Student updated." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos actualizar al estudiante." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to update the student." };
   }
 }
 
@@ -416,9 +416,9 @@ export async function inviteStudentAction(input: {
     const fullName = input.fullName.trim().slice(0, 120);
     const email = input.email.trim().toLowerCase();
     const level = input.level.trim().toUpperCase();
-    if (fullName.length < 2 || !validEmail(email)) throw new Error("Revisa el nombre y el correo.");
-    if (!/^(A1|A2|B1|B2|C1)$/.test(level)) throw new Error("Nivel inválido.");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) throw new Error("Fecha de cobro inválida.");
+    if (fullName.length < 2 || !validEmail(email)) throw new Error("Check the name and email address.");
+    if (!/^(A1|A2|B1|B2|C1)$/.test(level)) throw new Error("Invalid level.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) throw new Error("Invalid payment due date.");
 
     const admin = createAdminClient();
     const { data: academy, error: academyError } = await admin
@@ -426,7 +426,7 @@ export async function inviteStudentAction(input: {
       .select("id, name")
       .eq("id", input.organizationId)
       .single();
-    if (academyError || !academy) throw new Error("No encontramos la academia.");
+    if (academyError || !academy) throw new Error("Academy not found.");
 
     const { data: existingProfile, error: profileError } = await admin
       .from("profiles")
@@ -445,7 +445,7 @@ export async function inviteStudentAction(input: {
         data: { full_name: fullName },
         redirectTo: `${siteUrl}/learning/auth/callback?next=/learning/account/update-password`,
       });
-      if (error || !data.user) throw new Error(error?.message ?? "No se pudo crear la invitación.");
+      if (error || !data.user) throw new Error(error?.message ?? "Unable to create the invitation.");
       profileId = data.user.id;
       invitationSent = true;
     } else if (existingProfile?.full_name !== fullName) {
@@ -491,18 +491,18 @@ export async function inviteStudentAction(input: {
     return {
       ok: true,
       message: invitationSent
-        ? `Invitación enviada a ${email} para ingresar a ${academy.name}.`
+        ? `Invitation sent to ${email} to join ${academy.name}.`
         : `${fullName} fue asignado como estudiante de ${academy.name}.`,
       data: { id: profileId, accessStatus },
     };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos invitar al estudiante." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to invite the student." };
   }
 }
 
 export async function sendPasswordResetAction(email: string): Promise<ActionResult> {
   try {
-    if (!validEmail(email)) throw new Error("Correo inválido.");
+    if (!validEmail(email)) throw new Error("Invalid email address.");
     const { supabase } = await actor();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
     if (!siteUrl) throw new Error("Falta NEXT_PUBLIC_SITE_URL.");
@@ -510,9 +510,9 @@ export async function sendPasswordResetAction(email: string): Promise<ActionResu
       redirectTo: `${siteUrl}/learning/auth/callback?next=/learning/account/update-password`,
     });
     if (error) throw error;
-    return { ok: true, message: `Enlace de contraseña enviado a ${email}.` };
+    return { ok: true, message: `Password reset link sent to ${email}.` };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos enviar el enlace." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to send the link." };
   }
 }
 
@@ -531,7 +531,7 @@ export async function createCourseAction(input: {
     const title = input.title.trim().slice(0, 160);
     if (title.length < 3) throw new Error("Escribe un nombre para el curso.");
     if (input.youtubeUrl && !videoSource(input.youtubeUrl)) {
-      throw new Error("Usa un enlace válido de YouTube.");
+      throw new Error("Use a valid YouTube link.");
     }
 
     const { data: course, error } = await supabase
@@ -549,14 +549,14 @@ export async function createCourseAction(input: {
       })
       .select("id")
       .single();
-    if (error || !course) throw error ?? new Error("No se creó el curso.");
+    if (error || !course) throw error ?? new Error("The course could not be created.");
 
     const { data: module, error: moduleError } = await supabase
       .from("modules")
-      .insert({ course_id: course.id, title: "Módulo 1", position: 1 })
+      .insert({ course_id: course.id, title: "Module 1", position: 1 })
       .select("id")
       .single();
-    if (moduleError || !module) throw moduleError ?? new Error("No se creó el módulo inicial.");
+    if (moduleError || !module) throw moduleError ?? new Error("The initial module could not be created.");
 
     const template = input.template ?? "guided";
     const lessons: Array<{
@@ -570,15 +570,15 @@ export async function createCourseAction(input: {
       position: number;
       content_config: LmsCourseBlockConfig;
     }> = input.youtubeUrl
-      ? [{ module_id: module.id, title: "Video de bienvenida", description: "Introducción al curso.", content_type: "youtube", body: null, youtube_url: input.youtubeUrl, resource_url: null, position: 1, content_config: defaultBlockConfig }]
+      ? [{ module_id: module.id, title: "Welcome video", description: "Course introduction.", content_type: "youtube", body: null, youtube_url: input.youtubeUrl, resource_url: null, position: 1, content_config: defaultBlockConfig }]
       : template === "guided"
         ? [
-            { module_id: module.id, title: "Bienvenida", description: "Presenta el propósito y la experiencia del curso.", content_type: "text", body: "Te damos la bienvenida. Edita este bloque para presentar el curso.", youtube_url: null, resource_url: null, position: 1, content_config: defaultBlockConfig },
-            { module_id: module.id, title: "Objetivos de aprendizaje", description: "Define resultados claros y medibles.", content_type: "text", body: "Al finalizar este curso, el estudiante podrá:\n• Objetivo 1\n• Objetivo 2\n• Objetivo 3", youtube_url: null, resource_url: null, position: 2, content_config: { ...defaultBlockConfig, textStyle: "callout" as const } },
-            { module_id: module.id, title: "Contenido principal", description: "Desarrolla aquí la primera unidad.", content_type: "text", body: "Comienza a desarrollar el contenido de la primera unidad.", youtube_url: null, resource_url: null, position: 3, content_config: defaultBlockConfig },
+            { module_id: module.id, title: "Welcome", description: "Introduce the course purpose and learning experience.", content_type: "text", body: "Welcome! Edit this block to introduce the course.", youtube_url: null, resource_url: null, position: 1, content_config: defaultBlockConfig },
+            { module_id: module.id, title: "Learning objectives", description: "Define clear, measurable outcomes.", content_type: "text", body: "By the end of this course, the student will be able to:\n• Objective 1\n• Objective 2\n• Objective 3", youtube_url: null, resource_url: null, position: 2, content_config: { ...defaultBlockConfig, textStyle: "callout" as const } },
+            { module_id: module.id, title: "Main content", description: "Develop the first unit here.", content_type: "text", body: "Start developing the first unit content.", youtube_url: null, resource_url: null, position: 3, content_config: defaultBlockConfig },
           ]
         : template === "single"
-          ? [{ module_id: module.id, title: "Primera lección", description: "Contenido inicial del curso.", content_type: "text", body: "Escribe aquí el contenido de la primera lección.", youtube_url: null, resource_url: null, position: 1, content_config: defaultBlockConfig }]
+          ? [{ module_id: module.id, title: "First lesson", description: "Initial course content.", content_type: "text", body: "Write the first lesson content here.", youtube_url: null, resource_url: null, position: 1, content_config: defaultBlockConfig }]
           : [];
     if (lessons.length) {
       const { error: lessonError } = await supabase.from("lessons").insert(lessons);
@@ -587,9 +587,9 @@ export async function createCourseAction(input: {
 
     await audit(supabase, userId, input.organizationId, "course.created", "course", course.id);
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Curso creado como borrador.", data: { id: course.id } };
+    return { ok: true, message: "Course created as a draft.", data: { id: course.id } };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos crear el curso." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to create the course." };
   }
 }
 
@@ -608,9 +608,9 @@ export async function setCoursePublishedAction(input: {
     if (error) throw error;
     await audit(supabase, userId, input.organizationId, input.published ? "course.published" : "course.unpublished", "course", input.courseId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: input.published ? "Curso publicado." : "Curso movido a borrador." };
+    return { ok: true, message: input.published ? "Course published." : "Course moved to draft." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos actualizar el curso." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to update the course." };
   }
 }
 
@@ -625,12 +625,12 @@ export async function addLessonAction(input: {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
     const title = input.title.trim().slice(0, 180);
-    if (title.length < 2) throw new Error("Escribe el nombre de la lección.");
+    if (title.length < 2) throw new Error("Enter the lesson name.");
     if (input.contentType === "youtube" && !videoSource(input.contentUrl ?? "")) {
-      throw new Error("Usa un enlace válido de YouTube.");
+      throw new Error("Use a valid YouTube link.");
     }
     if ((input.contentType === "document" || input.contentType === "audio") && !/^https:\/\//i.test(input.contentUrl ?? "")) {
-      throw new Error("Usa un enlace HTTPS válido para el recurso.");
+      throw new Error("Use a valid HTTPS resource link.");
     }
 
     const { data: course, error: courseError } = await supabase
@@ -651,10 +651,10 @@ export async function addLessonAction(input: {
     if (!module) {
       const created = await supabase
         .from("modules")
-        .insert({ course_id: input.courseId, title: "Módulo 1", position: 1 })
+        .insert({ course_id: input.courseId, title: "Module 1", position: 1 })
         .select("id")
         .single();
-      if (created.error || !created.data) throw created.error ?? new Error("No se creó el módulo.");
+      if (created.error || !created.data) throw created.error ?? new Error("The module could not be created.");
       module = created.data;
     }
 
@@ -680,12 +680,12 @@ export async function addLessonAction(input: {
       })
       .select("id")
       .single();
-    if (error || !lesson) throw error ?? new Error("No se creó la lección.");
+    if (error || !lesson) throw error ?? new Error("The lesson could not be created.");
     await audit(supabase, userId, input.organizationId, "lesson.created", "lesson", lesson.id);
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Lección agregada al curso.", data: { id: lesson.id } };
+    return { ok: true, message: "Lesson added to the course.", data: { id: lesson.id } };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos crear la lección." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to create the lesson." };
   }
 }
 
@@ -695,14 +695,14 @@ export async function loadCourseStudioAction(input: {
 }): Promise<ActionResult<{ blocks: LmsCourseBlock[]; modules: { id: string; title: string; position: number }[] }>> {
   try {
     const { supabase } = await requireStaff(input.organizationId);
-    if (!validUuid(input.courseId)) throw new Error("Curso inválido.");
+    if (!validUuid(input.courseId)) throw new Error("Invalid course.");
     const { data: course, error: courseError } = await supabase
       .from("courses")
       .select("id")
       .eq("organization_id", input.organizationId)
       .eq("id", input.courseId)
       .single();
-    if (courseError || !course) throw new Error("No encontramos el curso.");
+    if (courseError || !course) throw new Error("Course not found.");
 
     const { data: modules, error: modulesError } = await supabase
       .from("modules")
@@ -775,9 +775,9 @@ export async function loadCourseStudioAction(input: {
       };
     });
     const blocks = [...lessonBlocks, ...quizBlocks].sort((a, b) => a.position - b.position);
-    return { ok: true, message: "Contenido cargado.", data: { blocks, modules: modules ?? [] } };
+    return { ok: true, message: "Content loaded.", data: { blocks, modules: modules ?? [] } };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos cargar el editor." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to load the editor." };
   }
 }
 
@@ -791,12 +791,12 @@ export async function updateCourseDetailsAction(input: {
 }): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
-    if (!validUuid(input.courseId)) throw new Error("Curso inválido.");
+    if (!validUuid(input.courseId)) throw new Error("Invalid course.");
     const title = input.title.trim().replace(/\s+/g, " ").slice(0, 160);
     const level = input.level.trim().toUpperCase().slice(0, 20);
-    if (title.length < 3) throw new Error("Escribe un nombre válido para el curso.");
-    if (!/^(A1|A2|B1|B2|C1|C2)$/.test(level)) throw new Error("Selecciona un nivel válido.");
-    if (!validHex(input.color)) throw new Error("Selecciona un color válido.");
+    if (title.length < 3) throw new Error("Enter a valid course name.");
+    if (!/^(A1|A2|B1|B2|C1|C2)$/.test(level)) throw new Error("Select a valid level.");
+    if (!validHex(input.color)) throw new Error("Select a valid color.");
     const { error } = await supabase
       .from("courses")
       .update({
@@ -810,9 +810,9 @@ export async function updateCourseDetailsAction(input: {
     if (error) throw error;
     await audit(supabase, userId, input.organizationId, "course.updated", "course", input.courseId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Configuración del curso guardada." };
+    return { ok: true, message: "Course settings saved." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos guardar el curso." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to save the course." };
   }
 }
 
@@ -823,10 +823,10 @@ export async function saveCourseBlockAction(input: {
 }): Promise<ActionResult<{ block: LmsCourseBlock }>> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
-    if (!validUuid(input.courseId)) throw new Error("Curso inválido.");
-    if (!courseBlockKinds.includes(input.block.kind)) throw new Error("Tipo de contenido inválido.");
+    if (!validUuid(input.courseId)) throw new Error("Invalid course.");
+    if (!courseBlockKinds.includes(input.block.kind)) throw new Error("Invalid content type.");
     const title = input.block.title.trim().replace(/\s+/g, " ").slice(0, 180);
-    if (title.length < 2) throw new Error("Agrega un título al bloque.");
+    if (title.length < 2) throw new Error("Add a block title.");
     const body = input.block.body.trim().slice(0, 12000);
     const url = input.block.url.trim().slice(0, 2000);
     const config = normalizeBlockConfig(input.block.config);
@@ -836,13 +836,13 @@ export async function saveCourseBlockAction(input: {
       .eq("organization_id", input.organizationId)
       .eq("id", input.courseId)
       .single();
-    if (courseError || !course) throw new Error("No encontramos el curso.");
+    if (courseError || !course) throw new Error("Course not found.");
 
     if (["image", "document", "audio"].includes(input.block.kind) && !/^https:\/\//i.test(url)) {
-      throw new Error("Agrega un enlace HTTPS válido para el recurso.");
+      throw new Error("Add a valid HTTPS resource link.");
     }
     if (input.block.kind === "youtube" && !videoSource(url)) {
-      throw new Error("Agrega un enlace válido de YouTube, OneDrive o un archivo MP4/WebM por HTTPS.");
+      throw new Error("Add a valid HTTPS YouTube, OneDrive or MP4/WebM link.");
     }
 
     const isAssessment = input.block.kind === "quiz" || input.block.kind === "exam";
@@ -853,8 +853,8 @@ export async function saveCourseBlockAction(input: {
       const options = (input.block.options ?? []).map((option) => option.trim()).filter(Boolean).slice(0, 6);
       const question = (input.block.question ?? "").trim().slice(0, 2000);
       const correctAnswer = (input.block.correctAnswer ?? "").trim();
-      if (question.length < 3 || options.length < 2) throw new Error("Completa la pregunta y al menos dos respuestas.");
-      if (!options.includes(correctAnswer)) throw new Error("Selecciona la respuesta correcta.");
+      if (question.length < 3 || options.length < 2) throw new Error("Complete the question and at least two answers.");
+      if (!options.includes(correctAnswer)) throw new Error("Select the correct answer.");
       const assessmentValues = {
         title,
         description: body,
@@ -877,7 +877,7 @@ export async function saveCourseBlockAction(input: {
           .insert({ course_id: input.courseId, ...assessmentValues })
           .select("id")
           .single();
-        if (error || !data) throw error ?? new Error("No se creó la evaluación.");
+        if (error || !data) throw error ?? new Error("The assessment could not be created.");
         blockId = data.id;
       }
       const { data: existingQuestion, error: questionLookupError } = await supabase
@@ -911,16 +911,16 @@ export async function saveCourseBlockAction(input: {
       let courseModule = moduleLookup.data;
       if (input.block.moduleId) {
         const target = await supabase.from("modules").select("id").eq("id", input.block.moduleId).eq("course_id", input.courseId).single();
-        if (target.error || !target.data) throw new Error("Módulo inválido.");
+        if (target.error || !target.data) throw new Error("Invalid module.");
         courseModule = target.data;
       }
       if (!courseModule) {
         const created = await supabase
           .from("modules")
-          .insert({ course_id: input.courseId, title: "Contenido", position: 1 })
+          .insert({ course_id: input.courseId, title: "Content", position: 1 })
           .select("id")
           .single();
-        if (created.error || !created.data) throw created.error ?? new Error("No se creó el módulo.");
+        if (created.error || !created.data) throw created.error ?? new Error("The module could not be created.");
         courseModule = created.data;
       }
       const lessonValues = {
@@ -947,7 +947,7 @@ export async function saveCourseBlockAction(input: {
           .insert({ module_id: courseModule.id, ...lessonValues })
           .select("id")
           .single();
-        if (error || !data) throw error ?? new Error("No se creó el bloque.");
+        if (error || !data) throw error ?? new Error("The block could not be created.");
         blockId = data.id;
       }
     }
@@ -964,9 +964,9 @@ export async function saveCourseBlockAction(input: {
     };
     await audit(supabase, userId, input.organizationId, "course.block_saved", isAssessment ? "quiz" : "lesson", blockId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: `${input.block.kind === "exam" ? "Examen" : input.block.kind === "quiz" ? "Quiz" : "Contenido"} guardado.`, data: { block: savedBlock } };
+    return { ok: true, message: `${input.block.kind === "exam" ? "Exam" : input.block.kind === "quiz" ? "Quiz" : "Content"} saved.`, data: { block: savedBlock } };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos guardar el contenido." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to save the content." };
   }
 }
 
@@ -978,7 +978,7 @@ export async function deleteCourseBlockAction(input: {
 }): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
-    if (!validUuid(input.courseId) || !validUuid(input.blockId)) throw new Error("Contenido inválido.");
+    if (!validUuid(input.courseId) || !validUuid(input.blockId)) throw new Error("Invalid content.");
     const isAssessment = input.kind === "quiz" || input.kind === "exam";
     if (isAssessment) {
       const { error } = await supabase.from("quizzes").delete().eq("id", input.blockId).eq("course_id", input.courseId);
@@ -987,15 +987,15 @@ export async function deleteCourseBlockAction(input: {
       const { data: modules, error: moduleError } = await supabase.from("modules").select("id").eq("course_id", input.courseId);
       if (moduleError) throw moduleError;
       const moduleIds = (modules ?? []).map((module) => module.id);
-      if (!moduleIds.length) throw new Error("No encontramos el contenido.");
+      if (!moduleIds.length) throw new Error("Content not found.");
       const { error } = await supabase.from("lessons").delete().eq("id", input.blockId).in("module_id", moduleIds);
       if (error) throw error;
     }
     await audit(supabase, userId, input.organizationId, "course.block_deleted", isAssessment ? "quiz" : "lesson", input.blockId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Bloque eliminado." };
+    return { ok: true, message: "Block deleted." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos eliminar el contenido." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to delete the content." };
   }
 }
 
@@ -1004,12 +1004,12 @@ export async function uploadCourseImageAction(formData: FormData): Promise<Actio
     const organizationId = String(formData.get("organizationId") ?? "");
     const courseId = String(formData.get("courseId") ?? "");
     await requireStaff(organizationId);
-    if (!validUuid(courseId)) throw new Error("Curso inválido.");
+    if (!validUuid(courseId)) throw new Error("Invalid course.");
     const file = formData.get("image");
-    if (!(file instanceof File) || !file.size) throw new Error("Selecciona una imagen.");
-    if (file.size > 2 * 1024 * 1024) throw new Error("La imagen no puede superar 2 MB.");
+    if (!(file instanceof File) || !file.size) throw new Error("Select an image.");
+    if (file.size > 2 * 1024 * 1024) throw new Error("The image must not exceed 2 MB.");
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      throw new Error("Usa una imagen PNG, JPG o WEBP.");
+      throw new Error("Use a PNG, JPG or WEBP image.");
     }
     const extension = file.name.split(".").pop()?.toLowerCase() || "png";
     const path = `${organizationId}/courses/${courseId}/${crypto.randomUUID()}.${extension}`;
@@ -1020,9 +1020,9 @@ export async function uploadCourseImageAction(formData: FormData): Promise<Actio
     });
     if (error) throw error;
     const { data } = admin.storage.from("organization-assets").getPublicUrl(path);
-    return { ok: true, message: "Imagen cargada.", data: { url: data.publicUrl } };
+    return { ok: true, message: "Image uploaded.", data: { url: data.publicUrl } };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos cargar la imagen." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to upload the image." };
   }
 }
 
@@ -1035,7 +1035,7 @@ export async function saveBrandAction(input: {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
     const colors = [input.primary, input.secondary, input.accent];
-    if (colors.some((color) => !/^#[0-9a-f]{6}$/i.test(color))) throw new Error("Color inválido.");
+    if (colors.some((color) => !/^#[0-9a-f]{6}$/i.test(color))) throw new Error("Invalid color.");
     const { error } = await supabase.from("organization_branding").upsert({
       organization_id: input.organizationId,
       primary_color: input.primary,
@@ -1045,9 +1045,9 @@ export async function saveBrandAction(input: {
     if (error) throw error;
     await audit(supabase, userId, input.organizationId, "branding.updated", "organization_branding", input.organizationId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Identidad visual guardada." };
+    return { ok: true, message: "Branding saved." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos guardar la identidad." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to save branding." };
   }
 }
 
@@ -1056,10 +1056,10 @@ export async function uploadBrandLogoAction(formData: FormData): Promise<ActionR
     const organizationId = String(formData.get("organizationId") ?? "");
     await requireStaff(organizationId);
     const file = formData.get("logo");
-    if (!(file instanceof File) || !file.size) throw new Error("Selecciona una imagen.");
-    if (file.size > 2 * 1024 * 1024) throw new Error("El logo no puede superar 2 MB.");
+    if (!(file instanceof File) || !file.size) throw new Error("Select an image.");
+    if (file.size > 2 * 1024 * 1024) throw new Error("The logo must not exceed 2 MB.");
     if (!["image/png", "image/jpeg", "image/webp", "image/svg+xml"].includes(file.type)) {
-      throw new Error("Formato de logo no permitido.");
+      throw new Error("Unsupported logo format.");
     }
 
     const extension = file.name.split(".").pop()?.toLowerCase() || "png";
@@ -1077,9 +1077,9 @@ export async function uploadBrandLogoAction(formData: FormData): Promise<ActionR
       .eq("organization_id", organizationId);
     if (updateError) throw updateError;
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Logo actualizado.", data: { url: publicUrl } };
+    return { ok: true, message: "Logo updated.", data: { url: publicUrl } };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos cargar el logo." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to upload the logo." };
   }
 }
 
@@ -1097,9 +1097,9 @@ export async function updateMonthlyFeeAction(input: {
     if (error) throw error;
     await audit(supabase, userId, input.organizationId, "billing.fee_updated", "organization", input.organizationId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Mensualidad actualizada." };
+    return { ok: true, message: "Monthly fee updated." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos actualizar la mensualidad." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to update the monthly fee." };
   }
 }
 
@@ -1113,7 +1113,7 @@ export async function createTicketAction(input: {
     const { supabase, userId } = await actor();
     const title = input.title.trim().slice(0, 180);
     const description = input.description.trim().slice(0, 5000);
-    if (title.length < 2 || description.length < 5) throw new Error("Describe el problema con más detalle.");
+    if (title.length < 2 || description.length < 5) throw new Error("Describe the issue in more detail.");
     const priority = { Alta: "high", Media: "medium", Baja: "low" }[input.priority];
     const { data, error } = await supabase
       .from("support_tickets")
@@ -1126,12 +1126,12 @@ export async function createTicketAction(input: {
       })
       .select("id")
       .single();
-    if (error || !data) throw error ?? new Error("No se creó el ticket.");
+    if (error || !data) throw error ?? new Error("The ticket could not be created.");
     await audit(supabase, userId, input.organizationId, "ticket.created", "support_ticket", data.id);
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Reporte enviado a CORVEN.", data: { id: data.id } };
+    return { ok: true, message: "Report sent to CORVEN.", data: { id: data.id } };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos crear el ticket." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to create the ticket." };
   }
 }
 
@@ -1144,7 +1144,7 @@ export async function replyTicketAction(input: {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
     const body = input.body.trim().slice(0, 5000);
-    if (input.status === "answered" && body.length < 2) throw new Error("Escribe una respuesta.");
+    if (input.status === "answered" && body.length < 2) throw new Error("Enter a reply.");
     if (body) {
       const { error: messageError } = await supabase.from("ticket_messages").insert({
         ticket_id: input.ticketId,
@@ -1161,9 +1161,9 @@ export async function replyTicketAction(input: {
     if (error) throw error;
     await audit(supabase, userId, input.organizationId, `ticket.${input.status}`, "support_ticket", input.ticketId);
     revalidatePath("/learning/platform");
-    return { ok: true, message: input.status === "answered" ? "Respuesta enviada." : "Ticket marcado en proceso." };
+    return { ok: true, message: input.status === "answered" ? "Reply sent." : "Ticket marked in progress." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos actualizar el ticket." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to update the ticket." };
   }
 }
 
@@ -1177,14 +1177,14 @@ export async function createCourseModuleAction(input: { organizationId: string; 
   try {
     const { supabase } = await requireStaff(input.organizationId);
     const title = input.title.trim().slice(0, 180);
-    if (title.length < 2) throw new Error("Agrega un nombre al módulo.");
+    if (title.length < 2) throw new Error("Add a module name.");
     const course = await supabase.from("courses").select("id").eq("id", input.courseId).eq("organization_id", input.organizationId).single();
-    if (course.error || !course.data) throw new Error("Curso no disponible.");
+    if (course.error || !course.data) throw new Error("Course unavailable.");
     const last = await supabase.from("modules").select("position").eq("course_id", input.courseId).order("position", { ascending: false }).limit(1).maybeSingle();
     if (last.error) throw last.error;
     const result = await supabase.from("modules").insert({ course_id: input.courseId, title, position: (last.data?.position ?? 0) + 1 }).select("id,title,position").single();
     if (result.error) throw result.error;
     revalidatePath("/learning/platform");
-    return { ok: true, message: "Módulo creado.", data: result.data };
-  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "No se pudo crear el módulo." }; }
+    return { ok: true, message: "Module created.", data: result.data };
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "Unable to create the module." }; }
 }

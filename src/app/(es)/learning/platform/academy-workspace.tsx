@@ -1,4 +1,5 @@
 "use client";
+import { displayLabel } from "@/lib/lms/display-label";
 
 import { useEffect, useState, type FormEvent } from "react";
 import type { LmsCourse, LmsStudent } from "@/lib/lms/types";
@@ -68,23 +69,23 @@ export function AcademyWorkspace({
         });
       setData(await academyOperationsAction(organizationId));
       form.reset();
-      setMessage("Registro guardado.");
+      setMessage("Record saved.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo guardar.");
+      setError(e instanceof Error ? e.message : "Unable to save.");
     } finally {
       setBusy(false);
     }
   }
   const money = (value: number, currency = "CRC") =>
-    new Intl.NumberFormat("es-CR", { style: "currency", currency }).format(
+    new Intl.NumberFormat("en-US", { style: "currency", currency }).format(
       value,
     );
   function exportPayments() {
     if (!data) return;
     const rows = [
-      ["Estudiante", "Monto", "Moneda", "Vencimiento", "Estado", "Referencia"],
+      ["Student", "Amount", "Currency", "Due date", "Status", "Reference"],
       ...data.payments.map((p) => [
-        students.find((s) => s.id === p.student_id)?.name ?? "Estudiante",
+        students.find((s) => s.id === p.student_id)?.name ?? "Student",
         p.amount,
         p.currency,
         p.due_date,
@@ -119,10 +120,10 @@ export function AcademyWorkspace({
     <div className={styles.workspace}>
       <h1>
         {view === "overview"
-          ? "Resumen de la academia"
+          ? "Academy overview"
           : view === "sessions"
-            ? "Clases en vivo"
-            : "Pagos e ingresos"}
+            ? "Live classes"
+            : "Payments and income"}
       </h1>
       {error && (
         <p role="alert" className={styles.error}>
@@ -134,37 +135,37 @@ export function AcademyWorkspace({
           {message}
         </p>
       )}
-      {!data && !error && <p>Cargando registros…</p>}
+      {!data && !error && <p>Loading records…</p>}
       {view === "overview" && (
         <div className={styles.cards}>
           <section className={styles.panel}>
             <h2>{students.filter((s) => s.active).length}</h2>
-            <p>Estudiantes activos</p>
+            <p>Active students</p>
           </section>
           <section className={styles.panel}>
             <h2>{courses.filter((c) => c.published).length}</h2>
-            <p>Cursos publicados</p>
+            <p>Published courses</p>
           </section>
           <section className={styles.panel}>
             <h2>
               {data?.payments.filter((p) => p.status === "paid").length ?? 0}
             </h2>
-            <p>Pagos registrados</p>
+            <p>Recorded payments</p>
           </section>
         </div>
       )}
       {view === "sessions" && (
         <section className={styles.panel}>
-          <h2>Programar clase</h2>
+          <h2>Schedule a class</h2>
           <form onSubmit={submit}>
             <label>
-              Título
+              Title
               <input name="title" required minLength={2} maxLength={180} />
             </label>
             <label>
-              Curso
+              Course
               <select name="courseId">
-                <option value="">Toda la academia</option>
+                <option value="">Entire academy</option>
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.title}
@@ -173,11 +174,11 @@ export function AcademyWorkspace({
               </select>
             </label>
             <label>
-              Fecha y hora (hora de este dispositivo)
+              Date and time (local device time)
               <input name="startsAt" type="datetime-local" required />
             </label>
             <label>
-              Duración en minutos
+              Duration in minutes
               <input
                 name="duration"
                 type="number"
@@ -188,7 +189,7 @@ export function AcademyWorkspace({
               />
             </label>
             <label>
-              Enlace de Teams, Zoom o Meet
+              Teams, Zoom or Meet link
               <input
                 name="meetingUrl"
                 type="url"
@@ -196,22 +197,22 @@ export function AcademyWorkspace({
                 placeholder="https://..."
               />
             </label>
-            <button disabled={busy}>Guardar clase</button>
+            <button disabled={busy}>Save class</button>
           </form>
         </section>
       )}
       {view !== "income" && (
         <section className={styles.panel}>
-          <h2>Clases programadas</h2>
+          <h2>Scheduled classes</h2>
           {data?.sessions.length ? (
             data.sessions.map((s) => (
               <article key={s.id}>
                 <h3>{s.title}</h3>
                 <p>
-                  {new Date(s.starts_at).toLocaleString("es-CR", {
+                  {new Date(s.starts_at).toLocaleString("en-US", {
                     timeZone: "America/Costa_Rica",
                   })}{" "}
-                  · {s.duration_minutes} minutos · {s.status}
+                  · {s.duration_minutes} minutes · {s.status}
                 </p>
                 {s.meeting_url && (
                   <a
@@ -219,7 +220,7 @@ export function AcademyWorkspace({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Abrir enlace ↗
+                    Open link ↗
                   </a>
                 )}
                 {view === "sessions" && s.status !== "cancelled" && (
@@ -243,32 +244,32 @@ export function AcademyWorkspace({
                         setError(
                           e instanceof Error
                             ? e.message
-                            : "No se pudo cancelar.",
+                            : "Unable to cancel.",
                         );
                       } finally {
                         setBusy(false);
                       }
                     }}
                   >
-                    Cancelar clase
+                    Cancel class
                   </button>
                 )}
               </article>
             ))
           ) : (
-            <p>No hay clases registradas.</p>
+            <p>No classes recorded.</p>
           )}
         </section>
       )}
       {view === "income" && (
         <>
           <section className={styles.panel}>
-            <h2>Registrar pago o cobro</h2>
+            <h2>Record a payment or charge</h2>
             <form onSubmit={submit}>
               <label>
-                Estudiante
+                Student
                 <select name="studentId" required>
-                  <option value="">Seleccionar</option>
+                  <option value="">Select</option>
                   {students.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -277,7 +278,7 @@ export function AcademyWorkspace({
                 </select>
               </label>
               <label>
-                Monto
+                Amount
                 <input
                   type="number"
                   name="amount"
@@ -287,40 +288,40 @@ export function AcademyWorkspace({
                 />
               </label>
               <label>
-                Vencimiento
+                Due date
                 <input type="date" name="dueDate" required />
               </label>
               <label>
-                Estado
+                Status
                 <select name="status">
-                  <option value="paid">Pagado</option>
-                  <option value="pending">Pendiente</option>
-                  <option value="overdue">Vencido</option>
-                  <option value="waived">Exonerado</option>
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="waived">Waived</option>
                 </select>
               </label>
               <label>
-                Referencia
+                Reference
                 <input name="reference" maxLength={200} />
               </label>
               <button disabled={busy || !students.length}>
-                Guardar registro
+                Save record
               </button>
             </form>
           </section>
           <section className={styles.panel}>
-            <h2>Historial real de pagos</h2>
+            <h2>Payment records</h2>
             <button onClick={exportPayments} disabled={!data?.payments.length}>
-              Exportar CSV
+              Export CSV
             </button>
             <div className={styles.tableScroll}>
               <table>
                 <thead>
                   <tr>
-                    <th>Estudiante</th>
-                    <th>Monto</th>
-                    <th>Vencimiento</th>
-                    <th>Estado</th>
+                    <th>Student</th>
+                    <th>Amount</th>
+                    <th>Due date</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -328,17 +329,17 @@ export function AcademyWorkspace({
                     <tr key={p.id}>
                       <td>
                         {students.find((s) => s.id === p.student_id)?.name ??
-                          "Estudiante"}
+                          "Student"}
                       </td>
                       <td>{money(p.amount, p.currency)}</td>
                       <td>{p.due_date}</td>
-                      <td>{p.status}</td>
+                      <td>{displayLabel(p.status)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {!data?.payments.length && <p>No hay pagos registrados.</p>}
+            {!data?.payments.length && <p>No payments recorded.</p>}
           </section>
         </>
       )}
@@ -359,7 +360,7 @@ export function EnrollmentForm({
   const [busy, setBusy] = useState(false);
   return (
     <section className={styles.panel}>
-      <h2>Matricular estudiante existente</h2>
+      <h2>Enroll an existing student</h2>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -372,7 +373,7 @@ export function EnrollmentForm({
               courseId: String(data.get("course")),
             });
             setMessage(
-              "Matrícula guardada. El curso aparecerá al estudiante cuando esté publicado.",
+              "Enrollment saved. The course will appear for the student once published.",
             );
           } catch (error) {
             setMessage(
@@ -384,9 +385,9 @@ export function EnrollmentForm({
         }}
       >
         <label>
-          Estudiante
+          Student
           <select name="student" required>
-            <option value="">Seleccionar</option>
+            <option value="">Select</option>
             {students.map((s) => (
               <option value={s.id} key={s.id}>
                 {s.name}
@@ -395,9 +396,9 @@ export function EnrollmentForm({
           </select>
         </label>
         <label>
-          Curso
+          Course
           <select name="course" required>
-            <option value="">Seleccionar</option>
+            <option value="">Select</option>
             {courses.map((c) => (
               <option value={c.id} key={c.id}>
                 {c.title}
@@ -406,7 +407,7 @@ export function EnrollmentForm({
             ))}
           </select>
         </label>
-        <button disabled={busy}>Guardar matrícula</button>
+        <button disabled={busy}>Save enrollment</button>
         {message && <p role="status">{message}</p>}
       </form>
     </section>
@@ -434,13 +435,13 @@ export function AcademySupport({ organizationId }: { organizationId: string }) {
   }, [organizationId]);
   return (
     <div className={styles.workspace}>
-      <h1>Solicitudes de soporte</h1>
+      <h1>Support requests</h1>
       {message && <p role="status">{message}</p>}
       {tickets.map((t) => (
         <section className={styles.panel} key={t.id}>
           <h2>{t.title}</h2>
           <p>{t.description}</p>
-          <small>{t.status}</small>
+          <small>{displayLabel(t.status)}</small>
           {[...t.ticket_messages]
             .sort((a, b) => a.created_at.localeCompare(b.created_at))
             .map((m) => (
@@ -462,12 +463,12 @@ export function AcademySupport({ organizationId }: { organizationId: string }) {
                 if (!result.ok) throw new Error(result.message);
                 setTickets(await academyTicketsAction(organizationId));
                 form.reset();
-                setMessage("Respuesta enviada.");
+                setMessage("Reply sent.");
               } catch (error) {
                 setMessage(
                   error instanceof Error
                     ? error.message
-                    : "No se pudo responder.",
+                    : "Unable to reply.",
                 );
               } finally {
                 setBusy(false);
@@ -475,14 +476,14 @@ export function AcademySupport({ organizationId }: { organizationId: string }) {
             }}
           >
             <label>
-              Respuesta
+              Reply
               <textarea name="body" required minLength={2} maxLength={5000} />
             </label>
-            <button disabled={busy}>Enviar respuesta</button>
+            <button disabled={busy}>Send reply</button>
           </form>
         </section>
       ))}
-      {!tickets.length && <p>No hay solicitudes registradas.</p>}
+      {!tickets.length && <p>No requests recorded.</p>}
     </div>
   );
 }
