@@ -26,7 +26,7 @@ export function LearningViewer({ title, children, onClose, contentClassName }: {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
       else {
-        const target = expanded ? dialog.current : inline.current;
+        const target = expanded ? document.documentElement : inline.current;
         if (!target?.requestFullscreen) throw new Error();
         await target.requestFullscreen();
       }
@@ -46,5 +46,5 @@ export function LearningViewer({ title, children, onClose, contentClassName }: {
     <div className={styles.content}><div className={contentClassName}>{children}</div></div>
   </>;
   if (!ready) return null;
-  return expanded ? createPortal(<dialog lang="en" ref={dialog} className={styles.dialog} aria-label={title} onCancel={(event) => { event.preventDefault(); if (onClose) onClose(); else setExpanded(false); }}>{content}</dialog>, document.body) : <div lang="en" ref={inline} className={styles.inline}>{content}</div>;
+  return expanded ? createPortal(<dialog lang="en" ref={dialog} className={`${styles.dialog} ${fullscreen ? styles.fullscreen : ""}`} aria-label={title} onCancel={(event) => { event.preventDefault(); if (onClose) onClose(); else setExpanded(false); }}>{content}</dialog>, document.body) : <div lang="en" ref={inline} className={styles.inline}>{content}</div>;
 }
