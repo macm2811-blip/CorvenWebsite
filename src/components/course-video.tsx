@@ -9,7 +9,7 @@ export function CourseVideo({ url, title }: { url: string; title: string }) {
   if (!source)
     return (
       <p>
-        Agrega un enlace válido de YouTube, OneDrive o un archivo MP4/WebM por
+        Add a valid YouTube, OneDrive or MP4/WebM link over
         HTTPS.
       </p>
     );
@@ -41,12 +41,12 @@ export function CourseVideo({ url, title }: { url: string; title: string }) {
       )}
       {(source.type === "link" || failed) && (
         <p>
-          Este enlace se reproduce en {source.provider}. Si Microsoft solicita
-          iniciar sesión, usa la cuenta autorizada por el administrador.
+          This link plays on {source.provider}. If Microsoft asks you to
+          sign in, use the account authorized by your administrator.
         </p>
       )}
       <a href={url} target="_blank" rel="noopener noreferrer">
-        Abrir video en {source.provider} ↗
+        Open video on{source.provider} ↗
       </a>
     </div>
   );

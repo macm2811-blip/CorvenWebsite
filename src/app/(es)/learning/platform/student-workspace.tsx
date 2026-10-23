@@ -1,6 +1,8 @@
 "use client";
+import { displayLabel } from "@/lib/lms/display-label";
 
 import Image from "next/image";
+import { LearningViewer } from "@/components/learning-viewer";
 import { useEffect, useState, type FormEvent, type CSSProperties } from "react";
 import type { LmsCourse, LmsInitialData } from "@/lib/lms/types";
 import { CourseVideo } from "@/components/course-video";
@@ -17,7 +19,7 @@ type Dashboard = Awaited<ReturnType<typeof studentDashboardAction>>;
 type CourseData = Awaited<ReturnType<typeof studentCourseAction>>;
 type View = "home" | "courses" | "sessions" | "billing" | "help";
 const date = (value: string) =>
-  new Intl.DateTimeFormat("es-CR", {
+  new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "America/Costa_Rica",
@@ -72,7 +74,7 @@ export function StudentWorkspace({
       );
       setAnswers({});
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo abrir el curso.");
+      setError(e instanceof Error ? e.message : "Unable to open the course.");
     } finally {
       setBusy(false);
     }
@@ -91,13 +93,13 @@ export function StudentWorkspace({
       });
       setNotice(
         quizId
-          ? `Resultado: ${result.score}% · ${result.passed ? "Aprobado" : "No aprobado"}`
-          : "Lección completada. Progreso guardado.",
+          ? `Result: ${result.score}% · ${result.passed ? "Passed" : "Not passed"}`
+          : "Lesson completed. Progress saved.",
       );
       setCourse(await studentCourseAction(org, course.course.id));
       setDashboard(await studentDashboardAction(org));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo guardar.");
+      setError(e instanceof Error ? e.message : "Unable to save.");
     } finally {
       setBusy(false);
     }
@@ -118,9 +120,9 @@ export function StudentWorkspace({
       if (!result.ok) throw new Error(result.message);
       setDashboard(await studentDashboardAction(org));
       form.reset();
-      setNotice("Tu solicitud fue enviada a la academia.");
+      setNotice("Your request was sent to the academy.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo enviar.");
+      setError(e instanceof Error ? e.message : "Unable to send.");
     } finally {
       setBusy(false);
     }
@@ -152,12 +154,12 @@ export function StudentWorkspace({
             {course
               ? course.course.title
               : view === "home"
-                ? `Hola, ${initialData.viewerName.split(" ")[0]}.`
+                ? `Hello, ${initialData.viewerName.split(" ")[0]}.`
                 : {
-                    courses: "Mis cursos",
-                    sessions: "Clases en vivo",
-                    billing: "Mis pagos",
-                    help: "Ayuda y soporte",
+                    courses: "My courses",
+                    sessions: "Live classes",
+                    billing: "My payments",
+                    help: "Help and support",
                   }[view]}
           </h1>
         </div>
@@ -172,13 +174,13 @@ export function StudentWorkspace({
                 setError(
                   e instanceof Error
                     ? e.message
-                    : "No se pudieron actualizar las notificaciones.",
+                    : "Unable to update notifications.",
                 );
               }
             }
           }}
         >
-          Notificaciones {unread > 0 ? `(${unread})` : ""}
+          Notifications {unread > 0 ? `(${unread})` : ""}
         </button>
       </header>
       {error && (
@@ -193,7 +195,7 @@ export function StudentWorkspace({
       )}
       {showNotifications && (
         <section className={styles.panel}>
-          <h2>Notificaciones</h2>
+          <h2>Notifications</h2>
           {dashboard?.notifications.length ? (
             dashboard.notifications.map((n) => (
               <article key={n.id}>
@@ -203,27 +205,26 @@ export function StudentWorkspace({
               </article>
             ))
           ) : (
-            <p>No tienes notificaciones.</p>
+            <p>You have no notifications.</p>
           )}
         </section>
       )}
       {!dashboard && !error && (
-        <p role="status">Cargando tu espacio de aprendizaje…</p>
+        <p role="status">Loading your learning space…</p>
       )}
-      {course ? (
-        <>
+      {course ? (<LearningViewer contentClassName={styles.workspace} title={course.course.title} onClose={() => { setCourse(null); setSelected(""); }}>
           <button
             onClick={() => {
               setCourse(null);
               setSelected("");
             }}
           >
-            ← Volver a mis cursos
+            ← Back to my courses
           </button>
-          <p>Progreso del curso: {course.percentage}%</p>
+          <p>Course progress: {course.percentage}%</p>
           <progress max={100} value={course.percentage} />
           <div className={styles.reader}>
-            <aside className={styles.panel} aria-label="Contenido del curso">
+            <aside className={styles.panel} aria-label="Course content">
               {course.modules.map((m) => (
                 <section key={m.id}>
                   <h3>{m.title}</h3>
@@ -245,7 +246,7 @@ export function StudentWorkspace({
                     ))}
                 </section>
               ))}
-              {course.quizzes.length > 0 && <h3>Evaluaciones</h3>}
+              {course.quizzes.length > 0 && <h3>Assessments</h3>}
               {course.quizzes.map((q) => (
                 <button key={q.id} onClick={() => go(q.id)}>
                   {course.attempts.some((a) => a.quiz_id === q.id && a.passed)
@@ -265,10 +266,10 @@ export function StudentWorkspace({
                     onClick={() => void save()}
                   >
                     {complete
-                      ? "✓ Completada"
+                      ? "✓ Completed"
                       : busy
-                        ? "Guardando…"
-                        : "Marcar como completada"}
+                        ? "Saving…"
+                        : "Mark as complete"}
                   </button>
                   {course.lessons.findIndex((l) => l.id === selected) <
                     course.lessons.length - 1 && (
@@ -282,7 +283,7 @@ export function StudentWorkspace({
                         )
                       }
                     >
-                      Siguiente lección →
+                      Next lesson →
                     </button>
                   )}
                 </>
@@ -291,7 +292,7 @@ export function StudentWorkspace({
                   <h2>{quiz.title}</h2>
                   <p>{quiz.description}</p>
                   <p>
-                    Nota mínima: {quiz.passing_score}% · Intentos utilizados:{" "}
+                    Passing score: {quiz.passing_score}% · Attempts used:{" "}
                     {
                       course.attempts.filter((a) => a.quiz_id === quiz.id)
                         .length
@@ -384,26 +385,24 @@ export function StudentWorkspace({
                       }
                       type="submit"
                     >
-                      {busy ? "Enviando…" : "Enviar evaluación"}
+                      {busy ? "Sending…" : "Submit assessment"}
                     </button>
                   </form>
                   {course.attempts
                     .filter((a) => a.quiz_id === quiz.id)
                     .map((a) => (
                       <p key={a.id}>
-                        {a.score}% · {a.passed ? "Aprobado" : "No aprobado"}
+                        {a.score}% · {a.passed ? "Passed" : "Not passed"}
                         {a.submitted_at ? ` · ${date(a.submitted_at)}` : ""}
                       </p>
                     ))}
                 </>
               ) : (
-                <p>Este curso todavía no tiene contenido publicado.</p>
+                <p>This course has no published content yet.</p>
               )}
             </main>
           </div>
-        </>
-      ) : (
-        <>
+        </LearningViewer>) : (<>
           {(view === "home" || view === "courses") && (
             <>
               <div className={styles.welcome}>
@@ -418,16 +417,16 @@ export function StudentWorkspace({
                 <div>
                   <h2>
                     {view === "home"
-                      ? "Tu próximo paso empieza aquí"
-                      : "Encuentra tu curso"}
+                      ? "Your next step starts here"
+                      : "Find your course"}
                   </h2>
                   <p>
-                    Abre un curso para continuar con tus lecciones y
-                    evaluaciones.
+                    Open a course to continue your lessons and
+                    assessments.
                   </p>
                   <input
-                    aria-label="Buscar mis cursos"
-                    placeholder="Buscar un curso…"
+                    aria-label="Search my courses"
+                    placeholder="Search for a course…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
@@ -444,13 +443,13 @@ export function StudentWorkspace({
                       <div className={styles.courseCardBody}>
                       <h2>{c.title}</h2>
                       <p>{c.description}</p>
-                      <div className={styles.courseMeta}><span>{c.lessons} lecciones</span><strong>{progress}% completado</strong></div>
-                      <progress aria-label={`Progreso de ${c.title}`} max={100} value={progress} />
+                      <div className={styles.courseMeta}><span>{c.lessons} lessons</span><strong>{progress}% complete</strong></div>
+                      <progress aria-label={`Progress for ${c.title}`} max={100} value={progress} />
                       <button
                         disabled={busy}
                         onClick={() => void openCourse(c)}
                       >
-                        {progress > 0 ? "Continuar curso" : "Abrir curso"} <span aria-hidden="true">→</span>
+                        {progress > 0 ? "Continue course" : "Open course"} <span aria-hidden="true">→</span>
                       </button>
                       </div>
                     </article>
@@ -459,13 +458,13 @@ export function StudentWorkspace({
               </div>
               {dashboard && !courses.length && (
                 <section className={styles.panel}>
-                  <h2>No hay cursos disponibles</h2>
+                  <h2>No courses available</h2>
                   <p>
-                    Tu academia debe matricularte en un curso publicado para que
-                    aparezca aquí.
+                    Your academy needs to enroll you in a published course for it to
+                    appear here.
                   </p>
                   <button onClick={() => setView("help")}>
-                    Contactar a la academia
+                    Contact your academy
                   </button>
                 </section>
               )}
@@ -475,8 +474,8 @@ export function StudentWorkspace({
             <section className={styles.panel}>
               <h2>
                 {view === "home"
-                  ? "Próximas clases"
-                  : "Tus clases y grabaciones"}
+                  ? "Upcoming classes"
+                  : "Your classes and recordings"}
               </h2>
               {dashboard?.sessions.length ? (
                 dashboard.sessions.map((s) => (
@@ -484,7 +483,7 @@ export function StudentWorkspace({
                     <div>
                       <h3>{s.title}</h3>
                       <p>
-                        {date(s.starts_at)} · {s.duration_minutes} minutos
+                        {date(s.starts_at)} · {s.duration_minutes} minutes
                       </p>
                     </div>
                     <div>
@@ -495,7 +494,7 @@ export function StudentWorkspace({
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            Entrar a la clase ↗
+                            Join class ↗
                           </a>
                         )}
                       {s.recording_youtube_url && (
@@ -508,22 +507,22 @@ export function StudentWorkspace({
                   </article>
                 ))
               ) : (
-                  <div className={styles.emptyState}><span aria-hidden="true">◷</span><strong>Aún no hay clases programadas</strong><p>Aquí aparecerán los horarios y enlaces que publique tu academia.</p></div>
+                  <div className={styles.emptyState}><span aria-hidden="true">◷</span><strong>No classes scheduled yet</strong><p>Schedules and links published by your academy will appear here.</p></div>
               )}
             </section>
           )}
           {view === "billing" && (
             <section className={styles.panel}>
-              <h2>Historial de pagos</h2>
+              <h2>Payment history</h2>
               {dashboard?.payments.length ? (
                 <div className={styles.tableScroll}>
                   <table>
                     <thead>
                       <tr>
-                        <th>Vencimiento</th>
-                        <th>Monto</th>
-                        <th>Estado</th>
-                        <th>Referencia</th>
+                        <th>Due date</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Reference</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -531,7 +530,7 @@ export function StudentWorkspace({
                         <tr key={p.id}>
                           <td>{p.due_date}</td>
                           <td>
-                            {new Intl.NumberFormat("es-CR", {
+                            {new Intl.NumberFormat("en-US", {
                               style: "currency",
                               currency: p.currency,
                             }).format(p.amount)}
@@ -540,11 +539,11 @@ export function StudentWorkspace({
                             {
                               (
                                 {
-                                  paid: "Pagado",
-                                  pending: "Pendiente",
-                                  overdue: "Vencido",
-                                  waived: "Exonerado",
-                                  cancelled: "Cancelado",
+                                  paid: "Paid",
+                                  pending: "Pending",
+                                  overdue: "Overdue",
+                                  waived: "Waived",
+                                  cancelled: "Cancelled",
                                 } as Record<string, string>
                               )[p.status]
                             }
@@ -556,21 +555,21 @@ export function StudentWorkspace({
                   </table>
                 </div>
               ) : (
-                <p>Tu academia aún no ha registrado pagos para tu cuenta.</p>
+                <p>Your academy has not recorded any payments for your account yet.</p>
               )}
               <p>
-                Para consultas sobre pagos, envía una solicitud a la academia.
+                For payment questions, send a request to your academy.
               </p>
-              <button onClick={() => setView("help")}>Consultar un pago</button>
+              <button onClick={() => setView("help")}>Ask about a payment</button>
             </section>
           )}
           {view === "help" && (
             <>
               <section className={styles.panel}>
-                <h2>Enviar solicitud a la academia</h2>
+                <h2>Send a request to your academy</h2>
                 <form onSubmit={ticket}>
                   <label>
-                    Asunto
+                    Subject
                     <input
                       name="title"
                       required
@@ -579,7 +578,7 @@ export function StudentWorkspace({
                     />
                   </label>
                   <label>
-                    Describe tu consulta
+                    Describe your question
                     <textarea
                       name="description"
                       required
@@ -588,19 +587,19 @@ export function StudentWorkspace({
                     />
                   </label>
                   <button disabled={busy} type="submit">
-                    {busy ? "Enviando…" : "Enviar solicitud"}
+                    {busy ? "Sending…" : "Send request"}
                   </button>
                 </form>
               </section>
               <section className={styles.panel}>
-                <h2>Mis solicitudes</h2>
+                <h2>My requests</h2>
                 {dashboard?.tickets.length ? (
                   dashboard.tickets.map((t) => (
                     <article key={t.id}>
                       <h3>{t.title}</h3>
                       <p>{t.description}</p>
                       <small>
-                        {t.status} · {date(t.created_at)}
+                        {displayLabel(t.status)} · {date(t.created_at)}
                       </small>
                       {[...t.ticket_messages]
                         .sort((a, b) =>
@@ -615,7 +614,7 @@ export function StudentWorkspace({
                     </article>
                   ))
                 ) : (
-                  <p>No has enviado solicitudes.</p>
+                  <p>You have not sent any requests.</p>
                 )}
               </section>
             </>
@@ -675,7 +674,7 @@ function LessonContent({ lesson }: { lesson: CourseData["lessons"][number] }) {
       )}
       {lesson.content_type === "document" && /^https:\/\//i.test(url) && (
         <a href={url} target="_blank" rel="noopener noreferrer">
-          Abrir documento ↗
+          Open document ↗
         </a>
       )}
       <p>{(lesson.body||lesson.description||"").split(/(\[[^\]]+\]\(https:\/\/[^\s)]+\))/g).map((part: string,index: number)=>{const match=part.match(/^\[([^\]]+)\]\((https:\/\/[^\s)]+)\)$/);return match?<a key={index} href={match[2]} target="_blank" rel="noopener noreferrer">{match[1]}</a>:part;})}</p>

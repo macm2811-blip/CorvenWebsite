@@ -29,23 +29,23 @@ export function LoginForm({ next }: { next: string }) {
     <form className={styles.form} action={forgotten ? resetAction : loginAction}>
       <input type="hidden" name="next" value={next} />
       <div className={styles.formHeading}>
-        <span>{forgotten ? "RECUPERAR ACCESO" : "LEVELUP"}</span>
-        <h1>{forgotten ? "Recupera tu acceso" : "Bienvenido de nuevo"}</h1>
+        <span>{forgotten ? "RECOVER ACCOUNT" : "LEVELUP"}</span>
+        <h1>{forgotten ? "Recover your account" : "Welcome back"}</h1>
         <p>
           {forgotten
-            ? "Te enviaremos un enlace seguro al correo registrado."
-            : "Continúa tu aprendizaje. Ingresa con tu usuario o correo."}
+            ? "We will email a secure link to your registered address."
+            : "Continue learning. Sign in with your username or email."}
         </p>
       </div>
 
       {forgotten ? (
         <label>
-          Correo electrónico
+          Email address
           <input name="email" type="email" autoComplete="email" required />
         </label>
       ) : (
         <label>
-          Usuario o correo
+          Username or email
           <input
             name="identifier"
             type="text"
@@ -59,7 +59,7 @@ export function LoginForm({ next }: { next: string }) {
 
       {!forgotten && (
         <label>
-          Contraseña
+          Password
           <input
             name="password"
             type="password"
@@ -75,10 +75,10 @@ export function LoginForm({ next }: { next: string }) {
 
       <button className={styles.submit} disabled={pending} type="submit">
         {pending
-          ? "Procesando…"
+          ? "Processing…"
           : forgotten
-            ? "Enviar enlace"
-            : "Iniciar sesión"}
+            ? "Send link"
+            : "Sign in"}
       </button>
 
       <button
@@ -86,7 +86,7 @@ export function LoginForm({ next }: { next: string }) {
         onClick={() => setForgotten((current) => !current)}
         type="button"
       >
-        {forgotten ? "Volver al inicio de sesión" : "Olvidé mi contraseña"}
+        {forgotten ? "Back to sign in" : "Forgot password"}
       </button>
 
     </form>
