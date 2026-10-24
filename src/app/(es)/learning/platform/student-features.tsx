@@ -337,10 +337,12 @@ export function LearningPaths({
   initialData,
   courses,
   onOpen,
+  previewStudentId,
 }: {
-  initialData: LmsInitialData;
+  initialData: Pick<LmsInitialData,"organizationId"|"viewerLevel"|"viewerName">;
   courses: LmsCourse[];
   onOpen: (course: LmsCourse) => Promise<void>;
+  previewStudentId?: string;
 }) {
   const [selectedLevel,setSelectedLevel] = useState<string>(CEFR_LEVELS.includes(initialData.viewerLevel as typeof CEFR_LEVELS[number]) ? initialData.viewerLevel : "A1");
   const [details, setDetails] = useState<
@@ -370,7 +372,7 @@ export function LearningPaths({
       courseIds
         .split(",")
         .filter(Boolean)
-        .map((id) => studentCourseAction(initialData.organizationId, id)),
+        .map((id) => studentCourseAction(initialData.organizationId, id, previewStudentId)),
     )
       .then((result) => {
         if (live) setDetails(result);
@@ -381,7 +383,7 @@ export function LearningPaths({
     return () => {
       live = false;
     };
-  }, [initialData.organizationId, courseIds]);
+  }, [initialData.organizationId, courseIds, previewStudentId]);
   async function certificate(c: LmsCourse) {
     try {
       const result = await certificateAction(
@@ -454,7 +456,7 @@ export function LearningPaths({
                     >
                       {enrolled ? "Open unit" : "Not enrolled"}
                     </button>
-                    {complete && (
+                    {complete && !previewStudentId && (
                       <>
                         <TheoryDownload
                           organizationId={initialData.organizationId}
@@ -466,7 +468,7 @@ export function LearningPaths({
                   </article>
                 );
               })}
-            {catalog.filter((c) => c.level === level).length > 0 &&
+            {!previewStudentId && catalog.filter((c) => c.level === level).length > 0 &&
               catalog
                 .filter((c) => c.level === level)
                 .every((c) =>
