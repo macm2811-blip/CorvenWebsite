@@ -21,3 +21,4 @@
 
 /* The viewer owns scrolling; preview content must retain its full natural height. */
 .previewShell{width:100%;max-height:none;overflow:visible;display:block;box-shadow:none}.studentPreviewGrid{overflow:visible;min-height:0;align-items:start}.studentPreviewGrid>article{min-width:0;overflow-wrap:anywhere}@media(max-width:720px){.studentPreviewGrid>article{grid-column:1/-1}}
+.folderToolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.folderToolbar button,.folderForm button{padding:10px 16px;border:1px solid #dce4ef;border-radius:8px;background:white;color:#2c55a2;cursor:pointer;font-weight:700}.folderToolbar span{font-size:12px;color:#68758b}.folderForm{display:flex;gap:12px;align-items:end;padding:18px;background:#fff;border:1px solid #dce4ef;border-radius:12px;flex-wrap:wrap}.folderForm label{display:grid;gap:7px;font-size:12px}.folderForm select{padding:10px 20px;border:1px solid #dce4ef;border-radius:7px}

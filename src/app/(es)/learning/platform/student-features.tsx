@@ -13,6 +13,7 @@ import type { studentDashboardAction } from "./student-actions";
 import { studentCourseAction } from "./student-actions";
 import styles from "./student-workspace.module.css";
 import { billingMonths } from "@/lib/lms/billing";
+import { CEFR_LEVELS, journeyProgress } from "@/lib/lms/learning-path";
 
 export function useAcademyFeatures(org: string) {
   const [data, setData] = useState<Awaited<
@@ -341,6 +342,7 @@ export function LearningPaths({
   courses: LmsCourse[];
   onOpen: (course: LmsCourse) => Promise<void>;
 }) {
+  const [selectedLevel,setSelectedLevel] = useState<string>(CEFR_LEVELS.includes(initialData.viewerLevel as typeof CEFR_LEVELS[number]) ? initialData.viewerLevel : "A1");
   const [details, setDetails] = useState<
       Awaited<ReturnType<typeof studentCourseAction>>[]
     >([]),
@@ -392,15 +394,25 @@ export function LearningPaths({
       setNotice(message(e));
     }
   }
-  const levels = Array.from(new Set(catalog.map((c) => c.level))).sort();
+  const levels = CEFR_LEVELS;
+  const stageProgress = journeyProgress(catalog,details);
+  const overall = Math.round(stageProgress.reduce((a,b)=>a+b,0)/levels.length);
   return (
     <section className={styles.panel}>
       <h2>My learning path</h2>
       <p>Follow your units, assessment results and certificates.</p>
+      <div className={styles.journeySummary}><strong>{overall}% of your A1–C1 journey</strong><span>Goal: C1 · 100%</span></div>
+      <progress className={styles.journeyProgress} max={100} value={overall} aria-label="Overall A1 to C1 progress" />
+      <div className={styles.timelineScroll}>
+        <nav className={styles.timeline} aria-label="English learning timeline">
+          {levels.map((level,i)=><button type="button" key={level} className={selectedLevel===level?styles.activeMilestone:""} aria-current={selectedLevel===level?"step":undefined} onClick={()=>setSelectedLevel(level)}><span className={styles.milestoneDot}>{stageProgress[i]===100?"✓":i+1}</span><strong>{level}</strong><small>{(i+1)*20}% milestone</small><span>{Math.round(stageProgress[i])}% completed</span></button>)}
+        </nav>
+      </div>
       <div className={styles.path}>
-        {levels.map((level) => (
+        {levels.filter(level=>level===selectedLevel).map((level) => (
           <section key={level}>
             <h3>{level}</h3>
+            {!catalog.some(c=>c.level===level)&&<p>Your academy has not published courses for this level yet.</p>}
             {catalog
               .filter((c) => c.level === level)
               .map((c) => {

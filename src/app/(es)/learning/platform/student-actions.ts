@@ -82,8 +82,16 @@ export async function studentDashboardAction(organizationId: string) {
   };
 }
 
-async function courseAccess(organizationId: string, courseId: string) {
+async function courseAccess(organizationId: string, courseId: string, previewStudentId?:string) {
   const context = await member(organizationId);
+  if(previewStudentId) {
+    if(context.role!=="academy_admin")throw new Error("Administrator preview required.");
+    const admin=createAdminClient();
+    const target=await admin.from("memberships").select("profile_id").eq("organization_id",organizationId).eq("profile_id",previewStudentId).eq("role","student").single();
+    if(target.error)throw new Error("Student unavailable in this academy.");
+    context.db=admin;
+    context.userId=previewStudentId;
+  }
   const course = await context.db
     .from("courses")
     .select("id,title,description,status")
@@ -106,10 +114,12 @@ async function courseAccess(organizationId: string, courseId: string) {
 export async function studentCourseAction(
   organizationId: string,
   courseId: string,
+  previewStudentId?:string,
 ) {
   const { db, userId, course, enrollment } = await courseAccess(
     organizationId,
     courseId,
+    previewStudentId,
   );
   const modules = await db
     .from("modules")

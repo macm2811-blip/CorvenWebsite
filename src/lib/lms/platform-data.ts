@@ -207,7 +207,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       ? Promise.resolve({ data: [], error: null })
       : supabase
           .from("memberships")
-          .select("profile_id, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name, last_access_at, profiles(full_name, email)")
+          .select("profile_id, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name, is_sample, last_access_at, profiles(full_name, email)")
           .eq("organization_id", organizationId)
           .eq("role", "student")
           .order("created_at", { ascending: true }),
@@ -297,7 +297,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       email: text(memberProfile.email),
       initials: initials(name),
       level: text(member.level, "A1"),
-      groupName:text(member.group_name),planName:text(member.plan_name),
+      groupName:text(member.group_name),planName:text(member.plan_name),isSample:member.is_sample === true,
       progress: averageProgress,
       active: member.access_status === "active",
       payment: paymentLabel(member.payment_status),
@@ -335,7 +335,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
         .order("created_at", { ascending: true }),
       supabase
         .from("memberships")
-        .select("organization_id, profile_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name, last_access_at, profiles(full_name, email)"),
+        .select("organization_id, profile_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name, is_sample, last_access_at, profiles(full_name, email)"),
       supabase
         .from("courses")
         .select("id, organization_id, title, description, level, status"),
@@ -431,7 +431,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
             email: text(studentProfile.email),
             initials: initials(studentName),
             level: text(member.level, "A1"),
-      groupName:text(member.group_name),planName:text(member.plan_name),
+      groupName:text(member.group_name),planName:text(member.plan_name),isSample:member.is_sample === true,
             progress: averageProgress,
             active: member.access_status === "active",
             payment: paymentLabel(member.payment_status),

@@ -2,6 +2,7 @@
 import { displayLabel } from "@/lib/lms/display-label";
 
 import Image from "next/image";
+import { LevelFolders } from "@/components/level-folders";
 import { CoursePlayer } from "./course-player";
 import { StudentPayments, LearningPaths, ReferFriend } from "./student-features";
 import { useEffect, useState, type FormEvent } from "react";
@@ -202,7 +203,7 @@ export function StudentWorkspace({
                   />
                 </div>
               </div>
-              {!activeLevel?<div className={styles.cards}>{Array.from(new Set(courses.map(c=>c.level.split(" · ")[0]))).sort().map(level=><article className={styles.panel} key={level}><small>LEVEL</small><h2>{level}</h2><p>{courses.filter(c=>c.level.startsWith(level+" · ")).length} units</p><button onClick={()=>setActiveLevel(level)}>Open level →</button></article>)}</div>:<><button onClick={()=>setActiveLevel(null)}>← All levels</button><h2>{activeLevel} · Units</h2><div className={styles.cards}>
+              {!activeLevel?<LevelFolders levels={Array.from(new Set(courses.map(c=>c.level.split(" · ")[0]))).sort()} courses={courses} onOpen={setActiveLevel}/>:<><button onClick={()=>setActiveLevel(null)}>← All levels</button><h2>{activeLevel} · Units</h2><div className={styles.cards}>
                 {courses.filter(c=>c.level.split(" · ")[0]===activeLevel).map((c) => {
                   const progress =
                     dashboard?.enrollments.find((e) => e.course_id === c.id)

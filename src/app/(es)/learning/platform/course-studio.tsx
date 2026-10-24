@@ -1,12 +1,15 @@
 "use client";
 
 import Image from "next/image";
+import { LevelFolders } from "@/components/level-folders";
+import { createLevelFolderAction, levelFoldersAction } from "./level-actions";
+import { CEFR_LEVELS } from "@/lib/lms/learning-path";
 import { FitSlide } from "@/components/fit-slide";
 import { QuestionEditor, newQuestion } from "./question-editor";
 import { BlockDesignOptions } from "./block-design-options";
 import { LearningViewer } from "@/components/learning-viewer";
 import { CourseVideo } from "@/components/course-video";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import type {
   LmsCourse,
@@ -115,6 +118,10 @@ function emptyBlock(kind: LmsCourseBlockKind, position: number): DraftBlock {
 
 export function CourseStudioWorkspace({ courses, setCourses, onNotify, persistent, organizationId }: Props) {
   const [showCreate, setShowCreate] = useState(false);
+  const [folders,setFolders]=useState<string[]>([]);
+  const [showLevelForm,setShowLevelForm]=useState(false);
+  const [newLevel,setNewLevel]=useState("A2");
+  useEffect(()=>{if(persistent&&organizationId){let active=true;levelFoldersAction(organizationId).then(items=>{if(active)setFolders(items);}).catch(e=>onNotify(e.message));return()=>{active=false;};}},[persistent,organizationId,onNotify]);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerCategory, setPickerCategory] = useState<"standard" | "activities" | null>(null);
   const [query, setQuery] = useState("");
@@ -135,11 +142,11 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     level: "A1",
     description: "",
     youtubeUrl: "",
-    color: "#6D28D9",
+    color: "#2C55A2",
     template: "guided" as "blank" | "guided" | "single",
     passingScore: 80,
   });
-  const [settings, setSettings] = useState({ title: "", level: "A1", description: "", color: "#6D28D9" });
+  const [settings, setSettings] = useState({ title: "", level: "A1", description: "", color: "#2C55A2" });
 
   async function openCourse(course: LmsCourse) {
     setEditingCourse(course);
@@ -194,7 +201,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       published: false,
     };
     setCourses((current) => [...current, course]);
-    setNewCourse({ title: "", level: "A1", description: "", youtubeUrl: "", color: "#6D28D9", template: "guided", passingScore: 80 });
+    setNewCourse({ title: "", level: newCourse.level, description: "", youtubeUrl: "", color: "#2C55A2", template: "guided", passingScore: 80 });
     setShowCreate(false);
     setBusy(false);
     await openCourse(course);
@@ -452,6 +459,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
         <button className={styles.createButton} type="button" onClick={() => setShowCreate((current) => !current)}>{showCreate ? "Close" : "+ Create course"}</button>
       </div>
 
+      <div className={styles.folderToolbar}><button type="button" onClick={()=>setShowLevelForm(!showLevelForm)}>+ Create level folder</button>{levelFolder&&<span>New courses will be placed in {levelFolder}.</span>}</div>
+      {showLevelForm&&<form className={styles.folderForm} onSubmit={async e=>{e.preventDefault();setBusy(true);try{if(persistent&&organizationId)setFolders(await createLevelFolderAction(organizationId,newLevel));else setFolders(current=>Array.from(new Set([...current,newLevel])));setShowLevelForm(false);onNotify(newLevel+" folder is ready. Add courses inside it.");}catch(e){onNotify(e instanceof Error?e.message:"Unable to create folder.");}finally{setBusy(false);}}}><label>Level<select value={newLevel} onChange={e=>setNewLevel(e.target.value)}>{CEFR_LEVELS.map(code=><option key={code}>{code}</option>)}</select></label><button type="submit" disabled={busy}>Create folder</button><button type="button" onClick={()=>setShowLevelForm(false)}>Cancel</button></form>}
       {showCreate && (
         <form className={styles.createPanel} onSubmit={createCourse}>
           <div className={styles.createHeading}><div><span>NEW COURSE</span><h2>Course basics</h2><p>Start with the basics, then design each lesson in the editor.</p></div><button type="button" onClick={() => setShowCreate(false)}>×</button></div>
@@ -468,7 +477,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
         </form>
       )}
 
-      {!levelFolder?<div className={styles.courseGrid}>{Array.from(new Set(courses.map(c=>c.level.split(" · ")[0]))).sort().map(level=><article className={styles.createPanel} key={level}><h2>{level}</h2><p>{courses.filter(c=>c.level.split(" · ")[0]===level).length} units</p><button type="button" onClick={()=>setLevelFolder(level)}>Open level →</button></article>)}</div>:<><button type="button" onClick={()=>setLevelFolder(null)}>← All levels</button><h2>{levelFolder} · Units</h2><div className={styles.courseGrid}>
+      {!levelFolder?<LevelFolders levels={Array.from(new Set([...folders,...courses.map(c=>c.level.split(" · ")[0])])).sort()} courses={courses} onOpen={level=>{setLevelFolder(level);setNewCourse(current=>({...current,level}));}}/>:<><button type="button" onClick={()=>setLevelFolder(null)}>← All levels</button><h2>{levelFolder} · Units</h2><div className={styles.courseGrid}>
         {courses.filter((course) => course.level.split(" · ")[0]===levelFolder && course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Published" ? course.published : !course.published))).map((course) => (
           <article className={styles.courseCard} key={course.id}>
             <button className={styles.courseCover} style={{ background: `linear-gradient(135deg, ${course.color}, #111827)` }} type="button" onClick={() => void openCourse(course)}>
