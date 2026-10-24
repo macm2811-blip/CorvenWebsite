@@ -168,6 +168,7 @@ export function CoursePlayer({
                 {lesson.content_config?.activityType === "assignment" ? (
                   <div className={styles.assignment}>
                     <h2>{lesson.title}</h2>
+                    {lesson.content_config?.dueAt && <p>Due: {new Date(String(lesson.content_config.dueAt)).toLocaleDateString("en-US")}</p>}
                     <LessonContent lesson={lesson} />
                     <AssignmentResponse
                       organizationId={organizationId}

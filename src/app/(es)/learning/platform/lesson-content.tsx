@@ -147,9 +147,10 @@ export function LessonContent({
         <audio src={url} controls preload="metadata" />
       )}
       {lesson.content_type === "document" && /^https:\/\//i.test(url) && (
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          Open document ↗
-        </a>
+        <div>
+          {/\.pdf(?:[?#]|$)/i.test(url) && <iframe src={url} title={`${lesson.title} · PDF document`} style={{ width: "100%", height: 400, border: 0 }} sandbox="allow-scripts allow-same-origin allow-downloads" />}
+          <a href={url} target="_blank" rel="noopener noreferrer">Open document ↗</a>
+        </div>
       )}
       {typeof config?.imageUrl === "string" &&
         config.imageUrl &&
