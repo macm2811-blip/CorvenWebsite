@@ -2,6 +2,8 @@
 import { displayLabel } from "@/lib/lms/display-label";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { AcademyReviewPanel } from "./academy-review-panel";
+import { loadCourseStudioAction } from "./actions";
 import type { LmsCourse, LmsStudent } from "@/lib/lms/types";
 import {
   academyOperationsAction,
@@ -26,6 +28,7 @@ export function AcademyWorkspace({
   courses: LmsCourse[];
 }) {
   const [data, setData] = useState<Operations | null>(null);
+  const [sessionPages,setSessionPages]=useState<{id:string;title:string}[]>([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,6 +60,7 @@ export function AcademyWorkspace({
           duration: Number(values.get("duration")),
           meetingUrl: String(values.get("meetingUrl")),
           courseId: String(values.get("courseId")),
+          lessonId:String(values.get("lessonId")??""),
         });
       else
         await recordPaymentAction({
@@ -135,6 +139,7 @@ export function AcademyWorkspace({
           {message}
         </p>
       )}
+      {view!=="sessions"&&<AcademyReviewPanel organizationId={organizationId} students={students} mode={view==="income"?"payments":"all"}/>}
       {!data && !error && <p>Loading records…</p>}
       {view === "overview" && (
         <div className={styles.cards}>
@@ -164,7 +169,7 @@ export function AcademyWorkspace({
             </label>
             <label>
               Course
-              <select name="courseId">
+              <select name="courseId" onChange={async e=>{const id=e.target.value;setSessionPages([]);if(id){try{const result=await loadCourseStudioAction({organizationId,courseId:id});if(result.ok&&result.data)setSessionPages(result.data.blocks.filter(b=>b.kind!=="quiz"&&b.kind!=="exam"));}catch(e){setError(e instanceof Error?e.message:"Unable to load pages.");}}}}>
                 <option value="">Entire academy</option>
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -173,6 +178,7 @@ export function AcademyWorkspace({
                 ))}
               </select>
             </label>
+            <label>Start page (optional)<select name="lessonId"><option value="">Continue at the student’s next page</option>{sessionPages.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
             <label>
               Date and time (local device time)
               <input name="startsAt" type="datetime-local" required />

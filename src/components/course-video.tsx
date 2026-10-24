@@ -45,8 +45,8 @@ export function CourseVideo({ url, title }: { url: string; title: string }) {
           sign in, use the account authorized by your administrator.
         </p>
       )}
-      <a href={url} target="_blank" rel="noopener noreferrer">
-        Open video on{source.provider} ↗
+      <a href={source.url} target="_blank" rel="noopener noreferrer">
+        Open video on {source.provider} ↗
       </a>
     </div>
   );

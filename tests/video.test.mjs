@@ -35,6 +35,13 @@ test("accepts OneDrive embed links and preserves permissions", () => {
   assert.equal(source?.type, "embed");
   assert.ok(source?.url.includes("authkey=example"));
 });
+
+test("accepts Microsoft embed code without executing HTML",()=>{
+  const source=videoSource('<iframe src="https://1drv.ms/v/c/example?embed=1&amp;authkey=example" width="900" onload="alert(1)"></iframe>');
+  assert.equal(source?.type,"embed");
+  assert.equal(source?.url,"https://1drv.ms/v/c/example?embed=1&authkey=example");
+  assert.equal(videoSource('<iframe src="javascript:alert(1)"></iframe>'),null);
+});
 test("accepts SharePoint embed and direct downloads", () => {
   assert.equal(
     videoSource(

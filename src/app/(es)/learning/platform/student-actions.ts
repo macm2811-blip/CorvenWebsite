@@ -39,7 +39,7 @@ export async function studentDashboardAction(organizationId: string) {
       .neq("status", "cancelled"),
     db
       .from("payments")
-      .select("id,amount,currency,due_date,paid_at,status,reference")
+      .select("id,amount,currency,due_date,paid_at,status,reference,coverage_start,coverage_end")
       .eq("student_id", userId)
       .eq("organization_id", organizationId)
       .order("due_date", { ascending: false }),
@@ -64,7 +64,7 @@ export async function studentDashboardAction(organizationId: string) {
   const sessions = await db
     .from("live_sessions")
     .select(
-      "id,title,starts_at,duration_minutes,meeting_url,recording_youtube_url,status,course_id",
+      "id,title,starts_at,duration_minutes,meeting_url,recording_youtube_url,status,course_id,lesson_id",
     )
     .eq("organization_id", organizationId)
     .neq("status", "cancelled")
@@ -131,7 +131,7 @@ export async function studentCourseAction(
     db
       .from("quizzes")
       .select(
-        "id,title,description,passing_score,max_attempts,assessment_type,position",
+        "id,title,description,passing_score,max_attempts,assessment_type,position,module_id",
       )
       .eq("course_id", courseId)
       .order("position"),
@@ -154,7 +154,7 @@ export async function studentCourseAction(
   const attempts = quizIds.length
     ? await db
         .from("quiz_attempts")
-        .select("id,quiz_id,score,passed,submitted_at")
+        .select("id,quiz_id,score,passed,submitted_at,review_state,feedback")
         .eq("student_id", userId)
         .in("quiz_id", quizIds)
         .order("submitted_at", { ascending: false })
@@ -194,6 +194,7 @@ export async function recordLearningAction(input: {
     progress: number;
     score: number | null;
     passed: boolean;
+    pendingReview?:boolean;
   };
 }
 
@@ -228,6 +229,7 @@ export async function saveSessionAction(input: {
   meetingUrl: string;
   courseId: string;
   id?: string;
+  lessonId?:string;
   status?: string;
 }) {
   const { db, userId, role } = await member(input.organizationId);
@@ -250,7 +252,9 @@ export async function saveSessionAction(input: {
       .single();
     if (course.error) throw new Error("Invalid course.");
   }
+  if(input.lessonId){if(!input.courseId)throw new Error("Choose a unit first.");const modules=await db.from("modules").select("id").eq("course_id",input.courseId);if(modules.error)throw modules.error;const page=await db.from("lessons").select("id").eq("id",input.lessonId).in("module_id",modules.data.map(m=>m.id)).single();if(page.error)throw new Error("Invalid start page.");}
   const values = {
+    lesson_id:input.lessonId||null,
     title: input.title.trim().slice(0, 180),
     starts_at: starts.toISOString(),
     duration_minutes: Math.min(480, Math.max(5, input.duration)),

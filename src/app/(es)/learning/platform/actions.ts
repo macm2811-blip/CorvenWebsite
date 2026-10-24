@@ -21,6 +21,7 @@ type ActionResult<T = undefined> = {
 };
 
 type StudentChanges = {
+  groupName?:string;planName?:string;
   active?: boolean;
   payment?: "Pagado" | "Pendiente" | "Vencido";
   dueDate?: string;
@@ -75,6 +76,7 @@ function validHex(value: string) {
   return /^#[0-9a-f]{6}$/i.test(value);
 }
 
+function secureArtwork(value?:string) { try { const u=new URL(value??"");return u.protocol==="https:"&&!u.username&&!u.password?u.href:""; } catch { return ""; } }
 function normalizeBlockConfig(value?: Partial<LmsCourseBlockConfig>): LmsCourseBlockConfig {
   return {
     fontFamily: fontFamilies.includes(value?.fontFamily ?? defaultBlockConfig.fontFamily)
@@ -105,6 +107,13 @@ function normalizeBlockConfig(value?: Partial<LmsCourseBlockConfig>): LmsCourseB
     underline: Boolean(value?.underline),
     strikethrough: Boolean(value?.strikethrough),
     uppercase: Boolean(value?.uppercase),
+    backgroundImage: secureArtwork(value?.backgroundImage),
+    imageUrl: secureArtwork(value?.imageUrl),
+    logoUrl: secureArtwork(value?.logoUrl),
+    imagePosition: ["before","after","behind"].includes(value?.imagePosition??"")?value!.imagePosition:"before",
+    gradient: /^linear-gradient\((90|120|135|180)deg,#[a-f0-9]{6},#[a-f0-9]{6}\)$/i.test(value?.gradient??"")?value!.gradient:"",
+    activityType: value?.activityType==="assignment"?"assignment":undefined,
+    dueAt: value?.dueAt && Number.isFinite(Date.parse(value.dueAt))?value.dueAt:undefined,
   };
 }
 
@@ -371,6 +380,8 @@ export async function updateStudentAction(input: {
     if (!validUuid(input.studentId)) throw new Error("Invalid student.");
 
     const updates: Record<string, string> = {};
+    if(typeof input.changes.groupName==="string")updates.group_name=input.changes.groupName.trim().slice(0,80);
+    if(typeof input.changes.planName==="string")updates.plan_name=input.changes.planName.trim().slice(0,120);
     if (typeof input.changes.active === "boolean") {
       updates.access_status = input.changes.active ? "active" : "suspended";
     }
@@ -722,7 +733,7 @@ export async function loadCourseStudioAction(input: {
 
     const { data: quizzes, error: quizzesError } = await supabase
       .from("quizzes")
-      .select("id, title, description, assessment_type, passing_score, max_attempts, position, content_config")
+      .select("id, module_id, title, description, assessment_type, passing_score, max_attempts, position, content_config")
       .eq("course_id", input.courseId)
       .order("position", { ascending: true });
     if (quizzesError) throw quizzesError;
@@ -730,7 +741,7 @@ export async function loadCourseStudioAction(input: {
     const questionsResult = quizIds.length
       ? await supabase
           .from("quiz_questions")
-          .select("id, quiz_id, prompt, options, correct_answer, position")
+          .select("id, quiz_id, prompt, question_type, options, correct_answer, position")
           .in("quiz_id", quizIds)
           .order("position", { ascending: true })
       : { data: [], error: null };
@@ -761,6 +772,8 @@ export async function loadCourseStudioAction(input: {
           : "";
       return {
         id: quiz.id,
+        moduleId: quiz.module_id ?? undefined,
+        questions: (questionsResult.data ?? []).filter(q=>q.quiz_id===quiz.id).map(q=>({id:q.id,prompt:q.prompt,questionType:(q.question_type==="true_false"?"single_choice":q.question_type) as "single_choice"|"multiple_choice"|"short_answer"|"essay",options:Array.isArray(q.options)?q.options.map(String):[],correctAnswer:q.correct_answer as string|string[]})),
         kind: quiz.assessment_type === "exam" ? "exam" : "quiz",
         title: quiz.title,
         body: quiz.description || "",
@@ -846,59 +859,18 @@ export async function saveCourseBlockAction(input: {
     }
 
     const isAssessment = input.block.kind === "quiz" || input.block.kind === "exam";
+    let savedQuestions=input.block.questions;
     let blockId = input.block.id ?? "";
-    let savedModuleId = isAssessment ? undefined : input.block.moduleId;
+    let savedModuleId = input.block.moduleId;
     const position = Math.max(1, Math.round(input.block.position || 1));
     if (isAssessment) {
-      const options = (input.block.options ?? []).map((option) => option.trim()).filter(Boolean).slice(0, 6);
-      const question = (input.block.question ?? "").trim().slice(0, 2000);
-      const correctAnswer = (input.block.correctAnswer ?? "").trim();
-      if (question.length < 3 || options.length < 2) throw new Error("Complete the question and at least two answers.");
-      if (!options.includes(correctAnswer)) throw new Error("Select the correct answer.");
-      const assessmentValues = {
-        title,
-        description: body,
-        assessment_type: input.block.kind,
-        passing_score: Math.max(0, Math.min(100, Math.round(input.block.passingScore ?? 80))),
-        max_attempts: Math.max(1, Math.min(20, Math.round(input.block.maxAttempts ?? 3))),
-        position,
-        content_config: config,
-      };
-      if (blockId && validUuid(blockId)) {
-        const { error } = await supabase
-          .from("quizzes")
-          .update(assessmentValues)
-          .eq("id", blockId)
-          .eq("course_id", input.courseId).select("id").single();
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase
-          .from("quizzes")
-          .insert({ course_id: input.courseId, ...assessmentValues })
-          .select("id")
-          .single();
-        if (error || !data) throw error ?? new Error("The assessment could not be created.");
-        blockId = data.id;
-      }
-      const { data: existingQuestion, error: questionLookupError } = await supabase
-        .from("quiz_questions")
-        .select("id")
-        .eq("quiz_id", blockId)
-        .order("position", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (questionLookupError) throw questionLookupError;
-      const questionValues = {
-        prompt: question,
-        question_type: "single_choice",
-        options,
-        correct_answer: correctAnswer,
-        position: 1,
-      };
-      const questionResult = existingQuestion
-        ? await supabase.from("quiz_questions").update(questionValues).eq("id", existingQuestion.id)
-        : await supabase.from("quiz_questions").insert({ quiz_id: blockId, ...questionValues });
-      if (questionResult.error) throw questionResult.error;
+      const questions=(input.block.questions?.length?input.block.questions:[{prompt:input.block.question??"",questionType:"single_choice",options:input.block.options??[],correctAnswer:input.block.correctAnswer??""}]).map(q=>({...q,prompt:q.prompt.trim(),options:q.options.map(o=>o.trim()).filter(Boolean)}));
+      if(questions.some(q=>!["single_choice","multiple_choice","short_answer","essay"].includes(q.questionType)))throw new Error("Invalid question type.");
+      const result=await createAdminClient().rpc("save_course_assessment",{p_actor:userId,p_org:input.organizationId,p_course:input.courseId,p_quiz:blockId||null,p_values:{title,description:body,assessment_type:input.block.kind,passing_score:Math.max(0,Math.min(100,Math.round(input.block.passingScore??80))),max_attempts:Math.max(1,Math.min(20,Math.round(input.block.maxAttempts??3))),position,content_config:config,module_id:input.block.moduleId??null},p_questions:questions});
+      if(result.error)throw result.error;blockId=result.data;
+      const loaded=await supabase.from("quiz_questions").select("id,prompt,question_type,options,correct_answer").eq("quiz_id",blockId).order("position");
+      if(loaded.error)throw loaded.error;
+      savedQuestions=loaded.data.map(q=>({id:q.id,prompt:q.prompt,questionType:q.question_type as "single_choice"|"multiple_choice"|"short_answer"|"essay",options:Array.isArray(q.options)?q.options.map(String):[],correctAnswer:q.correct_answer as string|string[]}));
     } else {
       const moduleLookup = await supabase
         .from("modules")
@@ -954,6 +926,7 @@ export async function saveCourseBlockAction(input: {
 
     const savedBlock: LmsCourseBlock = {
       ...input.block,
+      questions:savedQuestions,
       moduleId: savedModuleId,
       id: blockId,
       title,
