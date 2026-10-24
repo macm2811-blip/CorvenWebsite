@@ -95,7 +95,7 @@ export function LessonContent({
           : "left") as CSSProperties["textAlign"],
         color:
           typeof config?.textColor === "string" ? config.textColor : undefined,
-        background:
+        backgroundColor:
           typeof config?.backgroundColor === "string"
             ? config.backgroundColor
             : undefined,

@@ -169,7 +169,7 @@ export async function studentCourseAction(
     questions: questions.data ?? [],
     attempts: attempts.data ?? [],
     progress: progress.data ?? [],
-    percentage: enrollment.progress,
+    percentage: (() => { const total = (lessons.data?.length ?? 0) + (quizzes.data?.length ?? 0); const done = (lessons.data ?? []).filter(l => (progress.data ?? []).some(p => p.lesson_id === l.id && p.completed)).length + (quizzes.data ?? []).filter(q => (attempts.data ?? []).some(a => a.quiz_id === q.id && a.passed && a.review_state === "graded")).length; return total ? Math.round(done * 100 / total) : 0; })(),
   };
 }
 
