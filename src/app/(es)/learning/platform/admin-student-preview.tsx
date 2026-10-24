@@ -17,7 +17,7 @@ export function AdminStudentPreview({organizationId,students}:{organizationId:st
  return <section className={styles.panel} style={{marginBottom:20}}>
    <h2>Explore student experiences</h2><p>Preview a student as an administrator. Previewing never changes their progress, grades or payments.</p>
    <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"end"}}><label>Student<select value={studentId} onChange={e=>setStudentId(e.target.value)}><option value="">Choose a student</option>{students.map(s=><option key={s.id} value={String(s.id)}>{s.name} · {s.progress}%</option>)}</select></label><button disabled={!studentId||busy} onClick={()=>void open()}>View student experience</button><button disabled={busy} onClick={async()=>{setBusy(true);setError("");try{await createSampleStudentsAction(organizationId);window.location.reload();}catch(e){setError(e instanceof Error?e.message:"Unable to prepare samples.");setBusy(false);}}}>{busy?"Working…":"Add 3 sample students"}</button></div>
-   <small>Samples use fictitious identities, have no login passwords and send no invitations. Their payment statuses are examples; no payment transactions are created.</small>
+   <small>Samples use fictitious identities. No invitations or login credentials are shared; use administrator preview. Their payment statuses are examples; no payment transactions are created.</small>
    {error&&<p role="alert">{error}</p>}
    {data&&selected&&!course&&<LearningViewer title={`Student preview · ${selected.name}`} onClose={()=>setData(null)}><div className={styles.workspace}>
     <p className={styles.previewNotice}>Administrator preview · read only {data.membership.is_sample?"· Sample data":""}</p>

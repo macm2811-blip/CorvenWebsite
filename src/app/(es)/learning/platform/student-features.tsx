@@ -345,6 +345,7 @@ export function LearningPaths({
   previewStudentId?: string;
 }) {
   const [selectedLevel,setSelectedLevel] = useState<string>(CEFR_LEVELS.includes(initialData.viewerLevel as typeof CEFR_LEVELS[number]) ? initialData.viewerLevel : "A1");
+  const [catalogReady,setCatalogReady]=useState(false),[loadedCourseIds,setLoadedCourseIds]=useState<string|null>(null);
   const [details, setDetails] = useState<
       Awaited<ReturnType<typeof studentCourseAction>>[]
     >([]),
@@ -356,7 +357,7 @@ export function LearningPaths({
     let live = true;
     learningCatalogAction(initialData.organizationId)
       .then((c) => {
-        if (live) setCatalog(c);
+        if (live) {setCatalog(c);setCatalogReady(true);}
       })
       .catch((e) => {
         if (live) setNotice(message(e));
@@ -375,7 +376,7 @@ export function LearningPaths({
         .map((id) => studentCourseAction(initialData.organizationId, id, previewStudentId)),
     )
       .then((result) => {
-        if (live) setDetails(result);
+        if (live) {setDetails(result);setLoadedCourseIds(courseIds);}
       })
       .catch((e) => {
         if (live) setNotice(message(e));
@@ -399,6 +400,7 @@ export function LearningPaths({
   const levels = CEFR_LEVELS;
   const stageProgress = journeyProgress(catalog,details);
   const overall = Math.round(stageProgress.reduce((a,b)=>a+b,0)/levels.length);
+  if(!catalogReady||loadedCourseIds!==courseIds)return <section className={styles.panel}><h2>My learning path</h2><p role="status">{notice||"Loading your A1–C1 journey…"}</p></section>;
   return (
     <section className={styles.panel}>
       <h2>My learning path</h2>
