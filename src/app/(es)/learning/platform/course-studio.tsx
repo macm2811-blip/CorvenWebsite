@@ -1,6 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { FitSlide } from "@/components/fit-slide";
+import { QuestionEditor, newQuestion } from "./question-editor";
+import { BlockDesignOptions } from "./block-design-options";
 import { LearningViewer } from "@/components/learning-viewer";
 import { CourseVideo } from "@/components/course-video";
 import { FormEvent, useState } from "react";
@@ -101,6 +104,7 @@ function emptyBlock(kind: LmsCourseBlockKind, position: number): DraftBlock {
     url: "",
     position,
     config: { ...defaultConfig },
+    questions:assessment?[newQuestion()]:undefined,
     question: assessment ? "" : undefined,
     options: assessment ? ["", "", "", ""] : undefined,
     correctAnswer: assessment ? "" : undefined,
@@ -116,6 +120,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [levelFolder,setLevelFolder]=useState<string|null>(null);
   const [editingCourse, setEditingCourse] = useState<LmsCourse | null>(null);
   const [blocks, setBlocks] = useState<LmsCourseBlock[]>([]);
   const [modules, setModules] = useState<{ id: string; title: string; position: number }[]>([]);
@@ -312,7 +317,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     setBusy(false);
   }
 
-  async function uploadImage(file?: File) {
+  async function uploadImage(file?: File,target?:"backgroundImage"|"imageUrl"|"logoUrl") {
     if (!file || !draft || !editingCourse) return;
     if (!persistent || !organizationId || typeof editingCourse.id !== "string") {
       setDraft((current) => current ? { ...current, url: URL.createObjectURL(file) } : current);
@@ -326,7 +331,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     const result = await uploadCourseImageAction(formData);
     setBusy(false);
     if (!result.ok || !result.data) return onNotify(result.message);
-    setDraft((current) => current ? { ...current, url: result.data!.url } : current);
+    setDraft((current) => current ? target ? {...current,config:{...current.config,[target]:result.data!.url}} : { ...current, url: result.data!.url } : current);
     onNotify(result.message);
   }
 
@@ -463,8 +468,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
         </form>
       )}
 
-      <div className={styles.courseGrid}>
-        {courses.filter((course) => course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Published" ? course.published : !course.published))).map((course) => (
+      {!levelFolder?<div className={styles.courseGrid}>{Array.from(new Set(courses.map(c=>c.level.split(" · ")[0]))).sort().map(level=><article className={styles.createPanel} key={level}><h2>{level}</h2><p>{courses.filter(c=>c.level.split(" · ")[0]===level).length} units</p><button type="button" onClick={()=>setLevelFolder(level)}>Open level →</button></article>)}</div>:<><button type="button" onClick={()=>setLevelFolder(null)}>← All levels</button><h2>{levelFolder} · Units</h2><div className={styles.courseGrid}>
+        {courses.filter((course) => course.level.split(" · ")[0]===levelFolder && course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Published" ? course.published : !course.published))).map((course) => (
           <article className={styles.courseCard} key={course.id}>
             <button className={styles.courseCover} style={{ background: `linear-gradient(135deg, ${course.color}, #111827)` }} type="button" onClick={() => void openCourse(course)}>
               <span>{course.level.split(" · ")[0]}</span><i>▤</i><small>{course.published ? "PUBLISHED" : "DRAFT"}</small>
@@ -478,7 +483,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             </div>
           </article>
         ))}
-      </div>
+      </div></>}
     </section>
   );
 }
@@ -497,7 +502,7 @@ function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
   setDraft: React.Dispatch<React.SetStateAction<DraftBlock | null>>;
   busy: boolean;
   onSubmit: (event: FormEvent) => void;
-  onUpload: (file?: File) => void | Promise<void>;
+  onUpload: (file?: File,target?:"backgroundImage"|"imageUrl"|"logoUrl") => void | Promise<void>;
 }) {
   const assessment = draft.kind === "quiz" || draft.kind === "exam";
   const updateConfig = <K extends keyof LmsCourseBlockConfig>(key: K, value: LmsCourseBlockConfig[K]) => setDraft((current) => current ? { ...current, config: { ...current.config, [key]: value } } : current);
@@ -526,11 +531,12 @@ function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
       <div className={styles.liveSample} style={blockVisualStyle({ ...draft, id: draft.id ?? "draft" })}><small>LIVE PREVIEW</small><strong>{draft.title || "Block title"}</strong><p>{draft.body || "The selected formatting will appear here."}</p></div>
     </>}
     {draft.kind === "image" && <><label className={styles.uploadBox}>Upload image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void onUpload(event.target.files?.[0])} /><span>PNG, JPG or WEBP · maximum 2 MB</span></label><label>Or use a link<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." /></label><label>Alternative text<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Describe the image" /></label></>}
-    {draft.kind === "youtube" && <><label>Video link (YouTube, OneDrive or MP4/WebM)<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Instructions<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
+    {draft.kind === "youtube" && <><label>Video link or Microsoft embed code<input type="text" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://... or iframe embed code" required /></label><small>OneDrive: use Copy embed code for inline playback. Viewing permissions still apply.</small><label>Instructions<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
     {draft.kind === "document" && <><label>File link<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Description<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
     {draft.kind === "audio" && <><label>Audio link<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Description or transcript<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
-    {assessment && <><label>Instructions<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Student instructions" /></label><label>Question<textarea value={draft.question ?? ""} onChange={(event) => setDraft((current) => current ? { ...current, question: event.target.value } : current)} required /></label><fieldset className={styles.optionsField}><legend>Answer options</legend>{(draft.options ?? []).map((option, index) => <label key={index}><span>{String.fromCharCode(65 + index)}</span><input value={option} onChange={(event) => setDraft((current) => { if (!current) return current; const options = [...(current.options ?? [])]; options[index] = event.target.value; return { ...current, options }; })} required={index < 2} /></label>)}{(draft.options?.length ?? 0) < 6 && <button type="button" onClick={() => setDraft((current) => current ? { ...current, options: [...(current.options ?? []), ""] } : current)}>+ Add option</button>}</fieldset><label>Correct answer<select value={draft.correctAnswer ?? ""} onChange={(event) => setDraft((current) => current ? { ...current, correctAnswer: event.target.value } : current)} required><option value="">Select</option>{(draft.options ?? []).filter(Boolean).map((option, index) => <option key={`${option}-${index}`} value={option}>{option}</option>)}</select></label><div className={styles.twoFields}><label>Passing score<input type="number" min="0" max="100" value={draft.passingScore ?? 80} onChange={(event) => setDraft((current) => current ? { ...current, passingScore: Number(event.target.value) } : current)} /></label><label>Attempts<input type="number" min="1" max="20" value={draft.maxAttempts ?? 3} onChange={(event) => setDraft((current) => current ? { ...current, maxAttempts: Number(event.target.value) } : current)} /></label></div></>}
+    {assessment && <><label>Instructions<textarea value={draft.body} onChange={e=>updateBody(e.target.value)}/></label><QuestionEditor questions={draft.questions?.length?draft.questions:[{...newQuestion(),prompt:draft.question??"",options:draft.options??["",""],correctAnswer:draft.correctAnswer??""}]} onChange={questions=>setDraft(current=>current?{...current,questions}:current)}/><div className={styles.twoFields}><label>Passing score<input type="number" min={0} max={100} value={draft.passingScore??80} onChange={e=>setDraft(current=>current?{...current,passingScore:Number(e.target.value)}:current)}/></label><label>Attempts<input type="number" min={1} max={20} value={draft.maxAttempts??3} onChange={e=>setDraft(current=>current?{...current,maxAttempts:Number(e.target.value)}:current)}/></label></div></>}
     <div className={styles.designSection}><span>BLOCK DESIGN</span><label>Width<select value={draft.config.width} onChange={(event) => updateConfig("width", event.target.value as LmsCourseBlockConfig["width"])}><option value="full">Full width</option><option value="half">Half</option><option value="third">One third</option></select></label><div className={styles.twoFields}><label>Line height<select value={draft.config.lineHeight} onChange={(event) => updateConfig("lineHeight", event.target.value as LmsCourseBlockConfig["lineHeight"])}><option value="compact">Compact</option><option value="normal">Normal</option><option value="relaxed">Relaxed</option><option value="spacious">Spacious</option></select></label><label>Spacing<select value={draft.config.letterSpacing} onChange={(event) => updateConfig("letterSpacing", event.target.value as LmsCourseBlockConfig["letterSpacing"])}><option value="tight">Tight</option><option value="normal">Normal</option><option value="wide">Spacious</option></select></label><label>Padding<select value={draft.config.padding} onChange={(event) => updateConfig("padding", event.target.value as LmsCourseBlockConfig["padding"])}><option value="none">No padding</option><option value="compact">Compact</option><option value="normal">Normal</option><option value="roomy">Spacious</option></select></label><label>Corners<select value={draft.config.radius} onChange={(event) => updateConfig("radius", event.target.value as LmsCourseBlockConfig["radius"])}><option value="none">Square</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label><label>Border<select value={draft.config.borderStyle} onChange={(event) => updateConfig("borderStyle", event.target.value as LmsCourseBlockConfig["borderStyle"])}><option value="none">No border</option><option value="solid">Solid</option><option value="dashed">Dashed</option></select></label></div><div className={styles.threeFields}><label>Text<input type="color" value={draft.config.textColor} onChange={(event) => updateConfig("textColor", event.target.value)} /></label><label>Background<input type="color" value={draft.config.backgroundColor} onChange={(event) => updateConfig("backgroundColor", event.target.value)} /></label><label>Border<input type="color" value={draft.config.borderColor} onChange={(event) => updateConfig("borderColor", event.target.value)} /></label></div></div>
+    <BlockDesignOptions config={draft.config} onChange={value=>setDraft(current=>current?{...current,config:{...current.config,...value}}:current)} onUpload={onUpload}/>
     <button className={styles.saveButton} disabled={busy} type="submit">{busy ? "Saving…" : draft.id ? "Save changes" : `Add ${kindLabel(draft.kind).toLowerCase()}`}</button>
   </form>;
 }
@@ -540,6 +546,9 @@ function blockVisualStyle(block: LmsCourseBlock): React.CSSProperties {
   return {
     color: block.config.textColor,
     backgroundColor: block.config.backgroundColor,
+    backgroundImage: block.config.backgroundImage ? `url(${JSON.stringify(block.config.backgroundImage)})` : block.config.imagePosition === "behind" && block.config.imageUrl ? `url(${JSON.stringify(block.config.imageUrl)})` : block.config.gradient,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
     border: block.config.borderStyle === "none" ? "none" : `1px ${block.config.borderStyle} ${block.config.borderColor}`,
     borderRadius: { none: 0, small: 5, medium: 10, large: 18 }[block.config.radius],
     padding: { none: 0, compact: 12, normal: 18, roomy: 28 }[block.config.padding],
@@ -561,13 +570,15 @@ function CourseBlockPreview({ block, selected, onEdit, onDelete }: { block: LmsC
   return <article className={`${styles.canvasBlock} ${widthClass} ${selected ? styles.canvasBlockSelected : ""}`} onClick={onEdit}><div className={styles.blockTop}><span>{kindLabel(block.kind)}</span><div><button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Edit</button><button type="button" onClick={(event) => { event.stopPropagation(); onDelete(); }}>Delete</button></div></div><BlockContent block={block} /></article>;
 }
 
-function BlockContent({ block }: { block: LmsCourseBlock }) {
-  return <div className={`${styles.blockVisual} ${block.config.textStyle === "quote" ? styles.quoteBlock : ""}`} style={blockVisualStyle(block)}><strong>{block.title}</strong>{block.kind === "text" && <p>{block.body || "Add content from the properties panel."}</p>}{block.kind === "image" && (block.url ? <Image src={block.url} alt={block.body || block.title} width={900} height={500} unoptimized /> : <div className={styles.mediaPlaceholder}>Image</div>)}{block.kind === "youtube" && <CourseVideo url={block.url} title={block.title} />}{block.kind === "document" && <div className={styles.resourcePreview}><i>DOC</i><span>{block.body || "Downloadable document"}</span></div>}{block.kind === "audio" && <div className={styles.resourcePreview}><i>♪</i><span>{block.body || "Audio resource"}</span></div>}{(block.kind === "quiz" || block.kind === "exam") && <div className={styles.assessmentPreview}><span>{block.kind === "exam" ? "FINAL ASSESSMENT" : "KNOWLEDGE CHECK"}</span><p>{block.question || "Add a question in the properties panel."}</p>{(block.options ?? []).filter(Boolean).slice(0, 6).map((option, index) => <small key={`${option}-${index}`}>{String.fromCharCode(65 + index)}. {option}</small>)}</div>}</div>;
+export function BlockContent({ block }: { block: LmsCourseBlock }) {
+  return <div className={`${styles.blockVisual} ${block.config.textStyle === "quote" ? styles.quoteBlock : ""}`} style={blockVisualStyle(block)}>{block.config.logoUrl&&<Image src={block.config.logoUrl} alt="Academy logo" width={140} height={80} unoptimized style={{width:100,height:60,objectFit:"contain"}}/>}<strong>{block.title}</strong>{block.config.imageUrl&&block.config.imagePosition!=="behind"&&block.config.imagePosition!=="after"&&<Image src={block.config.imageUrl} alt="" width={900} height={500} unoptimized/>}{block.kind === "text" && <p>{block.body || "Add content from the properties panel."}</p>}{block.config.imageUrl&&block.config.imagePosition==="after"&&<Image src={block.config.imageUrl} alt="" width={900} height={500} unoptimized/>}{block.kind === "image" && (block.url ? <Image src={block.url} alt={block.body || block.title} width={900} height={500} unoptimized /> : <div className={styles.mediaPlaceholder}>Image</div>)}{block.kind === "youtube" && <CourseVideo url={block.url} title={block.title} />}{block.kind === "document" && <div className={styles.resourcePreview}><i>DOC</i><span>{block.body || "Downloadable document"}</span></div>}{block.kind === "audio" && <div className={styles.resourcePreview}><i>♪</i><span>{block.body || "Audio resource"}</span></div>}{(block.kind === "quiz" || block.kind === "exam") && <div className={styles.assessmentPreview}><span>{block.kind === "exam" ? "FINAL ASSESSMENT" : "KNOWLEDGE CHECK"}</span><p>{block.question || "Add a question in the properties panel."}</p>{(block.options ?? []).filter(Boolean).slice(0, 6).map((option, index) => <small key={`${option}-${index}`}>{String.fromCharCode(65 + index)}. {option}</small>)}</div>}</div>;
 }
 
-function CoursePreviewModal({ course, blocks, draft, onClose }: { course: LmsCourse; blocks: LmsCourseBlock[]; draft: DraftBlock | null; onClose: () => void }) {
-  const previewBlocks = draft ? draft.id ? blocks.map((block) => block.id === draft.id ? { ...draft, id: draft.id } as LmsCourseBlock : block) : [...blocks, { ...draft, id: "preview-draft" } as LmsCourseBlock] : blocks;
-  return <LearningViewer title={`Course preview · ${course.title}`} onClose={onClose}><div className={styles.previewShell}><header><div><span>STUDENT VIEW</span><h2>{course.title}</h2><p>{course.description}</p></div><button type="button" onClick={onClose} aria-label="Close preview">×</button></header><div className={styles.previewMeta}><span>{course.level.split(" · ")[0]}</span><span>{previewBlocks.length} items</span><span>{course.published ? "Published" : "Draft"}</span></div><main className={styles.studentPreviewGrid}>{previewBlocks.length ? previewBlocks.map((block) => <article className={block.config.width === "half" ? styles.blockHalf : block.config.width === "third" ? styles.blockThird : styles.blockFull} key={block.id}><BlockContent block={block} /></article>) : <div className={styles.previewEmpty}>This course has no content yet.</div>}</main><footer><button type="button" onClick={onClose}>Back to editor</button></footer></div></LearningViewer>;
+function CoursePreviewModal({ course, blocks, draft, onClose }: { course:LmsCourse;blocks:LmsCourseBlock[];draft:DraftBlock|null;onClose:()=>void }) {
+ const combined=draft?draft.id?blocks.map(b=>b.id===draft.id?{...draft,id:draft.id} as LmsCourseBlock:b):[...blocks,{...draft,id:"preview-draft"} as LmsCourseBlock]:blocks;
+ const pages=combined.flatMap(block=>block.questions?.length?block.questions.map((q,i)=>({...block,title:block.title+" · Question "+(i+1),question:q.prompt,options:q.options,questions:undefined})): [block]);
+ const [index,setIndex]=useState(0);const page=pages[index];
+ return <LearningViewer title={"Course preview · "+course.title} onClose={onClose}><small>STUDENT VIEW · {index+1} / {pages.length}</small>{page?<FitSlide key={page.id+index}><BlockContent block={page}/></FitSlide>:<p>This unit has no content yet.</p>}<nav style={{display:"flex",justifyContent:"space-between",gap:12,marginTop:12}}><button type="button" disabled={index===0} onClick={()=>setIndex(index-1)}>← Back</button><button type="button" onClick={onClose}>Back to editor</button><button type="button" disabled={index>=pages.length-1} onClick={()=>setIndex(index+1)}>Next →</button></nav></LearningViewer>;
 }
 
 function kindLabel(kind: LmsCourseBlockKind) {

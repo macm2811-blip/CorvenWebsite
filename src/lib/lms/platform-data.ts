@@ -122,7 +122,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
 
   const { data: membershipData } = await supabase
     .from("memberships")
-    .select("organization_id, role, access_status, payment_status, billing_due_date, monthly_fee, level")
+    .select("organization_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name")
     .eq("profile_id", userId)
     .order("created_at", { ascending: true })
     .limit(1)
@@ -164,7 +164,8 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       organizationId,
       organizationName: "Level Up English Academy",
       accessStatus,
-      viewerLevel: text(membership.level, "A1"),
+      viewerPlanName:text(membership.plan_name),
+    viewerLevel: text(membership.level, "A1"),
       viewerPayment: paymentLabel(membership.payment_status),
       viewerDueDate: text(membership.billing_due_date),
       students: [],
@@ -173,9 +174,9 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       academies: [],
       activity: [],
       brand: {
-        primary: "#6d28d9",
-        secondary: "#111827",
-        accent: "#f97316",
+        primary: "#2C55A2",
+        secondary: "#000000",
+        accent: "#E97704",
       },
       logoUrl: null,
       monthlyFee: number(membership.monthly_fee, 35000),
@@ -206,7 +207,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       ? Promise.resolve({ data: [], error: null })
       : supabase
           .from("memberships")
-          .select("profile_id, access_status, payment_status, billing_due_date, monthly_fee, level, last_access_at, profiles(full_name, email)")
+          .select("profile_id, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name, last_access_at, profiles(full_name, email)")
           .eq("organization_id", organizationId)
           .eq("role", "student")
           .order("created_at", { ascending: true }),
@@ -275,7 +276,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       youtubeUrl: text(courseLessons.find((lesson) => text(lesson.youtube_url))?.youtube_url),
       color: text(course.cover_url).startsWith("color:")
         ? text(course.cover_url).slice(6)
-        : ["#6d28d9", "#ea580c", "#0891b2"][index % 3],
+        : ["#2C55A2", "#ea580c", "#0891b2"][index % 3],
       published: course.status === "published",
     };
   });
@@ -296,6 +297,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       email: text(memberProfile.email),
       initials: initials(name),
       level: text(member.level, "A1"),
+      groupName:text(member.group_name),planName:text(member.plan_name),
       progress: averageProgress,
       active: member.access_status === "active",
       payment: paymentLabel(member.payment_status),
@@ -333,7 +335,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
         .order("created_at", { ascending: true }),
       supabase
         .from("memberships")
-        .select("organization_id, profile_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, last_access_at, profiles(full_name, email)"),
+        .select("organization_id, profile_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name, last_access_at, profiles(full_name, email)"),
       supabase
         .from("courses")
         .select("id, organization_id, title, description, level, status"),
@@ -429,6 +431,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
             email: text(studentProfile.email),
             initials: initials(studentName),
             level: text(member.level, "A1"),
+      groupName:text(member.group_name),planName:text(member.plan_name),
             progress: averageProgress,
             active: member.access_status === "active",
             payment: paymentLabel(member.payment_status),
@@ -456,7 +459,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
             duration: minutes ? `${Math.max(1, Math.round(minutes / 60))} h` : "Por definir",
             students: courseEnrollments.length,
             youtubeUrl: text(courseLessons.find((lesson) => text(lesson.youtube_url))?.youtube_url),
-            color: ["#6d28d9", "#ea580c", "#0891b2"][courseIndex % 3],
+            color: ["#2C55A2", "#ea580c", "#0891b2"][courseIndex % 3],
             published: course.status === "published",
           };
         }),
@@ -484,6 +487,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
     organizationId,
     organizationName: text(organization.name, "Level Up English Academy"),
     accessStatus: effectiveAccessStatus,
+    viewerPlanName:text(membership.plan_name),
     viewerLevel: text(membership.level, "A1"),
     viewerPayment: paymentLabel(membership.payment_status),
     viewerDueDate: text(membership.billing_due_date),
@@ -493,9 +497,9 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
     academies,
     activity,
     brand: {
-      primary: text(branding.primary_color, "#6d28d9"),
-      secondary: text(branding.secondary_color, "#111827"),
-      accent: text(branding.accent_color, "#f97316"),
+      primary: text(branding.primary_color, "#2C55A2"),
+      secondary: text(branding.secondary_color, "#000000"),
+      accent: text(branding.accent_color, "#E97704"),
     },
     logoUrl: text(branding.logo_url) || null,
     monthlyFee: number(organization.default_monthly_fee, number(membership.monthly_fee, 35000)),

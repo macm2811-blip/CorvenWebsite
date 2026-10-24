@@ -11,6 +11,8 @@ export type LmsStudent = {
   payment: "Pagado" | "Pendiente" | "Vencido";
   dueDate: string;
   lastAccess: string;
+  groupName?: string;
+  planName?: string;
 };
 
 export type LmsCourse = {
@@ -59,7 +61,16 @@ export type LmsCourseBlockConfig = {
   underline: boolean;
   strikethrough: boolean;
   uppercase: boolean;
+  backgroundImage?: string;
+  gradient?: string;
+  imageUrl?: string;
+  imagePosition?: "before" | "after" | "behind";
+  logoUrl?: string;
+  activityType?: "assignment";
+  dueAt?: string;
 };
+
+export type LmsQuestion = { id?: string; prompt: string; questionType: "single_choice" | "multiple_choice" | "short_answer" | "essay"; options: string[]; correctAnswer: string | string[] };
 
 export type LmsCourseBlock = {
   id: string;
@@ -75,6 +86,7 @@ export type LmsCourseBlock = {
   correctAnswer?: string;
   passingScore?: number;
   maxAttempts?: number;
+  questions?: LmsQuestion[];
 };
 
 export type LmsTicket = {
@@ -140,6 +152,7 @@ export type LmsInitialData = {
   organizationName: string;
   accessStatus: "invited" | "active" | "suspended" | "archived";
   viewerLevel: string;
+  viewerPlanName?:string;
   viewerPayment: LmsStudent["payment"];
   viewerDueDate: string;
   students: LmsStudent[];

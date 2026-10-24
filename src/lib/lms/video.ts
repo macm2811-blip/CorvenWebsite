@@ -2,7 +2,8 @@ export function videoSource(
   value: string,
 ): { type: "embed" | "file" | "link"; url: string; provider: string } | null {
   try {
-    const url = new URL(value);
+    const iframe = value.trim().match(/^<iframe\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>(?:\s*<\/iframe>)?\s*$/i);
+    const url = new URL(iframe ? iframe[1].replaceAll("&amp;", "&") : value);
     if (url.protocol !== "https:" || url.username || url.password) return null;
     const host = url.hostname.toLowerCase();
     if (
@@ -40,7 +41,7 @@ export function videoSource(
         return { type: "file", url: url.href, provider: "OneDrive" };
       if (host === "onedrive.live.com" && url.searchParams.has("resid"))
         url.pathname = "/embed";
-      const embed =
+      const embed = Boolean(iframe) || url.searchParams.get("embed") === "1" ||
         url.pathname.toLowerCase().includes("embed") ||
         url.pathname.toLowerCase().includes("stream.aspx");
       return {
