@@ -546,6 +546,9 @@ function blockVisualStyle(block: LmsCourseBlock): React.CSSProperties {
   return {
     color: block.config.textColor,
     backgroundColor: block.config.backgroundColor,
+    backgroundImage: block.config.backgroundImage ? `url(${JSON.stringify(block.config.backgroundImage)})` : block.config.imagePosition === "behind" && block.config.imageUrl ? `url(${JSON.stringify(block.config.imageUrl)})` : block.config.gradient,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
     border: block.config.borderStyle === "none" ? "none" : `1px ${block.config.borderStyle} ${block.config.borderColor}`,
     borderRadius: { none: 0, small: 5, medium: 10, large: 18 }[block.config.radius],
     padding: { none: 0, compact: 12, normal: 18, roomy: 28 }[block.config.padding],

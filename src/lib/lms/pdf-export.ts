@@ -56,8 +56,9 @@ export async function downloadTheory(
     new Promise<HTMLImageElement>((resolve, reject) => {
       const image = new Image();
       image.crossOrigin = "anonymous";
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("Image unavailable"));
+      const timeout = setTimeout(() => { image.src = ""; reject(new Error("Image unavailable")); }, 10000);
+      image.onload = () => { clearTimeout(timeout); resolve(image); };
+      image.onerror = () => { clearTimeout(timeout); reject(new Error("Image unavailable")); };
       image.src = url;
     });
   const logo = await loadImage("/brand/level-up/mark-transparent.png").catch(

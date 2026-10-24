@@ -57,12 +57,13 @@ export function StudentWorkspace({
       active = false;
     };
   }, [org]);
+  function updateCourse(data: CourseData) { setCourse(data); setDashboard(current => current ? {...current, enrollments: current.enrollments.map(e => e.course_id === data.course.id ? {...e, progress:data.percentage} : e)} : current); }
   async function openCourse(item: LmsCourse) {
     setBusy(true);
     setError("");
     try {
       const data = await studentCourseAction(org, String(item.id));
-      setCourse(data);
+      updateCourse(data);
 
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to open the course.");
@@ -171,7 +172,7 @@ export function StudentWorkspace({
       {!dashboard && !error && (
         <p role="status">Loading your learning space…</p>
       )}
-      {course ? (<CoursePlayer key={course.course.id} organizationId={org} data={course} startLessonId={startLessonId} onUpdate={setCourse} onNextUnit={(()=>{const units=initialData.courses.filter(c=>c.published&&c.level.split(" · ")[0]===initialData.courses.find(c=>c.id===course.course.id)?.level.split(" · ")[0]);const next=units[units.findIndex(c=>c.id===course.course.id)+1];return next?()=>openCourse(next):undefined;})()} onClose={()=>{setCourse(null);setStartLessonId(undefined);}}/>) : (<>
+      {course ? (<CoursePlayer key={course.course.id} organizationId={org} data={course} startLessonId={startLessonId} onUpdate={updateCourse} onNextUnit={(()=>{const units=initialData.courses.filter(c=>c.published&&c.level.split(" · ")[0]===initialData.courses.find(c=>c.id===course.course.id)?.level.split(" · ")[0]);const next=units[units.findIndex(c=>c.id===course.course.id)+1];return next?()=>openCourse(next):undefined;})()} onClose={()=>{setCourse(null);setStartLessonId(undefined);}}/>) : (<>
           {(view === "home" || view === "courses") && (
             <>
               <div className={styles.welcome}>
