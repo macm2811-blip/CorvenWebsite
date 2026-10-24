@@ -13,6 +13,7 @@ export type LmsStudent = {
   lastAccess: string;
   groupName?: string;
   planName?: string;
+  isSample?: boolean;
 };
 
 export type LmsCourse = {

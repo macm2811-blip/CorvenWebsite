@@ -34,6 +34,7 @@ import {
 } from "@/app/(es)/learning/platform/actions";
 import { CourseStudioWorkspace } from "@/app/(es)/learning/platform/course-studio";
 import { AcademyWorkspace, EnrollmentForm, AcademySupport } from "@/app/(es)/learning/platform/academy-workspace";
+import { AdminStudentPreview } from "@/app/(es)/learning/platform/admin-student-preview";
 import { StudentWorkspace } from "@/app/(es)/learning/platform/student-workspace";
 
 import styles from "./level-up-lms.module.css";
@@ -137,9 +138,9 @@ export function LevelUpLms({ initialData }: { initialData?: LmsInitialData }) {
   const [monthlyFee, setMonthlyFee] = useState(initialData?.monthlyFee ?? 35000);
 
   const activeCount = students.filter((student) => student.active).length;
-  const paidCount = students.filter((student) => student.payment === "Pagado").length;
+  const paidCount = students.filter((student) => !student.isSample && student.payment === "Pagado").length;
   const collectedRevenue = paidCount * monthlyFee;
-  const projectedRevenue = students.length * monthlyFee;
+  const projectedRevenue = students.filter(s=>!s.isSample).length * monthlyFee;
   const themeVariables = { "--brand-primary": brand.primary, "--brand-secondary": brand.secondary, "--brand-accent": brand.accent } as React.CSSProperties;
 
   function changeRole(nextRole: Role) {
@@ -504,7 +505,7 @@ function AdminExperience(props: {
 }) {
   if (props.persistent && props.organizationId && ["overview","income","sessions"].includes(props.view)) return <AcademyWorkspace organizationId={props.organizationId} view={props.view as "overview"|"income"|"sessions"} students={props.students} courses={props.courses} />;
   if (props.persistent && props.organizationId && props.view === "support") return <AcademySupport organizationId={props.organizationId} />;
-  if (props.persistent && props.organizationId && props.view === "students") return <><EnrollmentForm organizationId={props.organizationId} students={props.students} courses={props.courses}/><StudentManagement students={props.students} courses={props.courses} updateStudent={props.updateStudent} inviteStudent={props.inviteStudent} onNotify={props.onNotify}/></>;
+  if (props.persistent && props.organizationId && props.view === "students") return <><AdminStudentPreview organizationId={props.organizationId} students={props.students}/><EnrollmentForm organizationId={props.organizationId} students={props.students} courses={props.courses}/><StudentManagement students={props.students} courses={props.courses} updateStudent={props.updateStudent} inviteStudent={props.inviteStudent} onNotify={props.onNotify}/></>;
   if (props.view === "students") return <StudentManagement students={props.students} courses={props.courses} updateStudent={props.updateStudent} inviteStudent={props.inviteStudent} onNotify={props.onNotify} />;
   if (props.view === "courses") return props.persistent
     ? <Page><PageHeader eyebrow="Content management" title="Courses" text="Design, organize and publish learning experiences." /><CourseStudioWorkspace courses={props.courses} setCourses={props.setCourses} onNotify={props.onNotify} persistent={props.persistent} organizationId={props.organizationId} /></Page>
@@ -547,7 +548,7 @@ function CourseStudio({ courses, setCourses, onNotify, persistent, organizationI
 
 function IncomeDashboard({ students, monthlyFee, setMonthlyFee, collectedRevenue, projectedRevenue, onNotify }: { students: Student[]; monthlyFee: number; setMonthlyFee: (value: number) => void | Promise<void>; collectedRevenue: number; projectedRevenue: number; onNotify: (message: string) => void }) {
   const [draftFee, setDraftFee] = useState(monthlyFee);
-  const paid = students.filter((student) => student.payment === "Pagado").length;
+  const paid = students.filter((student) => !student.isSample && student.payment === "Pagado").length;
   const pending = students.filter((student) => student.payment === "Pendiente").length;
   const overdue = students.filter((student) => student.payment === "Vencido").length;
   const total = Math.max(students.length, 1);

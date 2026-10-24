@@ -15,6 +15,7 @@ export function CoursePlayer({
   onUpdate,
   startLessonId,
   onNextUnit,
+  preview = false,
 }: {
   data: Course;
   organizationId: string;
@@ -22,6 +23,7 @@ export function CoursePlayer({
   onUpdate: (data: Course) => void;
   startLessonId?: string;
   onNextUnit?: () => Promise<void>;
+  preview?: boolean;
 }) {
   const pages = [
     ...data.lessons.map((l) => ({
@@ -47,7 +49,6 @@ export function CoursePlayer({
   );
   const [index, setIndex] = useState(Math.max(0, first)),
     [hideIndex, setHideIndex] = useState(false),
-    [hideProgress, setHideProgress] = useState(false),
     [full, setFull] = useState(false),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
@@ -73,6 +74,7 @@ export function CoursePlayer({
     setMessage("");
   }
   async function advance() {
+    if (preview) { if (index < pages.length - 1) go(index + 1); else onClose(); return; }
     setBusy(true);
     setMessage("");
     try {
@@ -94,6 +96,7 @@ export function CoursePlayer({
     }
   }
   async function submit() {
+    if (preview) return;
     setBusy(true);
     setMessage("");
     try {
@@ -125,17 +128,15 @@ export function CoursePlayer({
     <LearningViewer title={data.course.title} onClose={onClose}>
       <div className={styles.player}>
         <div className={styles.tools}>
-          <button onClick={() => setHideIndex(!hideIndex)}>
-            {hideIndex ? "Show contents" : "Hide contents"}
+          <button aria-label={hideIndex ? "Show contents" : "Hide contents"} aria-expanded={!hideIndex && !full} onClick={() => setHideIndex(!hideIndex)}>
+            <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>{hideIndex ? <path d="m13 9 3 3-3 3"/> : <path d="m16 9-3 3 3 3"/>}</svg> Contents
           </button>
-          <button onClick={() => setHideProgress(!hideProgress)}>
-            {hideProgress ? "Show progress" : "Hide progress"}
-          </button>
+          {preview && <small>Administrator preview · changes are not saved</small>}
           <span>
             {index + 1} / {pages.length}
           </span>
         </div>
-        {!hideProgress && !full && (
+        {!full && (
           <div className={styles.progress}>
             <small>Unit progress · {data.percentage}%</small>
             <progress max={100} value={data.percentage} />
@@ -170,11 +171,11 @@ export function CoursePlayer({
                     <h2>{lesson.title}</h2>
                     {lesson.content_config?.dueAt && <p>Due: {new Date(String(lesson.content_config.dueAt)).toLocaleDateString("en-US")}</p>}
                     <LessonContent lesson={lesson} />
-                    <AssignmentResponse
+                    {preview ? <p>Students submit their response and attachment here.</p> : <AssignmentResponse
                       organizationId={organizationId}
                       courseId={data.course.id}
                       lessonId={lesson.id}
-                    />
+                    />}
                   </div>
                 ) : (
                   <FitSlide key={lesson.id}>
@@ -294,6 +295,7 @@ export function CoursePlayer({
                   ) : (
                     <button
                       disabled={
+                        preview ||
                         busy ||
                         !questions.length ||
                         questions.some((q) => !answered(q.id)) ||
@@ -332,7 +334,7 @@ export function CoursePlayer({
                 ← Back
               </button>
               <button
-                disabled={busy || !page || Boolean(quiz && !passed)}
+                disabled={busy || !page || (!preview && Boolean(quiz && !passed))}
                 onClick={() => {
                   if (index === pages.length - 1 && data.percentage === 100) {
                     if (onNextUnit) void onNextUnit();
