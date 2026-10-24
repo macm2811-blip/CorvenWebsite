@@ -801,6 +801,7 @@ export async function updateCourseDetailsAction(input: {
   level: string;
   description: string;
   color: string;
+  coverUrl?: string;
 }): Promise<ActionResult> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
@@ -810,13 +811,20 @@ export async function updateCourseDetailsAction(input: {
     if (title.length < 3) throw new Error("Enter a valid course name.");
     if (!/^(A1|A2|B1|B2|C1|C2)$/.test(level)) throw new Error("Select a valid level.");
     if (!validHex(input.color)) throw new Error("Select a valid color.");
+    const { data: existing, error: lookupError } = await supabase.from("courses").select("cover_url").eq("organization_id", input.organizationId).eq("id", input.courseId).single();
+    if (lookupError || !existing) throw new Error("Course unavailable in this academy.");
+    let cover = input.coverUrl === undefined ? existing.cover_url : input.coverUrl;
+    if (cover && !cover.startsWith("color:")) {
+      const prefix = createAdminClient().storage.from("organization-assets").getPublicUrl(`${input.organizationId}/courses/${input.courseId}/`).data.publicUrl;
+      if (!cover.startsWith(prefix) && cover !== existing.cover_url) throw new Error("Upload a cover for this course.");
+    } else { cover = `color:${input.color.toUpperCase()}`; }
     const { error } = await supabase
       .from("courses")
       .update({
         title,
         level,
         description: input.description.trim().slice(0, 2000),
-        cover_url: `color:${input.color.toUpperCase()}`,
+        cover_url: cover,
       })
       .eq("organization_id", input.organizationId)
       .eq("id", input.courseId);
@@ -976,15 +984,22 @@ export async function uploadCourseImageAction(formData: FormData): Promise<Actio
   try {
     const organizationId = String(formData.get("organizationId") ?? "");
     const courseId = String(formData.get("courseId") ?? "");
-    await requireStaff(organizationId);
+    const { supabase } = await requireStaff(organizationId);
     if (!validUuid(courseId)) throw new Error("Invalid course.");
+    const { data: course, error: courseError } = await supabase.from("courses").select("id").eq("organization_id", organizationId).eq("id", courseId).single();
+    if (courseError || !course) throw new Error("Course unavailable in this academy.");
     const file = formData.get("image");
     if (!(file instanceof File) || !file.size) throw new Error("Select an image.");
     if (file.size > 2 * 1024 * 1024) throw new Error("The image must not exceed 2 MB.");
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
       throw new Error("Use a PNG, JPG or WEBP image.");
     }
-    const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const validImage = file.type === "image/png" ? [137,80,78,71,13,10,26,10].every((byte,index)=>bytes[index]===byte)
+      : file.type === "image/jpeg" ? bytes[0]===255 && bytes[1]===216 && bytes[2]===255
+      : String.fromCharCode(...bytes.slice(0,4))==="RIFF" && String.fromCharCode(...bytes.slice(8,12))==="WEBP";
+    if (!validImage) throw new Error("This file is not a valid PNG, JPG or WEBP image.");
+    const extension = ({"image/png":"png","image/jpeg":"jpg","image/webp":"webp"} as Record<string,string>)[file.type];
     const path = `${organizationId}/courses/${courseId}/${crypto.randomUUID()}.${extension}`;
     const admin = createAdminClient();
     const { error } = await admin.storage.from("organization-assets").upload(path, file, {

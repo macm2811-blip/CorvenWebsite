@@ -12,7 +12,7 @@ export async function studentPreviewAction(org:string,studentId:string) {
  const db=await administrator(org);
  const membership=await db.from("memberships").select("level,group_name,plan_name,payment_status,billing_due_date,is_sample,access_status").eq("organization_id",org).eq("profile_id",studentId).eq("role","student").single();
  if(membership.error)throw new Error("Student unavailable in this academy.");
- const courses=await db.from("enrollments").select("course_id,progress,courses!inner(title,level,status,organization_id)").eq("organization_id",org).eq("student_id",studentId).eq("courses.organization_id",org).neq("status","cancelled");
+ const courses=await db.from("enrollments").select("course_id,progress,courses!inner(title,level,status,organization_id,cover_url)").eq("organization_id",org).eq("student_id",studentId).eq("courses.organization_id",org).neq("status","cancelled");
  if(courses.error)throw new Error(courses.error.message);
  return {membership:membership.data,courses:courses.data.map(c=>({...c,courses:Array.isArray(c.courses)?c.courses[0]:c.courses})).filter(c=>c.courses?.status==="published")};
 }

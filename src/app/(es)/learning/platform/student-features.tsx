@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useId, type FormEvent } from "react";
 import type { LmsInitialData, LmsCourse } from "@/lib/lms/types";
 import {
   academyFeaturesAction,
@@ -284,6 +284,7 @@ export function AssignmentResponse({
 }
 
 export function ReferFriend({ organizationId }: { organizationId: string }) {
+  const formId = useId();
   const [open, setOpen] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
@@ -291,6 +292,7 @@ export function ReferFriend({ organizationId }: { organizationId: string }) {
     e.preventDefault();
     const form = e.currentTarget;
     setBusy(true);
+    setNotice("");
     try {
       await referFriendAction(organizationId, new FormData(form));
       form.reset();
@@ -303,15 +305,14 @@ export function ReferFriend({ organizationId }: { organizationId: string }) {
     }
   }
   return (
-    <section className={styles.panel}>
-      <h2>Learning is better together</h2>
-      <button onClick={() => setOpen(!open)} aria-expanded={open}>
-        Refer a friend
-      </button>
+    <section className={`${styles.panel} ${styles.referral}`} aria-label="Refer a friend">
+      <div className={styles.referralHeader}><div><small>GROW TOGETHER</small><h2>Your next chapter. Their first step.</h2><p>Know someone ready to learn English? Help them discover Level Up.</p></div>
+      <button className={styles.referralCta} type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={formId}>{open ? "Close referral form" : "Refer a friend"}</button></div>
       {open && (
-        <form onSubmit={submit}>
+        <form id={formId} onSubmit={submit}>
+          <p>Share their details with permission. Our academy team can follow up.</p>
           <label>
-            Name
+            Friend’s name
             <input name="name" required minLength={2} maxLength={150} />
           </label>
           <label>
@@ -325,7 +326,7 @@ export function ReferFriend({ organizationId }: { organizationId: string }) {
           <small>
             Share contact details only with your friend&apos;s permission.
           </small>
-          <button disabled={busy}>Save referral</button>
+          <button disabled={busy}>{busy ? "Saving…" : "Send referral to academy"}</button>
         </form>
       )}
       {notice && <p role="status">{notice}</p>}

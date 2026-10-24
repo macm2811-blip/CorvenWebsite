@@ -27,6 +27,7 @@ export type LmsCourse = {
   students: number;
   youtubeUrl: string;
   color: string;
+  coverUrl?: string;
   published: boolean;
 };
 

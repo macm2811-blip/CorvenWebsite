@@ -2,6 +2,7 @@
 import { displayLabel } from "@/lib/lms/display-label";
 
 import Image from "next/image";
+import { CourseCover } from "@/components/course-cover";
 import { LevelFolders } from "@/components/level-folders";
 import { CoursePlayer } from "./course-player";
 import { StudentPayments, LearningPaths, ReferFriend } from "./student-features";
@@ -102,6 +103,7 @@ export function StudentWorkspace({
       enrolled.has(String(c.id)) &&
       `${c.title} ${c.description}`.toLowerCase().includes(query.toLowerCase()),
   );
+  const nextCourse = initialData.courses.find(c => c.published && enrolled.has(String(c.id)) && (dashboard?.enrollments.find(e=>e.course_id===c.id)?.progress ?? 0) > 0 && (dashboard?.enrollments.find(e=>e.course_id===c.id)?.progress ?? 0) < 100);
   const unread = dashboard?.notifications.filter((n) => !n.read_at).length ?? 0;
   return (
     <div className={styles.workspace}>
@@ -169,7 +171,7 @@ export function StudentWorkspace({
         </section>
       )}
       {!course&&view==="paths"&&<LearningPaths initialData={initialData} courses={courses} onOpen={openCourse}/>}
-      {!course&&view==="home"&&<ReferFriend organizationId={org}/>}
+
       {!dashboard && !error && (
         <p role="status">Loading your learning space…</p>
       )}
@@ -189,12 +191,12 @@ export function StudentWorkspace({
                   <h2>
                     {view === "home"
                       ? "Your next step starts here"
-                      : "Find your course"}
+                      : "Your English journey"}
                   </h2>
                   <p>
-                    Open a course to continue your lessons and
-                    assessments.
+                    Choose your level, find your course, and pick up where you left off.
                   </p>
+                  {view === "home" && nextCourse && <button className={styles.continueCta} disabled={busy} onClick={()=>void openCourse(nextCourse)}>Continue learning · {nextCourse.title}</button>}
                   <input
                     aria-label="Search my courses"
                     placeholder="Search for a course…"
@@ -203,14 +205,15 @@ export function StudentWorkspace({
                   />
                 </div>
               </div>
-              {!activeLevel?<LevelFolders levels={Array.from(new Set(courses.map(c=>c.level.split(" · ")[0]))).sort()} courses={courses} onOpen={setActiveLevel}/>:<><button onClick={()=>setActiveLevel(null)}>← All levels</button><h2>{activeLevel} · Units</h2><div className={styles.cards}>
-                {courses.filter(c=>c.level.split(" · ")[0]===activeLevel).map((c) => {
+              {query.trim() && !courses.length && dashboard && <p role="status">No courses match your search. Try another name.</p>}
+              {!activeLevel && !query.trim()?<LevelFolders levels={Array.from(new Set(courses.map(c=>c.level.split(" · ")[0]))).sort()} courses={courses} onOpen={setActiveLevel}/>:<><button onClick={()=>{setActiveLevel(null);setQuery("");}}>← All levels</button><h2>{query.trim() ? "Search results" : `${activeLevel} · Courses`}</h2><div className={styles.cards}>
+                {courses.filter(c=>query.trim() || c.level.split(" · ")[0]===activeLevel).map((c) => {
                   const progress =
                     dashboard?.enrollments.find((e) => e.course_id === c.id)
                       ?.progress ?? 0;
                   return (
                     <article className={styles.courseCard} key={c.id}>
-                      <div className={styles.courseCover} style={{ background: `linear-gradient(130deg,${c.color},#30205e)` }}><span>{c.level.split(" · ")[0]}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1m0-15c3-2 6-2 9-1v15c-3-1-6-1-9 1V5Z"/></svg><small>LEVEL UP ACADEMY</small></div>
+                      <CourseCover url={c.coverUrl} color={c.color} level={c.level.split(" · ")[0]} />
                       <div className={styles.courseCardBody}>
                       <h2>{c.title}</h2>
                       <p>{c.description}</p>
@@ -220,7 +223,7 @@ export function StudentWorkspace({
                         disabled={busy}
                         onClick={() => void openCourse(c)}
                       >
-                        {progress > 0 ? "Continue course" : "Open course"} <span aria-hidden="true">→</span>
+                        {progress >= 100 ? "Review course" : progress > 0 ? "Continue learning" : "Start course"}
                       </button>
                       </div>
                     </article>
@@ -336,6 +339,7 @@ export function StudentWorkspace({
           )}
         </>
       )}
+      {!course && view === "home" && <ReferFriend organizationId={org}/>}
     </div>
   );
 }
