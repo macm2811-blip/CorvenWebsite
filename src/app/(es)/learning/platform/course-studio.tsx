@@ -43,9 +43,9 @@ type Props = {
 const defaultConfig: LmsCourseBlockConfig = {
   fontFamily: "inter",
   fontSize: "normal",
-  textColor: "#111827",
+  textColor: "#000000",
   backgroundColor: "#FFFFFF",
-  borderColor: "#D0D5DD",
+  borderColor: "#D1D1D1",
   align: "left",
   width: "full",
   textStyle: "paragraph",
@@ -480,7 +480,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       {!levelFolder?<LevelFolders levels={Array.from(new Set([...folders,...courses.map(c=>c.level.split(" · ")[0])])).sort()} courses={courses} onOpen={level=>{setLevelFolder(level);setNewCourse(current=>({...current,level}));}}/>:<><button type="button" onClick={()=>setLevelFolder(null)}>← All levels</button><h2>{levelFolder} · Units</h2><div className={styles.courseGrid}>
         {courses.filter((course) => course.level.split(" · ")[0]===levelFolder && course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Published" ? course.published : !course.published))).map((course) => (
           <article className={styles.courseCard} key={course.id}>
-            <button className={styles.courseCover} style={{ background: `linear-gradient(135deg, ${course.color}, #111827)` }} type="button" onClick={() => void openCourse(course)}>
+            <button className={styles.courseCover} style={{ background: `linear-gradient(135deg, ${course.color}, #000000)` }} type="button" onClick={() => void openCourse(course)}>
               <span>{course.level.split(" · ")[0]}</span><i>▤</i><small>{course.published ? "PUBLISHED" : "DRAFT"}</small>
             </button>
             <div className={styles.courseBody}>
