@@ -1,0 +1,20 @@
+/* Shared Level Up primitives. Kept separate from CORVEN's marketing tokens. */
+:root {
+  --lu-blue: #2C55A2;
+  --lu-orange: #E97704;
+  --lu-peach: #F2B885;
+  --lu-gray: #F2F2F2;
+  --lu-black: #000000;
+  --lu-yellow: #FBD741;
+  --lu-mint: #34C996;
+  --lu-turquoise: #0DBAC3;
+  --lu-green: #428C3F;
+  --lu-forest: #2A5928;
+  --lu-muted: color-mix(in srgb, var(--lu-black) 65%, white);
+  --lu-line: color-mix(in srgb, var(--lu-black) 18%, white);
+  --lu-blue-soft: color-mix(in srgb, var(--lu-blue) 8%, white);
+  --lu-blue-hover: color-mix(in srgb, var(--lu-blue) 84%, var(--lu-black));
+  --lu-peach-soft: color-mix(in srgb, var(--lu-peach) 28%, white);
+  --lu-success-soft: color-mix(in srgb, var(--lu-mint) 14%, white);
+  --lu-yellow-soft: color-mix(in srgb, var(--lu-yellow) 24%, white);
+}

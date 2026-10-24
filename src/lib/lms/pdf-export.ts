@@ -79,7 +79,7 @@ export async function downloadTheory(
     ctx!.fillStyle = "#2C55A2";
     ctx!.font = "bold 30px Arial";
     ctx!.fillText(title.slice(0, 78), 60, 70);
-    ctx!.fillStyle = "#17243c";
+    ctx!.fillStyle = "#000000";
     ctx!.font = "22px Arial";
     y = 120;
   }
@@ -95,7 +95,7 @@ export async function downloadTheory(
     ctx!.textAlign = "center";
     ctx!.fillText(student, 0, 0);
     ctx!.restore();
-    ctx!.fillStyle = "#7b8490";
+    ctx!.fillStyle = "#595959";
     ctx!.font = "14px Arial";
     ctx!.fillText(
       `${student} · Personal study copy · ${course.course.title}`,
@@ -109,7 +109,7 @@ export async function downloadTheory(
       flush();
       start(title + " · continued");
     }
-    ctx!.fillStyle = "#17243c";
+    ctx!.fillStyle = "#000000";
     ctx!.font = "22px Arial";
     ctx!.fillText(text, 60, y);
     y += 32;
