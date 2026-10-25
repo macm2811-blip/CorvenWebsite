@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { validStudentPlan } from "@/lib/lms/student-plans";
 import { videoSource } from "@/lib/lms/video";
 import type {
   LmsAcademy,
@@ -381,7 +382,7 @@ export async function updateStudentAction(input: {
 
     const updates: Record<string, string> = {};
     if(typeof input.changes.groupName==="string")updates.group_name=input.changes.groupName.trim().slice(0,80);
-    if(typeof input.changes.planName==="string")updates.plan_name=input.changes.planName.trim().slice(0,120);
+    if(typeof input.changes.planName==="string"){if(!validStudentPlan(input.changes.planName))throw new Error("Enter a plan between 1 and 120 characters.");updates.plan_name=input.changes.planName.trim();}
     if (typeof input.changes.active === "boolean") {
       updates.access_status = input.changes.active ? "active" : "suspended";
     }
@@ -421,7 +422,9 @@ export async function inviteStudentAction(input: {
   dueDate: string;
   monthlyFee: number;
   courseId?: string;
-}): Promise<ActionResult<{ id: string; accessStatus: "invited" | "active" }>> {
+  planName?: string;
+  groupName?: string;
+}): Promise<ActionResult<{ id: string; accessStatus: "invited" | "active"; studentCode: string }>> {
   try {
     const { supabase, userId } = await requireStaff(input.organizationId);
     const fullName = input.fullName.trim().slice(0, 120);
@@ -431,6 +434,8 @@ export async function inviteStudentAction(input: {
     if (!/^(A1|A2|B1|B2|C1)$/.test(level)) throw new Error("Invalid level.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) throw new Error("Invalid payment due date.");
 
+    const planName=(input.planName??"1 class / week").trim();
+    if(!validStudentPlan(planName))throw new Error("Enter a plan between 1 and 120 characters.");
     const admin = createAdminClient();
     const { data: academy, error: academyError } = await admin
       .from("organizations")
@@ -439,6 +444,11 @@ export async function inviteStudentAction(input: {
       .single();
     if (academyError || !academy) throw new Error("Academy not found.");
 
+    if(input.courseId){
+      if(!validUuid(input.courseId))throw new Error("Invalid course.");
+      const target=await admin.from("courses").select("id").eq("id",input.courseId).eq("organization_id",input.organizationId).single();
+      if(target.error||!target.data)throw new Error("Course unavailable in this academy.");
+    }
     const { data: existingProfile, error: profileError } = await admin
       .from("profiles")
       .select("id, full_name")
@@ -447,6 +457,9 @@ export async function inviteStudentAction(input: {
       .maybeSingle();
     if (profileError) throw profileError;
 
+    const existingMembership=existingProfile?await admin.from("memberships").select("role,access_status").eq("profile_id",existingProfile.id).eq("organization_id",input.organizationId).maybeSingle():null;
+    if(existingMembership?.error)throw existingMembership.error;
+    if(existingMembership?.data && existingMembership.data.role!=="student")throw new Error("This account is already a staff member of this academy.");
     let profileId = existingProfile?.id ?? "";
     let invitationSent = false;
     if (!profileId) {
@@ -467,16 +480,15 @@ export async function inviteStudentAction(input: {
     const { data: authData } = await admin.auth.admin.getUserById(profileId);
     const accessStatus = authData.user?.email_confirmed_at ? "active" : "invited";
 
-    const { error: membershipError } = await admin.from("memberships").upsert({
+    const { data: savedMembership, error: membershipError } = await admin.from("memberships").upsert({
       organization_id: input.organizationId,
       profile_id: profileId,
       role: "student",
-      access_status: accessStatus,
-      payment_status: "pending",
-      billing_due_date: input.dueDate,
-      monthly_fee: Math.max(0, Number(input.monthlyFee) || 0),
+      ...(!existingMembership?.data?{access_status:accessStatus,payment_status:"pending",billing_due_date:input.dueDate,monthly_fee:Math.max(0,Number(input.monthlyFee)||0)}:{}),
+      plan_name:planName,
+      group_name:(input.groupName??"").trim().slice(0,80),
       level,
-    }, { onConflict: "organization_id,profile_id" });
+    }, { onConflict: "organization_id,profile_id" }).select("student_code").single();
     if (membershipError) throw membershipError;
 
     if (input.courseId && validUuid(input.courseId)) {
@@ -503,8 +515,8 @@ export async function inviteStudentAction(input: {
       ok: true,
       message: invitationSent
         ? `Invitation sent to ${email} to join ${academy.name}.`
-        : `${fullName} fue asignado como estudiante de ${academy.name}.`,
-      data: { id: profileId, accessStatus },
+        : `${fullName} is enrolled in ${academy.name}.`,
+      data: { id: profileId, accessStatus, studentCode:savedMembership?.student_code??"" },
     };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "Unable to invite the student." };
@@ -1175,4 +1187,20 @@ export async function createCourseModuleAction(input: { organizationId: string; 
     revalidatePath("/learning/platform");
     return { ok: true, message: "Module created.", data: result.data };
   } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "Unable to create the module." }; }
+}
+
+export async function assignCourseStudentsAction(input:{organizationId:string;courseId:string;studentIds?:string[];groupName?:string}):Promise<ActionResult<{count:number;enrolledCount:number}>> {
+ try {
+  const {supabase,userId}=await requireStaff(input.organizationId);
+  if(!validUuid(input.courseId))throw new Error("Invalid course.");
+  let ids=Array.from(new Set(input.studentIds??[]));
+  if(input.groupName){const group=input.groupName.trim();if(!group||group.length>80)throw new Error("Select a valid group.");const result=await supabase.from("memberships").select("profile_id").eq("organization_id",input.organizationId).eq("role","student").eq("group_name",group).limit(501);if(result.error)throw result.error;ids=result.data.map(s=>s.profile_id);}
+  if(!ids.length||ids.length>500||ids.some(id=>!validUuid(id)))throw new Error("Select between 1 and 500 students.");
+  const result=await createAdminClient().rpc("assign_course_students",{p_actor:userId,p_org:input.organizationId,p_course:input.courseId,p_students:ids});
+  if(result.error)throw result.error;
+  const enrollments=await createAdminClient().from("enrollments").select("id",{count:"exact",head:true}).eq("course_id",input.courseId).eq("organization_id",input.organizationId).neq("status","cancelled");
+  await audit(supabase,userId,input.organizationId,"course.assigned","course",input.courseId);
+  revalidatePath("/learning/platform");
+  return {ok:true,message:`Course assigned to ${result.data} ${result.data===1?"student":"students"}. Existing progress and grades are preserved.`,data:{count:result.data,enrolledCount:enrollments.count??0}};
+ }catch(error){return{ok:false,message:error instanceof Error?error.message:"Unable to assign course."};}
 }

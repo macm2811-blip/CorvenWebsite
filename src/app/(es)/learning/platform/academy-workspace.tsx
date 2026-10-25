@@ -2,6 +2,7 @@
 import { displayLabel } from "@/lib/lms/display-label";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { AcademyDashboard } from "./academy-dashboard";
 import { AcademyReviewPanel } from "./academy-review-panel";
 import { loadCourseStudioAction } from "./actions";
 import type { LmsCourse, LmsStudent } from "@/lib/lms/types";
@@ -21,11 +22,13 @@ export function AcademyWorkspace({
   view,
   students,
   courses,
+  onNavigate,
 }: {
   organizationId: string;
   view: "overview" | "income" | "sessions";
   students: LmsStudent[];
   courses: LmsCourse[];
+  onNavigate:(view:"students"|"courses"|"income"|"sessions"|"support")=>void;
 }) {
   const [data, setData] = useState<Operations | null>(null);
   const [sessionPages,setSessionPages]=useState<{id:string;title:string}[]>([]);
@@ -120,12 +123,11 @@ export function AcademyWorkspace({
     link.click();
     URL.revokeObjectURL(url);
   }
+  if(view==="overview")return <AcademyDashboard organizationId={organizationId} students={students} courses={courses} operations={data} onNavigate={onNavigate} error={error}/>;
   return (
     <div className={styles.workspace}>
       <h1>
-        {view === "overview"
-          ? "Academy overview"
-          : view === "sessions"
+        {view === "sessions"
             ? "Live classes"
             : "Payments and income"}
       </h1>
@@ -141,24 +143,6 @@ export function AcademyWorkspace({
       )}
       {view!=="sessions"&&<AcademyReviewPanel organizationId={organizationId} students={students} mode={view==="income"?"payments":"all"}/>}
       {!data && !error && <p>Loading records…</p>}
-      {view === "overview" && (
-        <div className={styles.cards}>
-          <section className={styles.panel}>
-            <h2>{students.filter((s) => s.active).length}</h2>
-            <p>Active students</p>
-          </section>
-          <section className={styles.panel}>
-            <h2>{courses.filter((c) => c.published).length}</h2>
-            <p>Published courses</p>
-          </section>
-          <section className={styles.panel}>
-            <h2>
-              {data?.payments.filter((p) => p.status === "paid").length ?? 0}
-            </h2>
-            <p>Recorded payments</p>
-          </section>
-        </div>
-      )}
       {view === "sessions" && (
         <section className={styles.panel}>
           <h2>Schedule a class</h2>

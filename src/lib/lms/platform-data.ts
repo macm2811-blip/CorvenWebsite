@@ -122,7 +122,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
 
   const { data: membershipData } = await supabase
     .from("memberships")
-    .select("organization_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name")
+    .select("organization_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, student_code, plan_name, group_name")
     .eq("profile_id", userId)
     .order("created_at", { ascending: true })
     .limit(1)
@@ -164,7 +164,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       organizationId,
       organizationName: "Level Up English Academy",
       accessStatus,
-      viewerPlanName:text(membership.plan_name),
+      viewerStudentCode:text(membership.student_code),viewerPlanName:text(membership.plan_name),
     viewerLevel: text(membership.level, "A1"),
       viewerPayment: paymentLabel(membership.payment_status),
       viewerDueDate: text(membership.billing_due_date),
@@ -207,7 +207,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       ? Promise.resolve({ data: [], error: null })
       : supabase
           .from("memberships")
-          .select("profile_id, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name, is_sample, last_access_at, profiles(full_name, email)")
+          .select("profile_id, access_status, payment_status, billing_due_date, monthly_fee, level, student_code, plan_name, group_name, is_sample, last_access_at, profiles(full_name, email)")
           .eq("organization_id", organizationId)
           .eq("role", "student")
           .order("created_at", { ascending: true }),
@@ -298,7 +298,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       email: text(memberProfile.email),
       initials: initials(name),
       level: text(member.level, "A1"),
-      groupName:text(member.group_name),planName:text(member.plan_name),isSample:member.is_sample === true,
+      studentCode:text(member.student_code),groupName:text(member.group_name),planName:text(member.plan_name),isSample:member.is_sample === true,
       progress: averageProgress,
       active: member.access_status === "active",
       payment: paymentLabel(member.payment_status),
@@ -336,7 +336,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
         .order("created_at", { ascending: true }),
       supabase
         .from("memberships")
-        .select("organization_id, profile_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, plan_name, group_name, is_sample, last_access_at, profiles(full_name, email)"),
+        .select("organization_id, profile_id, role, access_status, payment_status, billing_due_date, monthly_fee, level, student_code, plan_name, group_name, is_sample, last_access_at, profiles(full_name, email)"),
       supabase
         .from("courses")
         .select("id, organization_id, title, description, level, status"),
@@ -432,7 +432,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
             email: text(studentProfile.email),
             initials: initials(studentName),
             level: text(member.level, "A1"),
-      groupName:text(member.group_name),planName:text(member.plan_name),isSample:member.is_sample === true,
+      studentCode:text(member.student_code),groupName:text(member.group_name),planName:text(member.plan_name),isSample:member.is_sample === true,
             progress: averageProgress,
             active: member.access_status === "active",
             payment: paymentLabel(member.payment_status),
@@ -489,7 +489,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
     organizationId,
     organizationName: text(organization.name, "Level Up English Academy"),
     accessStatus: effectiveAccessStatus,
-    viewerPlanName:text(membership.plan_name),
+    viewerStudentCode:text(membership.student_code),viewerPlanName:text(membership.plan_name),
     viewerLevel: text(membership.level, "A1"),
     viewerPayment: paymentLabel(membership.payment_status),
     viewerDueDate: text(membership.billing_due_date),

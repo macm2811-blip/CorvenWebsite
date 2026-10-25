@@ -14,6 +14,7 @@ export type LmsStudent = {
   groupName?: string;
   planName?: string;
   isSample?: boolean;
+  studentCode?: string;
 };
 
 export type LmsCourse = {
@@ -154,6 +155,7 @@ export type LmsInitialData = {
   organizationName: string;
   accessStatus: "invited" | "active" | "suspended" | "archived";
   viewerLevel: string;
+  viewerStudentCode?: string;
   viewerPlanName?:string;
   viewerPayment: LmsStudent["payment"];
   viewerDueDate: string;

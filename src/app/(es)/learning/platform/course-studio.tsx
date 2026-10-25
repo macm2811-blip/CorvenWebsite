@@ -1,5 +1,7 @@
 "use client";
 
+import { CourseAssignment } from "./course-assignment";
+import { LearningViewer as AssignmentViewer } from "@/components/learning-viewer";
 import { LessonContent } from "./lesson-content";
 import { artworkChange, artworkUrlValid } from "@/lib/lms/page-artwork";
 import { CourseCover } from "@/components/course-cover";
@@ -14,6 +16,7 @@ import { FormEvent, useEffect, useState, useRef } from "react";
 
 import type {
   LmsCourse,
+  LmsStudent,
   LmsCourseBlock,
   LmsCourseBlockConfig,
   LmsCourseBlockKind,
@@ -35,6 +38,7 @@ type DraftBlock = Omit<LmsCourseBlock, "id"> & { id?: string };
 
 type Props = {
   courses: LmsCourse[];
+  students?: LmsStudent[];
   setCourses: React.Dispatch<React.SetStateAction<LmsCourse[]>>;
   onNotify: (message: string) => void;
   persistent: boolean;
@@ -115,7 +119,8 @@ function emptyBlock(kind: LmsCourseBlockKind, position: number): DraftBlock {
   };
 }
 
-export function CourseStudioWorkspace({ courses, setCourses, onNotify, persistent, organizationId }: Props) {
+export function CourseStudioWorkspace({ students = [], courses, setCourses, onNotify, persistent, organizationId }: Props) {
+  const [assigning,setAssigning]=useState<LmsCourse|null>(null);
   const editSession = useRef(0);
   const [showCreate, setShowCreate] = useState(false);
   const [folders,setFolders]=useState<string[]>([]);
@@ -149,6 +154,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   });
   const [newCover, setNewCover] = useState<File | null>(null);
   const [settings, setSettings] = useState({ title: "", level: "A1", description: "", color: "#2C55A2", coverUrl: "" });
+
+  const assignment = assigning && organizationId ? <AssignmentViewer title="Assign course" onClose={()=>setAssigning(null)}><CourseAssignment organizationId={organizationId} course={assigning} students={students} onAssigned={count=>{setCourses(current=>current.map(c=>c.id===assigning.id?{...c,students:count}:c));setEditingCourse(current=>current?.id===assigning.id?{...current,students:count}:current);}} onClose={()=>setAssigning(null)}/></AssignmentViewer> : null;
 
   async function openCourse(course: LmsCourse) {
     const session = ++editSession.current;
@@ -403,6 +410,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     const currentModule = modules.find((item) => item.id === moduleId);
     return (
       <section className={styles.studio}>
+        {assignment}
         <header className={styles.studioHeader}>
           <button className={styles.backButton} type="button" onClick={() => { setEditingCourse(null); setDraft(null); }}>
             ← Courses
@@ -413,6 +421,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
           </div>
           <div className={styles.headerActions}>
             <span className={editingCourse.published ? styles.published : styles.draftStatus}>{editingCourse.published ? "Published" : "Draft"}</span>
+            {organizationId&&<button type="button" className={styles.previewButton} onClick={()=>setAssigning(editingCourse)}>Assign students</button>}
             <button type="button" className={styles.previewButton} onClick={() => setPreviewOpen(true)}>Preview</button>
             <button type="button" className={styles.publishButton} disabled={busy} onClick={() => void togglePublished(editingCourse)}>
               {editingCourse.published ? "Unpublish" : "Publish"}
@@ -495,6 +504,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
 
   return (
     <section className={styles.catalog}>
+      {assignment}
       <div className={styles.catalogToolbar}>
         <label><span>⌕</span><input placeholder="Search courses" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         <div>{["All", "Published", "Drafts"].map((item) => <button type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>{item}</button>)}</div>
@@ -531,7 +541,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
               <h3>{course.title}</h3>
               <p>{course.description}</p>
               <div className={styles.courseMeta}><span>{course.lessons} items</span><span>{course.students} students</span></div>
-              <div className={styles.courseActions}><button type="button" onClick={() => void openCourse(course)}>Open editor</button><button type="button" disabled={busy} onClick={() => void togglePublished(course)}>{course.published ? "Unpublish" : "Publish"}</button></div>
+              <div className={styles.courseActions}>{organizationId&&<button type="button" onClick={()=>setAssigning(course)}>Assign students</button>}<button type="button" onClick={() => void openCourse(course)}>Open editor</button><button type="button" disabled={busy} onClick={() => void togglePublished(course)}>{course.published ? "Unpublish" : "Publish"}</button></div>
             </div>
           </article>
         ))}
