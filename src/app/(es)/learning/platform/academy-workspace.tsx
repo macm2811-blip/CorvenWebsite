@@ -2,6 +2,7 @@
 import { displayLabel } from "@/lib/lms/display-label";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { CourseCover } from "@/components/course-cover";
 import { AcademyDashboard } from "./academy-dashboard";
 import { AcademyReviewPanel } from "./academy-review-panel";
 import { loadCourseStudioAction } from "./actions";
@@ -9,6 +10,7 @@ import type { LmsCourse, LmsStudent } from "@/lib/lms/types";
 import {
   academyOperationsAction,
   saveSessionAction,
+  createSessionWithCoverAction,
   enrollExistingStudentAction,
   recordPaymentAction,
   academyTicketsAction,
@@ -32,6 +34,8 @@ export function AcademyWorkspace({
 }) {
   const [data, setData] = useState<Operations | null>(null);
   const [sessionPages,setSessionPages]=useState<{id:string;title:string}[]>([]);
+  const [coverPreview,setCoverPreview]=useState<string>();
+  useEffect(()=>()=>{if(coverPreview)URL.revokeObjectURL(coverPreview);},[coverPreview]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,16 +59,12 @@ export function AcademyWorkspace({
     setBusy(true);
     setError("");
     try {
-      if (view === "sessions")
-        await saveSessionAction({
-          organizationId,
-          title: String(values.get("title")),
-          startsAt: String(values.get("startsAt")),
-          duration: Number(values.get("duration")),
-          meetingUrl: String(values.get("meetingUrl")),
-          courseId: String(values.get("courseId")),
-          lessonId:String(values.get("lessonId")??""),
-        });
+      if (view === "sessions") {
+        values.set("organizationId",organizationId);
+        await createSessionWithCoverAction(values);
+        setCoverPreview(undefined);
+        setSessionPages([]);
+      }
       else
         await recordPaymentAction({
           organizationId,
@@ -142,11 +142,16 @@ export function AcademyWorkspace({
         </p>
       )}
       {view!=="sessions"&&<AcademyReviewPanel organizationId={organizationId} students={students} mode={view==="income"?"payments":"all"}/>}
-      {!data && !error && <p>Loading records…</p>}
+      {!data && !error && <p>Loading recordsâ€¦</p>}
       {view === "sessions" && (
         <section className={styles.panel}>
           <h2>Schedule a class</h2>
           <form onSubmit={submit}>
+            <label className={styles.coverField}>Class cover (optional)
+              <input name="cover" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{const file=e.target.files?.[0];setError("");if(file && (file.size>2*1024*1024 || !["image/png","image/jpeg","image/webp"].includes(file.type))){setError("Choose a PNG, JPG or WEBP image up to 2 MB.");e.target.value="";setCoverPreview(undefined);return;}setCoverPreview(file?URL.createObjectURL(file):undefined);}} />
+              <small>PNG, JPG or WEBP · up to 2 MB · recommended 16:9. Without an upload, we use the Level Up cover.</small>
+              <div className={styles.coverPreview}><CourseCover url={coverPreview}/></div>
+            </label>
             <label>
               Title
               <input name="title" required minLength={2} maxLength={180} />
@@ -162,7 +167,7 @@ export function AcademyWorkspace({
                 ))}
               </select>
             </label>
-            <label>Start page (optional)<select name="lessonId"><option value="">Continue at the student’s next page</option>{sessionPages.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
+            <label>Start page (optional)<select name="lessonId"><option value="">Continue at the studentâ€™s next page</option>{sessionPages.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
             <label>
               Date and time (local device time)
               <input name="startsAt" type="datetime-local" required />
@@ -196,13 +201,13 @@ export function AcademyWorkspace({
           <h2>Scheduled classes</h2>
           {data?.sessions.length ? (
             data.sessions.map((s) => (
-              <article key={s.id}>
+              <article className={styles.liveCard} key={s.id}><div className={styles.liveCover}><CourseCover url={s.cover_url??undefined}/></div><div className={styles.liveDetails}>
                 <h3>{s.title}</h3>
                 <p>
                   {new Date(s.starts_at).toLocaleString("en-US", {
                     timeZone: "America/Costa_Rica",
                   })}{" "}
-                  · {s.duration_minutes} minutes · {s.status}
+                  Â· {s.duration_minutes} minutes Â· {s.status}
                 </p>
                 {s.meeting_url && (
                   <a
@@ -210,7 +215,7 @@ export function AcademyWorkspace({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Open link ↗
+                    Open link â†—
                   </a>
                 )}
                 {view === "sessions" && s.status !== "cancelled" && (
@@ -244,7 +249,7 @@ export function AcademyWorkspace({
                     Cancel class
                   </button>
                 )}
-              </article>
+              </div></article>
             ))
           ) : (
             <p>No classes recorded.</p>
