@@ -109,7 +109,7 @@ export function StudentWorkspace({
     <div className={styles.workspace}>
       <header className={styles.heading}>
         <div>
-          <small>LEVEL UP ACADEMY</small>
+          <small>LEVEL UP ACADEMY{initialData.viewerStudentCode?` · ${initialData.viewerStudentCode}`:""}</small>
           <h1>
             {course
               ? course.course.title

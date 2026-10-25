@@ -1,0 +1,35 @@
+begin;
+do $$
+declare org uuid; staff uuid; student uuid:=gen_random_uuid(); outsider uuid:=gen_random_uuid(); other_org uuid:=gen_random_uuid(); course uuid:=gen_random_uuid(); code text; original_code text; n integer; blocked boolean:=false;
+begin
+ select id into org from public.organizations where slug='level-up';
+ select profile_id into staff from public.memberships where organization_id=org and role='academy_admin' and access_status='active' limit 1;
+ if org is null or staff is null then raise exception 'Test academy unavailable';end if;
+ insert into auth.users(id,email) values(student,student::text||'@example.invalid'),(outsider,outsider::text||'@example.invalid');
+ insert into public.organizations(id,name,slug) values(other_org,'Assignment test',other_org::text);
+ insert into public.memberships(organization_id,profile_id,role,plan_name,group_name) values(org,student,'student','1 class / week','Regression group');
+ insert into public.memberships(organization_id,profile_id,role) values(other_org,outsider,'student');
+ select student_code into original_code from public.memberships where organization_id=org and profile_id=student;
+ if original_code is null or original_code!~'^LU-[0-9]{6,}$' then raise exception 'Student code not generated';end if;
+ insert into public.memberships(organization_id,profile_id,role,plan_name) values(org,student,'student','Custom regression plan') on conflict(organization_id,profile_id) do update set plan_name=excluded.plan_name;
+ select student_code into code from public.memberships where organization_id=org and profile_id=student;
+ if code<>original_code then raise exception 'Student code changed on repeated invite';end if;
+ if exists(select student_code from public.memberships where role='student' group by student_code having count(*)>1) then raise exception 'Duplicate student codes';end if;
+ insert into public.courses(id,organization_id,created_by,title,slug,level,status) values(course,org,staff,'Assignment regression',course::text,'A1','draft');
+ n:=public.assign_course_students(staff,org,course,array[student,student]);
+ if n<>1 or (select count(*) from public.enrollments where course_id=course)<>1 then raise exception 'Assignment not deduplicated';end if;
+ update public.enrollments set progress=75,status='in_progress' where course_id=course and student_id=student;
+ perform public.assign_course_students(staff,org,course,array[student]);
+ if not exists(select 1 from public.enrollments where course_id=course and student_id=student and progress=75 and status='in_progress') then raise exception 'Progress or status reset';end if;
+ update public.enrollments set status='cancelled' where course_id=course and student_id=student;
+ perform public.assign_course_students(staff,org,course,array[student]);
+ if not exists(select 1 from public.enrollments where course_id=course and student_id=student and progress=75 and status='enrolled') then raise exception 'Re-enrollment lost progress';end if;
+ begin perform public.assign_course_students(student,org,course,array[student]);exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Student could assign courses';end if;
+ blocked:=false;begin perform public.assign_course_students(staff,org,course,array[student,outsider]);exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Cross-academy assignment allowed';end if;
+ if (select count(*) from public.enrollments where course_id=course)<>1 then raise exception 'Partial cross-academy assignment';end if;
+ if has_function_privilege('authenticated','public.assign_course_students(uuid,uuid,uuid,uuid[])','execute') or has_function_privilege('anon','public.assign_course_students(uuid,uuid,uuid,uuid[])','execute') then raise exception 'Privileged assignment exposed';end if;
+end;$$;
+select 'PASS: automatic unique stable student codes, custom plans, deduplicated assignments, retained progress, re-enrollment, actor/academy checks' as verification;
+rollback;

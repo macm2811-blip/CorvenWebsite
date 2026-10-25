@@ -17,7 +17,7 @@ export function AcademyReviewPanel({
 }: {
   organizationId: string;
   students: LmsStudent[];
-  mode?: "all" | "payments";
+  mode?: "all" | "payments" | "assessments" | "homework" | "referrals";
 }) {
   const { data, error, reload } = useAcademyFeatures(organizationId),
     [notice, setNotice] = useState(""),
@@ -56,6 +56,7 @@ export function AcademyReviewPanel({
           </a>
         </p>
       )}
+      {(mode==="all"||mode==="payments")&&<>
       <h3>Payment receipts</h3>
       {data?.reports.filter((r) => r.status === "pending").length ? (
         data.reports
@@ -129,8 +130,10 @@ export function AcademyReviewPanel({
       ) : (
         <p>No payment receipts awaiting approval.</p>
       )}
-      {mode === "all" && (
+      </>}
+      {mode !== "payments" && (
         <>
+          {(mode==="all"||mode==="assessments")&&<>
           <h3>Open-response assessments</h3>
           {data?.reviews.length ? (
             data.reviews.map((a) => (
@@ -186,6 +189,8 @@ export function AcademyReviewPanel({
           ) : (
             <p>No assessments awaiting grading.</p>
           )}
+          </>}
+          {(mode==="all"||mode==="homework")&&<>
           <h3>Homework submissions</h3>
           {data?.submissions.length ? (
             data.submissions.map((s) => (
@@ -240,6 +245,8 @@ export function AcademyReviewPanel({
           ) : (
             <p>No homework submitted yet.</p>
           )}
+          </>}
+          {(mode==="all"||mode==="referrals")&&<>
           <h3>Friend referrals</h3>
           {data?.referrals.length ? (
             data.referrals.map((r) => (
@@ -261,7 +268,8 @@ export function AcademyReviewPanel({
             {data?.emailReady
               ? "Referral email delivery is configured."
               : "Referrals are saved. Automatic email delivery requires the academy sender configuration."}
-          </p>
+          </p>          </>}
+
         </>
       )}
     </section>
