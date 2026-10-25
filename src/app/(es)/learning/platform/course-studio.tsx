@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+import { LessonContent } from "./lesson-content";
+import { artworkChange, artworkUrlValid } from "@/lib/lms/page-artwork";
 import { CourseCover } from "@/components/course-cover";
 import { LevelFolders } from "@/components/level-folders";
 import { createLevelFolderAction, levelFoldersAction } from "./level-actions";
@@ -9,8 +10,7 @@ import { FitSlide } from "@/components/fit-slide";
 import { QuestionEditor, newQuestion } from "./question-editor";
 import { BlockDesignOptions } from "./block-design-options";
 import { LearningViewer } from "@/components/learning-viewer";
-import { CourseVideo } from "@/components/course-video";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useRef } from "react";
 
 import type {
   LmsCourse,
@@ -85,9 +85,7 @@ const fontOptions: { value: LmsCourseBlockConfig["fontFamily"]; label: string; s
   { value: "playfair", label: "Playfair Display", stack: "'Playfair Display', Georgia, serif" },
 ];
 
-function fontStack(font: LmsCourseBlockConfig["fontFamily"]) {
-  return fontOptions.find((option) => option.value === font)?.stack ?? fontOptions[0].stack;
-}
+
 
 const blockTools: { kind: LmsCourseBlockKind; label: string; mark: string }[] = [
   { kind: "text", label: "Text", mark: "T" },
@@ -118,6 +116,7 @@ function emptyBlock(kind: LmsCourseBlockKind, position: number): DraftBlock {
 }
 
 export function CourseStudioWorkspace({ courses, setCourses, onNotify, persistent, organizationId }: Props) {
+  const editSession = useRef(0);
   const [showCreate, setShowCreate] = useState(false);
   const [folders,setFolders]=useState<string[]>([]);
   const [showLevelForm,setShowLevelForm]=useState(false);
@@ -135,6 +134,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   const [moduleId, setModuleId] = useState("");
   const [moduleTitle, setModuleTitle] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(()=>{if(selectedId && selectedId!=="settings") document.getElementById(`studio-block-${selectedId}`)?.scrollIntoView({block:"nearest"});},[selectedId]);
   const [draft, setDraft] = useState<DraftBlock | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -151,6 +151,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   const [settings, setSettings] = useState({ title: "", level: "A1", description: "", color: "#2C55A2", coverUrl: "" });
 
   async function openCourse(course: LmsCourse) {
+    const session = ++editSession.current;
     setEditingCourse(course);
     setSettings({
       title: course.title,
@@ -166,12 +167,14 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       return;
     }
     setLoading(true);
-    const result = await loadCourseStudioAction({ organizationId, courseId: course.id });
-    setLoading(false);
-    if (!result.ok || !result.data) return onNotify(result.message);
-    setBlocks(result.data.blocks);
-    setModules(result.data.modules);
-    setModuleId(result.data.modules[0]?.id ?? "");
+    try {
+      const result = await loadCourseStudioAction({ organizationId, courseId: course.id });
+      if (editSession.current !== session) return;
+      if (!result.ok || !result.data) return onNotify(result.message);
+      setBlocks(result.data.blocks); setModules(result.data.modules); setModuleId(result.data.modules[0]?.id ?? "");
+    } catch(error) { if(editSession.current===session) onNotify(error instanceof Error?error.message:"Unable to load the course. Please try again."); }
+    finally { if(editSession.current===session) setLoading(false); }
+
   }
 
   async function createCourse(event: FormEvent) {
@@ -280,6 +283,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   }
 
   function startBlock(kind: LmsCourseBlockKind) {
+    if (loading || busy) return;
+    editSession.current++;
     const nextPosition = Math.max(0, ...blocks.map((block) => block.position)) + 1;
     setSelectedId("new");
     setDraft({ ...emptyBlock(kind, nextPosition), moduleId: moduleId || undefined });
@@ -287,6 +292,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   }
 
   function selectBlock(block: LmsCourseBlock) {
+    editSession.current++;
     if (block.moduleId) setModuleId(block.moduleId);
     setSelectedId(block.id);
     setDraft({ ...block, config: { ...block.config }, options: [...(block.options ?? [])] });
@@ -295,6 +301,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   async function saveBlock(event: FormEvent) {
     event.preventDefault();
     if (!editingCourse || !draft) return;
+    if ([draft.config.backgroundImage,draft.config.logoUrl,draft.config.imageUrl].some(url=>!artworkUrlValid(url))) return onNotify("Artwork links must be valid HTTPS image URLs without embedded credentials.");
     setBusy(true);
     let saved: LmsCourseBlock = { ...draft, id: draft.id ?? `local-${Date.now()}` };
     if (persistent && organizationId && typeof editingCourse.id === "string") {
@@ -356,20 +363,22 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
 
   async function uploadImage(file?: File,target?:"backgroundImage"|"imageUrl"|"logoUrl") {
     if (!file || !draft || !editingCourse) return;
-    if (!persistent || !organizationId || typeof editingCourse.id !== "string") {
-      setDraft((current) => current ? { ...current, url: URL.createObjectURL(file) } : current);
-      return onNotify("Image ready in preview");
-    }
+    const selected = draft.id ?? "new";
+    const session = editSession.current;
     setBusy(true);
-    const formData = new FormData();
-    formData.set("organizationId", organizationId);
-    formData.set("courseId", editingCourse.id);
-    formData.set("image", file);
-    const result = await uploadCourseImageAction(formData);
-    setBusy(false);
-    if (!result.ok || !result.data) return onNotify(result.message);
-    setDraft((current) => current ? target ? {...current,config:{...current.config,[target]:result.data!.url}} : { ...current, url: result.data!.url } : current);
-    onNotify(result.message);
+    try {
+      let url: string;
+      if (!persistent || !organizationId || typeof editingCourse.id !== "string") url = URL.createObjectURL(file);
+      else {
+        const form = new FormData(); form.set("organizationId", organizationId); form.set("courseId", editingCourse.id); form.set("image", file);
+        const result = await uploadCourseImageAction(form);
+        if (!result.ok || !result.data) throw new Error(result.message);
+        url = result.data.url;
+      }
+      setDraft(current => current && editSession.current === session && (current.id ?? "new") === selected ? target ? {...current,config:{...current.config,...artworkChange(target,url)}} : {...current,url} : current);
+      onNotify("Image ready. Save changes to keep it in the course.");
+    } catch(error) { onNotify(error instanceof Error ? error.message : "Unable to upload image. Please try again."); }
+    finally { setBusy(false); }
   }
 
   async function addModule(event: FormEvent) {
@@ -386,8 +395,11 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     setShowPicker(false);
   }
 
+  const catalogCourses = courses.filter(course => (!levelFolder || query.trim() || course.level.split(" · ")[0] === levelFolder) && course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Published" ? course.published : !course.published)));
+
   if (editingCourse) {
-    const visibleBlocks = blocks.filter((block) => !block.moduleId || !moduleId || block.moduleId === moduleId);
+    const renderedBlocks = draft ? draft.id ? blocks.map(block=>block.id===draft.id?{...draft,id:draft.id}:block) : [...blocks,{...draft,id:"new"}] : blocks;
+    const visibleBlocks = renderedBlocks.filter((block) => !block.moduleId || !moduleId || block.moduleId === moduleId);
     const currentModule = modules.find((item) => item.id === moduleId);
     return (
       <section className={styles.studio}>
@@ -414,18 +426,18 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             <button className={selectedId === "settings" ? styles.outlineActive : ""} onClick={() => { setSelectedId("settings"); setDraft(null); }} type="button">
               <i>⚙</i><span><strong>Settings</strong><small>Name, level and cover</small></span>
             </button>
-            <button className={styles.addOutline} type="button" aria-expanded={showPicker} onClick={() => { setShowPicker((current) => !current); setPickerCategory(null); }}>+ Add</button>
+            <button className={styles.addOutline} type="button" disabled={loading || busy} aria-expanded={showPicker} onClick={() => { setShowPicker((current) => !current); setPickerCategory(null); }}>+ Add</button>
             {showPicker && <div className={styles.addMenu}>
               <button type="button" onClick={() => setPickerCategory("standard")}><strong>Standard content →</strong><small>Text, video, image, file or audio</small></button>
               <button type="button" onClick={() => setPickerCategory("activities")}><strong>Learning activities →</strong><small>Quiz and exam</small></button>
-              {pickerCategory && blockTools.filter((tool) => pickerCategory === "activities" ? ["quiz", "exam"].includes(tool.kind) : !["quiz", "exam"].includes(tool.kind)).map((tool) => <button key={tool.kind} type="button" onClick={() => startBlock(tool.kind)}>{tool.mark} {tool.label}</button>)}
+              {pickerCategory && blockTools.filter((tool) => pickerCategory === "activities" ? ["quiz", "exam"].includes(tool.kind) : !["quiz", "exam"].includes(tool.kind)).map((tool) => <button key={tool.kind} type="button" disabled={loading || busy} onClick={() => startBlock(tool.kind)}>{tool.mark} {tool.label}</button>)}
               <form onSubmit={addModule}><label>New module<input value={moduleTitle} onChange={(event) => setModuleTitle(event.target.value)} required maxLength={180} /></label><button type="submit" disabled={busy}>Add module</button></form>
             </div>}
             {modules.map((item) => <button type="button" key={item.id} className={moduleId === item.id ? styles.outlineActive : ""} onClick={() => { setModuleId(item.id); setDraft(null); setSelectedId(null); }}><i>▤</i><span><strong>{item.title}</strong><small>{blocks.filter((block) => block.moduleId === item.id).length} items</small></span></button>)}
             <div className={styles.moduleLabel}><span>{currentModule?.title ?? "CONTENT"}</span><small>{visibleBlocks.length} blocks</small></div>
             <div className={styles.outlineList}>
               {visibleBlocks.map((block, index) => (
-                <button className={selectedId === block.id ? styles.outlineActive : ""} key={block.id} type="button" onClick={() => selectBlock(block)}>
+                <button className={selectedId === block.id ? styles.outlineActive : ""} key={block.id} type="button" onClick={() => {if(selectedId !== block.id) selectBlock(block);}}>
                   <i>{index + 1}</i><span><strong>{block.title}</strong><small>{kindLabel(block.kind)}</small></span>
                 </button>
               ))}
@@ -435,20 +447,20 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
           <main className={styles.canvasPanel}>
             <div className={styles.canvasTop}>
               <div><span>COURSE CANVAS</span><strong>{currentModule?.title ?? "Content"}</strong></div>
-              <span>{blocks.length} items</span>
+              <span>{visibleBlocks.length} items</span>
             </div>
             <div className={styles.toolShelf} aria-label="Add content">
-              {blockTools.map((tool) => <button key={tool.kind} type="button" onClick={() => startBlock(tool.kind)}><i>{tool.mark}</i><span>{tool.label}</span></button>)}
+              {blockTools.map((tool) => <button key={tool.kind} type="button" disabled={loading || busy} onClick={() => startBlock(tool.kind)}><i>{tool.mark}</i><span>{tool.label}</span></button>)}
             </div>
-            {loading ? <div className={styles.loadingState}>Loading content…</div> : blocks.length ? (
+            {loading ? <div className={styles.loadingState}>Loading content…</div> : visibleBlocks.length ? (
               <div className={styles.canvasGrid}>
                 {visibleBlocks.map((block) => (
                   <CourseBlockPreview
                     block={block}
                     key={block.id}
                     selected={selectedId === block.id}
-                    onEdit={() => selectBlock(block)}
-                    onDelete={() => void removeBlock(block)}
+                    onEdit={() => {if(selectedId !== block.id) selectBlock(block);}}
+                    onDelete={() => {if(block.id==="new"){setDraft(null);setSelectedId(null);}else void removeBlock(block);}}
                   />
                 ))}
               </div>
@@ -493,7 +505,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       {showLevelForm&&<form className={styles.folderForm} onSubmit={async e=>{e.preventDefault();setBusy(true);try{if(persistent&&organizationId)setFolders(await createLevelFolderAction(organizationId,newLevel));else setFolders(current=>Array.from(new Set([...current,newLevel])));setShowLevelForm(false);onNotify(newLevel+" folder is ready. Add courses inside it.");}catch(e){onNotify(e instanceof Error?e.message:"Unable to create folder.");}finally{setBusy(false);}}}><label>Level<select value={newLevel} onChange={e=>setNewLevel(e.target.value)}>{CEFR_LEVELS.map(code=><option key={code}>{code}</option>)}</select></label><button type="submit" disabled={busy}>Create folder</button><button type="button" onClick={()=>setShowLevelForm(false)}>Cancel</button></form>}
       {showCreate && (
         <form className={styles.createPanel} onSubmit={createCourse}>
-          <div className={styles.createHeading}><div><span>NEW COURSE</span><h2>Course basics</h2><p>Start with the basics, then design each lesson in the editor.</p></div><button type="button" onClick={() => setShowCreate(false)}>×</button></div>
+          <div className={styles.createHeading}><div><span>NEW COURSE</span><h2>Course basics</h2><p>Start with the basics, then design each lesson in the editor.</p></div><button type="button" onClick={() => {setShowCreate(false);setNewCover(null);}}>×</button></div>
           <div className={styles.createGrid}>
             <label className={styles.wide}>Course name<input value={newCourse.title} onChange={(event) => setNewCourse((current) => ({ ...current, title: event.target.value }))} placeholder="e.g. Business English B1" required /></label>
             <label>Level<select value={newCourse.level} onChange={(event) => setNewCourse((current) => ({ ...current, level: event.target.value }))}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label>
@@ -502,14 +514,14 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             <label>Starting template<select value={newCourse.template} onChange={(event) => setNewCourse((current) => ({ ...current, template: event.target.value as "blank" | "guided" | "single" }))}><option value="guided">Guided structure</option><option value="single">One starter lesson</option><option value="blank">Blank course</option></select></label>
             <label>Passing score<input type="number" min="0" max="100" value={newCourse.passingScore} onChange={(event) => setNewCourse((current) => ({ ...current, passingScore: Number(event.target.value) }))} /></label>
             <label className={styles.full}>Description<textarea value={newCourse.description} onChange={(event) => setNewCourse((current) => ({ ...current, description: event.target.value }))} placeholder="What will the student learn?" /></label>
-            <label className={styles.full}>Video inicial (YouTube o OneDrive) <small>(opcional)</small><input type="url" value={newCourse.youtubeUrl} onChange={(event) => setNewCourse((current) => ({ ...current, youtubeUrl: event.target.value }))} placeholder="https://..." /></label>
+            <label className={styles.full}>Starter video (YouTube or OneDrive) <small>(optional)</small><input type="url" value={newCourse.youtubeUrl} onChange={(event) => setNewCourse((current) => ({ ...current, youtubeUrl: event.target.value }))} placeholder="https://..." /></label>
           </div>
-          <div className={styles.createActions}><button type="button" onClick={() => setShowCreate(false)}>Cancel</button><button className={styles.createButton} disabled={busy} type="submit">{busy ? "Creating…" : "Create and open editor"}</button></div>
+          <div className={styles.createActions}><button type="button" onClick={() => {setShowCreate(false);setNewCover(null);}}>Cancel</button><button className={styles.createButton} disabled={busy} type="submit">{busy ? "Creating…" : "Create and open editor"}</button></div>
         </form>
       )}
 
-      {!levelFolder?<LevelFolders levels={Array.from(new Set([...folders,...courses.map(c=>c.level.split(" · ")[0])])).sort()} courses={courses} onOpen={level=>{setLevelFolder(level);setNewCourse(current=>({...current,level}));}}/>:<><button type="button" onClick={()=>setLevelFolder(null)}>← All levels</button><h2>{levelFolder} · Units</h2><div className={styles.courseGrid}>
-        {courses.filter((course) => course.level.split(" · ")[0]===levelFolder && course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Published" ? course.published : !course.published))).map((course) => (
+      {!levelFolder && !query.trim() && filter === "All"?<LevelFolders levels={Array.from(new Set([...folders,...courses.map(c=>c.level.split(" · ")[0])])).sort()} courses={courses} onOpen={level=>{setLevelFolder(level);setNewCourse(current=>({...current,level}));}}/>:<><button type="button" onClick={()=>{setLevelFolder(null);setQuery("");setFilter("All");}}>← All levels</button><h2>{query.trim() || !levelFolder ? "Courses" : `${levelFolder} · Courses`}</h2>{!catalogCourses.length && <p role="status">No courses match these filters.</p>}<div className={styles.courseGrid}>
+        {catalogCourses.map((course) => (
           <article className={styles.courseCard} key={course.id}>
             <button className={styles.courseCover} aria-label={`Edit ${course.title}`} type="button" onClick={() => void openCourse(course)}>
               <CourseCover url={course.coverUrl} color={course.color} level={course.level.split(" · ")[0]} />
@@ -569,7 +581,7 @@ function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
       <div className={styles.extendedToolbar}><button title="Strikethrough" className={draft.config.strikethrough ? styles.formatActive : ""} type="button" onClick={() => updateConfig("strikethrough", !draft.config.strikethrough)}>S̶</button><button title="Uppercase" className={draft.config.uppercase ? styles.formatActive : ""} type="button" onClick={() => updateConfig("uppercase", !draft.config.uppercase)}>AA</button><button type="button" onClick={() => toggleList(false)}>• List</button><button type="button" onClick={() => toggleList(true)}>1. List</button><button type="button" onClick={() => updateBody(`${draft.body}${draft.body ? "\n" : ""}[Link text](https://)`)}>Link</button></div>
       <div className={styles.alignmentToolbar}><span>Align</span>{(["left", "center", "right", "justify"] as const).map((align) => <button title={align} className={draft.config.align === align ? styles.formatActive : ""} key={align} type="button" onClick={() => updateConfig("align", align)}>{align === "left" ? "≡" : align === "center" ? "≣" : align === "right" ? "☰" : "▤"}</button>)}</div>
       <label>Content<textarea className={styles.contentTextarea} value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Write the lesson content…" /></label>
-      <div className={styles.liveSample} style={blockVisualStyle({ ...draft, id: draft.id ?? "draft" })}><small>LIVE PREVIEW</small><strong>{draft.title || "Block title"}</strong><p>{draft.body || "The selected formatting will appear here."}</p></div>
+
     </>}
     {draft.kind === "image" && <><label className={styles.uploadBox}>Upload image<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void onUpload(event.target.files?.[0])} /><span>PNG, JPG or WEBP · maximum 2 MB</span></label><label>Or use a link<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." /></label><label>Alternative text<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} placeholder="Describe the image" /></label></>}
     {draft.kind === "youtube" && <><label>Video link or Microsoft embed code<input type="text" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://... or iframe embed code" required /></label><small>OneDrive: use Copy embed code for inline playback. Viewing permissions still apply.</small><label>Instructions<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
@@ -577,49 +589,29 @@ function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
     {draft.kind === "audio" && <><label>Audio link<input type="url" value={draft.url} onChange={(event) => setDraft((current) => current ? { ...current, url: event.target.value } : current)} placeholder="https://..." required /></label><label>Description or transcript<textarea value={draft.body} onChange={(event) => updateBody(event.target.value)} /></label></>}
     {assessment && <><label>Instructions<textarea value={draft.body} onChange={e=>updateBody(e.target.value)}/></label><QuestionEditor questions={draft.questions?.length?draft.questions:[{...newQuestion(),prompt:draft.question??"",options:draft.options??["",""],correctAnswer:draft.correctAnswer??""}]} onChange={questions=>setDraft(current=>current?{...current,questions}:current)}/><div className={styles.twoFields}><label>Passing score<input type="number" min={0} max={100} value={draft.passingScore??80} onChange={e=>setDraft(current=>current?{...current,passingScore:Number(e.target.value)}:current)}/></label><label>Attempts<input type="number" min={1} max={20} value={draft.maxAttempts??3} onChange={e=>setDraft(current=>current?{...current,maxAttempts:Number(e.target.value)}:current)}/></label></div></>}
     <div className={styles.designSection}><span>BLOCK DESIGN</span><label>Width<select value={draft.config.width} onChange={(event) => updateConfig("width", event.target.value as LmsCourseBlockConfig["width"])}><option value="full">Full width</option><option value="half">Half</option><option value="third">One third</option></select></label><div className={styles.twoFields}><label>Line height<select value={draft.config.lineHeight} onChange={(event) => updateConfig("lineHeight", event.target.value as LmsCourseBlockConfig["lineHeight"])}><option value="compact">Compact</option><option value="normal">Normal</option><option value="relaxed">Relaxed</option><option value="spacious">Spacious</option></select></label><label>Spacing<select value={draft.config.letterSpacing} onChange={(event) => updateConfig("letterSpacing", event.target.value as LmsCourseBlockConfig["letterSpacing"])}><option value="tight">Tight</option><option value="normal">Normal</option><option value="wide">Spacious</option></select></label><label>Padding<select value={draft.config.padding} onChange={(event) => updateConfig("padding", event.target.value as LmsCourseBlockConfig["padding"])}><option value="none">No padding</option><option value="compact">Compact</option><option value="normal">Normal</option><option value="roomy">Spacious</option></select></label><label>Corners<select value={draft.config.radius} onChange={(event) => updateConfig("radius", event.target.value as LmsCourseBlockConfig["radius"])}><option value="none">Square</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label><label>Border<select value={draft.config.borderStyle} onChange={(event) => updateConfig("borderStyle", event.target.value as LmsCourseBlockConfig["borderStyle"])}><option value="none">No border</option><option value="solid">Solid</option><option value="dashed">Dashed</option></select></label></div><div className={styles.threeFields}><label>Text<input type="color" value={draft.config.textColor} onChange={(event) => updateConfig("textColor", event.target.value)} /></label><label>Background<input type="color" value={draft.config.backgroundColor} onChange={(event) => updateConfig("backgroundColor", event.target.value)} /></label><label>Border<input type="color" value={draft.config.borderColor} onChange={(event) => updateConfig("borderColor", event.target.value)} /></label></div></div>
-    <BlockDesignOptions config={draft.config} onChange={value=>setDraft(current=>current?{...current,config:{...current.config,...value}}:current)} onUpload={onUpload}/>
+    <p role="status" className={styles.editorHint}>{busy ? "Working…" : "Preview updates as you edit. Save changes to keep your work."}</p>
+    <BlockDesignOptions busy={busy} config={draft.config} onChange={value=>setDraft(current=>current?{...current,config:{...current.config,...value}}:current)} onUpload={onUpload}/>
     <button className={styles.saveButton} disabled={busy} type="submit">{busy ? "Saving…" : draft.id ? "Save changes" : `Add ${kindLabel(draft.kind).toLowerCase()}`}</button>
   </form>;
 }
 
-function blockVisualStyle(block: LmsCourseBlock): React.CSSProperties {
-  const decoration = [block.config.underline && "underline", block.config.strikethrough && "line-through"].filter(Boolean).join(" ") || "none";
-  return {
-    color: block.config.textColor,
-    backgroundColor: block.config.backgroundColor,
-    backgroundImage: block.config.backgroundImage ? `url(${JSON.stringify(block.config.backgroundImage)})` : block.config.imagePosition === "behind" && block.config.imageUrl ? `url(${JSON.stringify(block.config.imageUrl)})` : block.config.gradient,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    border: block.config.borderStyle === "none" ? "none" : `1px ${block.config.borderStyle} ${block.config.borderColor}`,
-    borderRadius: { none: 0, small: 5, medium: 10, large: 18 }[block.config.radius],
-    padding: { none: 0, compact: 12, normal: 18, roomy: 28 }[block.config.padding],
-    textAlign: block.config.align,
-    fontFamily: fontStack(block.config.fontFamily),
-    fontSize: { xs: "11px", small: "13px", normal: "15px", large: "19px", xl: "23px", title: "29px", display: "38px" }[block.config.fontSize],
-    fontWeight: block.config.bold || block.config.textStyle.startsWith("heading") ? 800 : 500,
-    fontStyle: block.config.italic || block.config.textStyle === "quote" ? "italic" : "normal",
-    textDecoration: decoration,
-    textTransform: block.config.uppercase ? "uppercase" : "none",
-    lineHeight: { compact: 1.25, normal: 1.55, relaxed: 1.75, spacious: 2 }[block.config.lineHeight],
-    letterSpacing: { tight: "-.02em", normal: "normal", wide: ".08em" }[block.config.letterSpacing],
-    boxShadow: block.config.textStyle === "callout" ? `inset 4px 0 ${block.config.borderColor}` : undefined,
-  };
-}
-
 function CourseBlockPreview({ block, selected, onEdit, onDelete }: { block: LmsCourseBlock; selected: boolean; onEdit: () => void; onDelete: () => void }) {
   const widthClass = block.config.width === "half" ? styles.blockHalf : block.config.width === "third" ? styles.blockThird : styles.blockFull;
-  return <article className={`${styles.canvasBlock} ${widthClass} ${selected ? styles.canvasBlockSelected : ""}`} onClick={onEdit}><div className={styles.blockTop}><span>{kindLabel(block.kind)}</span><div><button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Edit</button><button type="button" onClick={(event) => { event.stopPropagation(); onDelete(); }}>Delete</button></div></div><BlockContent block={block} /></article>;
+  return <article id={`studio-block-${block.id}`} className={`${styles.canvasBlock} ${widthClass} ${selected ? styles.canvasBlockSelected : ""}`} onClick={onEdit}><div className={styles.blockTop}><span>{kindLabel(block.kind)}</span><div><button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Edit</button><button type="button" onClick={(event) => { event.stopPropagation(); onDelete(); }}>Delete</button></div></div><BlockContent block={block} /></article>;
 }
 
-export function BlockContent({ block }: { block: LmsCourseBlock }) {
-  return <div className={`${styles.blockVisual} ${block.config.textStyle === "quote" ? styles.quoteBlock : ""}`} style={blockVisualStyle(block)}>{block.config.logoUrl&&<Image src={block.config.logoUrl} alt="Academy logo" width={140} height={80} unoptimized style={{width:100,height:60,objectFit:"contain"}}/>}<strong>{block.title}</strong>{block.config.imageUrl&&block.config.imagePosition!=="behind"&&block.config.imagePosition!=="after"&&<Image src={block.config.imageUrl} alt="" width={900} height={500} unoptimized/>}{block.kind === "text" && <p>{block.body || "Add content from the properties panel."}</p>}{block.config.imageUrl&&block.config.imagePosition==="after"&&<Image src={block.config.imageUrl} alt="" width={900} height={500} unoptimized/>}{block.kind === "image" && (block.url ? <Image src={block.url} alt={block.body || block.title} width={900} height={500} unoptimized /> : <div className={styles.mediaPlaceholder}>Image</div>)}{block.kind === "youtube" && <CourseVideo url={block.url} title={block.title} />}{block.kind === "document" && <div className={styles.resourcePreview}><i>DOC</i><span>{block.body || "Downloadable document"}</span></div>}{block.kind === "audio" && <div className={styles.resourcePreview}><i>♪</i><span>{block.body || "Audio resource"}</span></div>}{(block.kind === "quiz" || block.kind === "exam") && <div className={styles.assessmentPreview}><span>{block.kind === "exam" ? "FINAL ASSESSMENT" : "KNOWLEDGE CHECK"}</span><p>{block.question || "Add a question in the properties panel."}</p>{(block.options ?? []).filter(Boolean).slice(0, 6).map((option, index) => <small key={`${option}-${index}`}>{String.fromCharCode(65 + index)}. {option}</small>)}</div>}</div>;
+export function BlockContent({block}: {block:LmsCourseBlock}) {
+ const assessment=block.kind==="quiz"||block.kind==="exam";
+ return <LessonContent showTitle lesson={{title:block.title,content_type:assessment?"text":block.kind,body:block.body,youtube_url:block.kind==="youtube"?block.url:undefined,resource_url:block.url,content_config:block.config}}>
+  {assessment && <div className={styles.assessmentPreview}><span>{block.kind==="exam"?"FINAL ASSESSMENT":"KNOWLEDGE CHECK"}</span><p>{block.question || block.questions?.[0]?.prompt || "Add a question in the properties panel."}</p>{(block.options??[]).filter(Boolean).slice(0,6).map((option,index)=><small key={index}>{String.fromCharCode(65+index)}. {option}</small>)}</div>}
+ </LessonContent>;
 }
 
 function CoursePreviewModal({ course, blocks, draft, onClose }: { course:LmsCourse;blocks:LmsCourseBlock[];draft:DraftBlock|null;onClose:()=>void }) {
  const combined=draft?draft.id?blocks.map(b=>b.id===draft.id?{...draft,id:draft.id} as LmsCourseBlock:b):[...blocks,{...draft,id:"preview-draft"} as LmsCourseBlock]:blocks;
  const pages=combined.flatMap(block=>block.questions?.length?block.questions.map((q,i)=>({...block,title:block.title+" · Question "+(i+1),question:q.prompt,options:q.options,questions:undefined})): [block]);
- const [index,setIndex]=useState(0);const page=pages[index];
- return <LearningViewer title={"Course preview · "+course.title} onClose={onClose}><small>STUDENT VIEW · {index+1} / {pages.length}</small>{page?<FitSlide key={page.id+index}><BlockContent block={page}/></FitSlide>:<p>This unit has no content yet.</p>}<nav style={{display:"flex",justifyContent:"space-between",gap:12,marginTop:12}}><button type="button" disabled={index===0} onClick={()=>setIndex(index-1)}>← Back</button><button type="button" onClick={onClose}>Back to editor</button><button type="button" disabled={index>=pages.length-1} onClick={()=>setIndex(index+1)}>Next →</button></nav></LearningViewer>;
+ const [index,setIndex]=useState(()=>Math.max(0,pages.findIndex(page=>page.id===(draft?.id??"preview-draft"))));const page=pages[index];
+ return <LearningViewer title={"Course preview · "+course.title} onClose={onClose}><small>STUDENT VIEW · {pages.length?index+1:0} / {pages.length}</small>{page?<FitSlide key={page.id+index}><BlockContent block={page}/></FitSlide>:<p>This unit has no content yet.</p>}<nav style={{display:"flex",justifyContent:"space-between",gap:12,marginTop:12}}><button type="button" disabled={index===0} onClick={()=>setIndex(index-1)}>← Back</button><button type="button" onClick={onClose}>Back to editor</button><button type="button" disabled={index>=pages.length-1} onClick={()=>setIndex(index+1)}>Next →</button></nav></LearningViewer>;
 }
 
 function kindLabel(kind: LmsCourseBlockKind) {

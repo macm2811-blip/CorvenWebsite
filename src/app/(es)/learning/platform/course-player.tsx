@@ -179,16 +179,14 @@ export function CoursePlayer({
                   </div>
                 ) : (
                   <FitSlide key={lesson.id}>
-                    <h2>{lesson.title}</h2>
-                    <LessonContent lesson={lesson} />
+                    <LessonContent lesson={lesson} showTitle />
                   </FitSlide>
                 )}
               </>
             )}
             {quiz && (
               <div className={styles.quiz}>
-                <h2>{quiz.title}</h2>
-                <p>{quiz.description}</p>
+                <LessonContent showTitle lesson={{title:quiz.title,body:quiz.description,content_type:"text",content_config:quiz.content_config}}>
                 <small>
                   Passing score {quiz.passing_score}% · Attempts{" "}
                   {data.attempts.filter((a) => a.quiz_id === quiz.id).length}/
@@ -318,6 +316,7 @@ export function CoursePlayer({
                       {a.feedback ? ` · ${a.feedback}` : ""}
                     </p>
                   ))}
+                </LessonContent>
               </div>
             )}
             {!page && <p>This unit has no published content yet.</p>}

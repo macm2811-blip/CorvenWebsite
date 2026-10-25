@@ -141,7 +141,7 @@ export async function studentCourseAction(
     db
       .from("quizzes")
       .select(
-        "id,title,description,passing_score,max_attempts,assessment_type,position,module_id",
+        "id,title,description,passing_score,max_attempts,assessment_type,position,module_id,content_config",
       )
       .eq("course_id", courseId)
       .order("position"),
