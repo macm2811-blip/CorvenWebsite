@@ -30,7 +30,7 @@ export default async function LoginPage({
     <main lang="en" className={styles.page}>
       <section className={styles.brandPanel}>
         <div className={styles.levelUpBrand}>
-          <div className={styles.logoPlate}><Image className={styles.levelUpLogo} src="/brand/level-up/logo-horizontal-transparent.png" alt="Level Up English Academy" width={2109} height={745} sizes="(max-width: 850px) 250px, 380px" preload /></div>
+          <div className={styles.logoPlate}><span className={styles.logoArtwork}><Image className={styles.levelUpLogo} src="/brand/level-up/logo-horizontal-transparent.png" alt="Level Up English Academy" width={2109} height={745} sizes="(max-width: 850px) 250px, 380px" preload /></span></div>
           <Image className={styles.mascot} src="/brand/level-up/mascot-wave-transparent.png" alt="The Level Up mascot welcomes you" width={1254} height={1254} sizes="(max-width: 850px) 140px, 270px" />
         </div>
         <div className={styles.powered}>
