@@ -5,12 +5,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { CourseCover } from "@/components/course-cover";
 import { AcademyDashboard } from "./academy-dashboard";
 import { AcademyReviewPanel } from "./academy-review-panel";
-import { loadCourseStudioAction } from "./actions";
+import { LiveClassForm } from "./live-class-form";
 import type { LmsCourse, LmsStudent } from "@/lib/lms/types";
 import {
   academyOperationsAction,
   saveSessionAction,
-  createSessionWithCoverAction,
   enrollExistingStudentAction,
   recordPaymentAction,
   academyTicketsAction,
@@ -33,9 +32,7 @@ export function AcademyWorkspace({
   onNavigate:(view:"students"|"courses"|"income"|"sessions"|"support")=>void;
 }) {
   const [data, setData] = useState<Operations | null>(null);
-  const [sessionPages,setSessionPages]=useState<{id:string;title:string}[]>([]);
-  const [coverPreview,setCoverPreview]=useState<string>();
-  useEffect(()=>()=>{if(coverPreview)URL.revokeObjectURL(coverPreview);},[coverPreview]);
+  const [editing,setEditing]=useState<Operations["sessions"][number]|null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -59,13 +56,6 @@ export function AcademyWorkspace({
     setBusy(true);
     setError("");
     try {
-      if (view === "sessions") {
-        values.set("organizationId",organizationId);
-        await createSessionWithCoverAction(values);
-        setCoverPreview(undefined);
-        setSessionPages([]);
-      }
-      else
         await recordPaymentAction({
           organizationId,
           studentId: String(values.get("studentId")),
@@ -143,59 +133,7 @@ export function AcademyWorkspace({
       )}
       {view!=="sessions"&&<AcademyReviewPanel organizationId={organizationId} students={students} mode={view==="income"?"payments":"all"}/>}
       {!data && !error && <p>Loading records…</p>}
-      {view === "sessions" && (
-        <section className={styles.panel}>
-          <h2>Schedule a class</h2>
-          <form onSubmit={submit}>
-            <label className={styles.coverField}>Class cover (optional)
-              <input name="cover" type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{const file=e.target.files?.[0];setError("");if(file && (file.size>2*1024*1024 || !["image/png","image/jpeg","image/webp"].includes(file.type))){setError("Choose a PNG, JPG or WEBP image up to 2 MB.");e.target.value="";setCoverPreview(undefined);return;}setCoverPreview(file?URL.createObjectURL(file):undefined);}} />
-              <small>PNG, JPG or WEBP · up to 2 MB · recommended 16:9. Without an upload, we use the Level Up cover.</small>
-              <div className={styles.coverPreview}><CourseCover url={coverPreview}/></div>
-            </label>
-            <label>
-              Title
-              <input name="title" required minLength={2} maxLength={180} />
-            </label>
-            <label>
-              Course
-              <select name="courseId" onChange={async e=>{const id=e.target.value;setSessionPages([]);if(id){try{const result=await loadCourseStudioAction({organizationId,courseId:id});if(result.ok&&result.data)setSessionPages(result.data.blocks.filter(b=>b.kind!=="quiz"&&b.kind!=="exam"));}catch(e){setError(e instanceof Error?e.message:"Unable to load pages.");}}}}>
-                <option value="">Entire academy</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>Start page (optional)<select name="lessonId"><option value="">Continue at the student’s next page</option>{sessionPages.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
-            <label>
-              Date and time (local device time)
-              <input name="startsAt" type="datetime-local" required />
-            </label>
-            <label>
-              Duration in minutes
-              <input
-                name="duration"
-                type="number"
-                min={5}
-                max={480}
-                defaultValue={60}
-                required
-              />
-            </label>
-            <label>
-              Teams, Zoom or Meet link
-              <input
-                name="meetingUrl"
-                type="url"
-                required
-                placeholder="https://..."
-              />
-            </label>
-            <button disabled={busy}>Save class</button>
-          </form>
-        </section>
-      )}
+      {view === "sessions" && <LiveClassForm key={editing?.id??"new"} organizationId={organizationId} courses={courses} session={editing} onCancel={()=>setEditing(null)} onSaved={async()=>{setEditing(null);setData(await academyOperationsAction(organizationId));setMessage("Class saved.");}}/>}
       {view !== "income" && (
         <section className={styles.panel}>
           <h2>Scheduled classes</h2>
@@ -218,6 +156,7 @@ export function AcademyWorkspace({
                     Open link ↗
                   </a>
                 )}
+                <button type="button" disabled={busy} onClick={()=>{setEditing(s);setError("");setMessage("");}}>Edit class</button>
                 {view === "sessions" && s.status !== "cancelled" && (
                   <button
                     disabled={busy}
