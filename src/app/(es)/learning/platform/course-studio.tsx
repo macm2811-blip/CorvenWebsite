@@ -151,7 +151,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   const [settings, setSettings] = useState({ title: "", level: "A1", description: "", color: "#2C55A2", coverUrl: "" });
 
   async function openCourse(course: LmsCourse) {
-    editSession.current++;
+    const session = ++editSession.current;
     setEditingCourse(course);
     setSettings({
       title: course.title,
@@ -167,12 +167,14 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       return;
     }
     setLoading(true);
-    const result = await loadCourseStudioAction({ organizationId, courseId: course.id });
-    setLoading(false);
-    if (!result.ok || !result.data) return onNotify(result.message);
-    setBlocks(result.data.blocks);
-    setModules(result.data.modules);
-    setModuleId(result.data.modules[0]?.id ?? "");
+    try {
+      const result = await loadCourseStudioAction({ organizationId, courseId: course.id });
+      if (editSession.current !== session) return;
+      if (!result.ok || !result.data) return onNotify(result.message);
+      setBlocks(result.data.blocks); setModules(result.data.modules); setModuleId(result.data.modules[0]?.id ?? "");
+    } catch(error) { if(editSession.current===session) onNotify(error instanceof Error?error.message:"Unable to load the course. Please try again."); }
+    finally { if(editSession.current===session) setLoading(false); }
+
   }
 
   async function createCourse(event: FormEvent) {
@@ -281,6 +283,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   }
 
   function startBlock(kind: LmsCourseBlockKind) {
+    if (loading || busy) return;
     editSession.current++;
     const nextPosition = Math.max(0, ...blocks.map((block) => block.position)) + 1;
     setSelectedId("new");
@@ -423,11 +426,11 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             <button className={selectedId === "settings" ? styles.outlineActive : ""} onClick={() => { setSelectedId("settings"); setDraft(null); }} type="button">
               <i>⚙</i><span><strong>Settings</strong><small>Name, level and cover</small></span>
             </button>
-            <button className={styles.addOutline} type="button" aria-expanded={showPicker} onClick={() => { setShowPicker((current) => !current); setPickerCategory(null); }}>+ Add</button>
+            <button className={styles.addOutline} type="button" disabled={loading || busy} aria-expanded={showPicker} onClick={() => { setShowPicker((current) => !current); setPickerCategory(null); }}>+ Add</button>
             {showPicker && <div className={styles.addMenu}>
               <button type="button" onClick={() => setPickerCategory("standard")}><strong>Standard content →</strong><small>Text, video, image, file or audio</small></button>
               <button type="button" onClick={() => setPickerCategory("activities")}><strong>Learning activities →</strong><small>Quiz and exam</small></button>
-              {pickerCategory && blockTools.filter((tool) => pickerCategory === "activities" ? ["quiz", "exam"].includes(tool.kind) : !["quiz", "exam"].includes(tool.kind)).map((tool) => <button key={tool.kind} type="button" onClick={() => startBlock(tool.kind)}>{tool.mark} {tool.label}</button>)}
+              {pickerCategory && blockTools.filter((tool) => pickerCategory === "activities" ? ["quiz", "exam"].includes(tool.kind) : !["quiz", "exam"].includes(tool.kind)).map((tool) => <button key={tool.kind} type="button" disabled={loading || busy} onClick={() => startBlock(tool.kind)}>{tool.mark} {tool.label}</button>)}
               <form onSubmit={addModule}><label>New module<input value={moduleTitle} onChange={(event) => setModuleTitle(event.target.value)} required maxLength={180} /></label><button type="submit" disabled={busy}>Add module</button></form>
             </div>}
             {modules.map((item) => <button type="button" key={item.id} className={moduleId === item.id ? styles.outlineActive : ""} onClick={() => { setModuleId(item.id); setDraft(null); setSelectedId(null); }}><i>▤</i><span><strong>{item.title}</strong><small>{blocks.filter((block) => block.moduleId === item.id).length} items</small></span></button>)}
@@ -444,10 +447,10 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
           <main className={styles.canvasPanel}>
             <div className={styles.canvasTop}>
               <div><span>COURSE CANVAS</span><strong>{currentModule?.title ?? "Content"}</strong></div>
-              <span>{blocks.length} items</span>
+              <span>{visibleBlocks.length} items</span>
             </div>
             <div className={styles.toolShelf} aria-label="Add content">
-              {blockTools.map((tool) => <button key={tool.kind} type="button" onClick={() => startBlock(tool.kind)}><i>{tool.mark}</i><span>{tool.label}</span></button>)}
+              {blockTools.map((tool) => <button key={tool.kind} type="button" disabled={loading || busy} onClick={() => startBlock(tool.kind)}><i>{tool.mark}</i><span>{tool.label}</span></button>)}
             </div>
             {loading ? <div className={styles.loadingState}>Loading content…</div> : visibleBlocks.length ? (
               <div className={styles.canvasGrid}>
