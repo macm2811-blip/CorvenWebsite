@@ -186,5 +186,5 @@ function LessonImage(props: ImageProps) {
   const source = typeof props.src === "string" ? props.src : "";
   if (!source || (!source.startsWith("blob:") && !artworkUrlValid(source))) return null;
   if (source === failedUrl) return <p role="status">Image unavailable. Check the image link or upload the file again.</p>;
-  return <Image {...props} onError={()=>setFailedUrl(source)}/>;
+  return <Image {...props} alt={props.alt} onError={()=>setFailedUrl(source)}/>;
 }

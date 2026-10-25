@@ -134,6 +134,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   const [moduleId, setModuleId] = useState("");
   const [moduleTitle, setModuleTitle] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(()=>{if(selectedId && selectedId!=="settings") document.getElementById(`studio-block-${selectedId}`)?.scrollIntoView({block:"nearest"});},[selectedId]);
   const [draft, setDraft] = useState<DraftBlock | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -433,7 +434,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
             <div className={styles.moduleLabel}><span>{currentModule?.title ?? "CONTENT"}</span><small>{visibleBlocks.length} blocks</small></div>
             <div className={styles.outlineList}>
               {visibleBlocks.map((block, index) => (
-                <button className={selectedId === block.id ? styles.outlineActive : ""} key={block.id} type="button" onClick={() => selectBlock(block)}>
+                <button className={selectedId === block.id ? styles.outlineActive : ""} key={block.id} type="button" onClick={() => {if(selectedId !== block.id) selectBlock(block);}}>
                   <i>{index + 1}</i><span><strong>{block.title}</strong><small>{kindLabel(block.kind)}</small></span>
                 </button>
               ))}
@@ -593,7 +594,7 @@ function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
 
 function CourseBlockPreview({ block, selected, onEdit, onDelete }: { block: LmsCourseBlock; selected: boolean; onEdit: () => void; onDelete: () => void }) {
   const widthClass = block.config.width === "half" ? styles.blockHalf : block.config.width === "third" ? styles.blockThird : styles.blockFull;
-  return <article className={`${styles.canvasBlock} ${widthClass} ${selected ? styles.canvasBlockSelected : ""}`} onClick={onEdit}><div className={styles.blockTop}><span>{kindLabel(block.kind)}</span><div><button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Edit</button><button type="button" onClick={(event) => { event.stopPropagation(); onDelete(); }}>Delete</button></div></div><BlockContent block={block} /></article>;
+  return <article id={`studio-block-${block.id}`} className={`${styles.canvasBlock} ${widthClass} ${selected ? styles.canvasBlockSelected : ""}`} onClick={onEdit}><div className={styles.blockTop}><span>{kindLabel(block.kind)}</span><div><button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }}>Edit</button><button type="button" onClick={(event) => { event.stopPropagation(); onDelete(); }}>Delete</button></div></div><BlockContent block={block} /></article>;
 }
 
 export function BlockContent({block}: {block:LmsCourseBlock}) {
