@@ -13,7 +13,6 @@
 
 .logoPlate{background:transparent;border:0;box-shadow:none}.powered{color:white}.powered img{filter:brightness(0) invert(1)}
 
-/* Full white logo variant on the blue login background. */
-.logoArtwork{position:relative;display:block}.logoArtwork:after{content:"";position:absolute;inset:0;background:white;mask:url("/brand/level-up/logo-horizontal-transparent.png") center/100% 100% no-repeat;pointer-events:none}
+/* White level lettering with the original orange UP+ on the blue login background. */
+.logoArtwork{position:relative;display:block}.logoArtwork:after{content:"";position:absolute;inset:0;background:white;mask:url("/brand/level-up/logo-horizontal-transparent.png") center/100% 100% no-repeat;clip-path:inset(0 49% 0 0);pointer-events:none}
 
-.logoArtwork .levelUpLogo{filter:brightness(0) invert(1)}
