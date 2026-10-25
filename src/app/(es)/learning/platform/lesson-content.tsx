@@ -1,15 +1,13 @@
 "use client";
-import Image from "next/image";
-import type { CSSProperties } from "react";
+import Image, { type ImageProps } from "next/image";
+import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { artworkBackground, artworkUrlValid } from "@/lib/lms/page-artwork";
+import type { LmsCourseBlockConfig } from "@/lib/lms/types";
 import { CourseVideo } from "@/components/course-video";
-import type { studentCourseAction } from "./student-actions";
-type CourseData = Awaited<ReturnType<typeof studentCourseAction>>;
-export function LessonContent({
-  lesson,
-}: {
-  lesson: CourseData["lessons"][number];
-}) {
-  const config = lesson.content_config as Record<string, unknown> | null;
+type LessonDisplay = { title: string; content_type: string; body?: string | null; description?: string | null; youtube_url?: string | null; resource_url?: string | null; content_config?: Record<string, unknown> | null };
+export function LessonContent({lesson, showTitle = false, children}: {lesson: LessonDisplay; showTitle?: boolean; children?: ReactNode}) {
+  const config = (lesson.content_config ?? {}) as Partial<LmsCourseBlockConfig>;
   const url = lesson.youtube_url || lesson.resource_url || "";
   const families: Record<string, string> = {
     inter: "Inter,Arial,sans-serif",
@@ -64,22 +62,16 @@ export function LessonContent({
     <div
       style={{
         whiteSpace: "pre-wrap",
-        backgroundImage:
-          typeof config?.backgroundImage === "string" && config.backgroundImage
-            ? `url(${JSON.stringify(config.backgroundImage)})`
-            : config?.imagePosition === "behind" &&
-                typeof config.imageUrl === "string"
-              ? `url(${JSON.stringify(config.imageUrl)})`
-              : typeof config?.gradient === "string"
-                ? config.gradient
-                : undefined,
+        backgroundImage: artworkBackground(config),
         backgroundSize: "cover",
         backgroundPosition: "center",
         lineHeight: height[String(config?.lineHeight)] ?? 1.55,
         fontFamily: families[String(config?.fontFamily)],
         fontSize: size[String(config?.fontSize)] ?? 16,
-        fontWeight: config?.bold ? 700 : 400,
-        fontStyle: config?.italic ? "italic" : "normal",
+        fontWeight: config?.bold || config.textStyle?.startsWith("heading") ? 700 : 400,
+        letterSpacing: config.letterSpacing === "tight" ? "-.02em" : config.letterSpacing === "wide" ? ".08em" : undefined,
+        fontStyle: config?.italic || config.textStyle === "quote" ? "italic" : "normal",
+        boxShadow: config.textStyle === "callout" ? `inset 4px 0 ${config.borderColor ?? "#2C55A2"}` : undefined,
         textDecoration:
           [
             config?.underline ? "underline" : "",
@@ -108,7 +100,7 @@ export function LessonContent({
       }}
     >
       {typeof config?.logoUrl === "string" && config.logoUrl && (
-        <Image
+        <LessonImage
           src={config.logoUrl}
           alt="Academy logo"
           width={140}
@@ -121,7 +113,7 @@ export function LessonContent({
         config.imageUrl &&
         config.imagePosition !== "behind" &&
         config.imagePosition !== "after" && (
-          <Image
+          <LessonImage
             src={config.imageUrl}
             alt=""
             width={900}
@@ -130,11 +122,12 @@ export function LessonContent({
             style={{ maxHeight: 300, width: "100%", objectFit: "contain" }}
           />
         )}
+      {showTitle && <h2 style={{color:"inherit",fontSize:"1.6em",fontWeight:700,margin:"0 0 16px"}}>{lesson.title}</h2>}
       {lesson.content_type === "youtube" && (
         <CourseVideo url={url} title={lesson.title} />
       )}
       {lesson.content_type === "image" && url && (
-        <Image
+        <LessonImage
           src={url}
           alt={lesson.body || lesson.title}
           width={1000}
@@ -155,7 +148,7 @@ export function LessonContent({
       {typeof config?.imageUrl === "string" &&
         config.imageUrl &&
         config.imagePosition === "after" && (
-          <Image
+          <LessonImage
             src={config.imageUrl}
             alt=""
             width={900}
@@ -164,7 +157,7 @@ export function LessonContent({
             style={{ maxHeight: 300, width: "100%", objectFit: "contain" }}
           />
         )}
-      <p>
+      <p style={{fontSize:"inherit",lineHeight:"inherit",color:"inherit",margin:"12px 0"}}>
         {(lesson.body || lesson.description || "")
           .split(/(\[[^\]]+\]\(https:\/\/[^\s)]+\))/g)
           .map((part: string, index: number) => {
@@ -183,6 +176,15 @@ export function LessonContent({
             );
           })}
       </p>
+      {children}
     </div>
   );
+}
+
+function LessonImage(props: ImageProps) {
+  const [failedUrl,setFailedUrl] = useState("");
+  const source = typeof props.src === "string" ? props.src : "";
+  if (!source || (!source.startsWith("blob:") && !artworkUrlValid(source))) return null;
+  if (source === failedUrl) return <p role="status">Image unavailable. Check the image link or upload the file again.</p>;
+  return <Image {...props} onError={()=>setFailedUrl(source)}/>;
 }

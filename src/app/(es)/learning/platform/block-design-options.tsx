@@ -1,7 +1,9 @@
 "use client";
+import { artworkChange, artworkUrlValid } from "@/lib/lms/page-artwork";
 import type { LmsCourseBlockConfig } from "@/lib/lms/types";
 export function BlockDesignOptions({
   config,
+  busy = false,
   onChange,
   onUpload,
 }: {
@@ -9,12 +11,13 @@ export function BlockDesignOptions({
     file?: File,
     target?: "backgroundImage" | "imageUrl" | "logoUrl",
   ) => void | Promise<void>;
+  busy?: boolean;
   config: LmsCourseBlockConfig;
   onChange: (value: Partial<LmsCourseBlockConfig>) => void;
 }) {
   return (
-    <section aria-label="Page artwork">
-      <h3>Page artwork</h3>
+    <section aria-label="Page artwork" className="page-artwork">
+      <h3>Page artwork</h3><p>Changes appear in the canvas immediately. Save the block to keep them in the course. Use a direct HTTPS image URL or upload a JPG, PNG or WEBP file up to 2 MB.</p>
       {(["backgroundImage", "imageUrl", "logoUrl"] as const).map((target) => (
         <label key={target}>
           Upload{" "}
@@ -26,8 +29,10 @@ export function BlockDesignOptions({
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => void onUpload(e.target.files?.[0], target)}
+            disabled={busy}
+            onChange={(e) => { void onUpload(e.target.files?.[0], target); e.target.value=""; }}
           />
+          {config[target] && <button type="button" disabled={busy} onClick={()=>onChange(artworkChange(target,""))}>Remove {target === "backgroundImage" ? "background" : target === "logoUrl" ? "logo" : "image"}</button>}
         </label>
       ))}
       <label>
@@ -35,7 +40,7 @@ export function BlockDesignOptions({
         <input
           type="url"
           value={config.backgroundImage ?? ""}
-          onChange={(e) => onChange({ backgroundImage: e.target.value })}
+          onChange={(e) => onChange(artworkChange("backgroundImage", e.target.value))}
           placeholder="https://..."
         />
       </label>
@@ -43,7 +48,7 @@ export function BlockDesignOptions({
         Gradient
         <select
           value={config.gradient ?? ""}
-          onChange={(e) => onChange({ gradient: e.target.value })}
+          onChange={(e) => onChange(artworkChange("gradient", e.target.value))}
         >
           <option value="">Solid color / background image</option>
           <option value="linear-gradient(135deg,#FBD741,#F2B885)">
@@ -80,10 +85,7 @@ export function BlockDesignOptions({
         <select
           value={config.imagePosition ?? "before"}
           onChange={(e) =>
-            onChange({
-              imagePosition: e.target
-                .value as LmsCourseBlockConfig["imagePosition"],
-            })
+            onChange(artworkChange("imagePosition", e.target.value))
           }
         >
           <option value="before">Above the text</option>
@@ -91,6 +93,7 @@ export function BlockDesignOptions({
           <option value="behind">Behind the text</option>
         </select>
       </label>
+      {[config.backgroundImage,config.imageUrl,config.logoUrl].some(value=>!artworkUrlValid(value)) && <p role="alert">Use a complete HTTPS image link without a username or password.</p>}
       <label>
         Page activity
         <select
