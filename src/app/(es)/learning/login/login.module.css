@@ -7,3 +7,12 @@
 .brandPanel{background:var(--lu-turquoise);color:var(--lu-black)}.brandPanel:after{border-color:color-mix(in srgb, white 18.82%, transparent)}.logoPlate{background:transparent;border:0;box-shadow:none}.powered{color:var(--lu-black)}.powered img{filter:brightness(0)}.formPanel{background:var(--lu-gray)}.formHeading span,.textButton{color:var(--lu-blue)}.submit{background:var(--lu-blue);box-shadow:0 5px 15px color-mix(in srgb, var(--lu-black) 14.51%, transparent)}.submit:hover:not(:disabled){background:var(--lu-blue-hover);box-shadow:0 8px 20px color-mix(in srgb, var(--lu-black) 20%, transparent)}.form input:focus{border-color:var(--lu-orange);box-shadow:0 0 0 3px color-mix(in srgb, var(--lu-black) 40%, transparent)}
 .formHeading h1{color:var(--lu-blue)}.formHeading p,.form label{color:var(--lu-black)}.textButton:hover{color:var(--lu-blue-hover);text-decoration:underline}.form input{color:var(--lu-black)}
 .submit{background:var(--lu-orange);color:var(--lu-black)}.submit:hover:not(:disabled){background:var(--lu-peach);color:var(--lu-black)}
+
+/* Login gradient supplied by the academy. */
+.page{background:linear-gradient(90deg,#1645d1 0%,#0354b7 20%,#0067ad 40%,#037abb 60%,#0a90d5 80%,#23a5e5 100%)}.brandPanel,.formPanel{background:transparent}
+
+.logoPlate{background:transparent;border:0;box-shadow:none}.powered{color:white}.powered img{filter:brightness(0) invert(1)}
+
+/* White level lettering with the original orange UP+ on the blue login background. */
+.logoArtwork{position:relative;display:block}.logoArtwork:after{content:"";position:absolute;inset:0;background:white;mask:url("/brand/level-up/logo-horizontal-transparent.png") center/100% 100% no-repeat;clip-path:inset(0 49% 0 0);pointer-events:none}
+
