@@ -178,7 +178,7 @@ export function CoursePlayer({
                     />}
                   </div>
                 ) : (
-                  <FitSlide key={lesson.id}>
+                  <FitSlide key={lesson.id} imagePage={lesson.content_type==="image"}>
                     <LessonContent lesson={lesson} showTitle />
                   </FitSlide>
                 )}
