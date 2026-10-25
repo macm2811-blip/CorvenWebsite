@@ -245,6 +245,7 @@ export function StudentWorkspace({
               )}
             </>
           )}
+          {view === "home" && <ReferFriend organizationId={org}/>}
           {(view === "sessions" || view === "home") && (
             <section className={styles.panel}>
               <h2>
@@ -339,7 +340,6 @@ export function StudentWorkspace({
           )}
         </>
       )}
-      {!course && view === "home" && <ReferFriend organizationId={org}/>}
     </div>
   );
 }
