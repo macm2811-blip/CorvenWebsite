@@ -158,7 +158,7 @@ export function CoursePlayer({
                   ) || data.attempts.some((x) => x.quiz_id === p.id && x.passed)
                     ? "✓ "
                     : ""}
-                  {p.title}
+                  {p.title || "Image"}
                 </button>
               ))}
             </aside>

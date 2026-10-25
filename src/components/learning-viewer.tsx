@@ -48,7 +48,7 @@ export function LearningViewer({ title, children, onClose, contentClassName }: {
       {onClose && <button type="button" onClick={() => void close()} aria-label="Close viewer">Close ×</button>}
     </div></header>
     {error && <p role="status">{error}</p>}
-    <div className={styles.content}><div className={contentClassName}>{children}</div></div>
+    <div className={styles.content} data-learning-viewport><div className={contentClassName}>{children}</div></div>
   </>;
   if (!ready) return null;
   return expanded ? createPortal(<dialog lang="en" ref={dialog} className={`${styles.dialog} ${fullscreen ? styles.fullscreen : ""}`} aria-label={title} onCancel={(event) => { event.preventDefault(); if (onClose) void close(); else setExpanded(false); }}>{content}</dialog>, document.body) : <div lang="en" ref={inline} className={styles.inline}>{content}</div>;
