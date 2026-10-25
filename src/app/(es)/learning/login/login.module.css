@@ -9,4 +9,6 @@
 .submit{background:var(--lu-orange);color:var(--lu-black)}.submit:hover:not(:disabled){background:var(--lu-peach);color:var(--lu-black)}
 
 /* Login gradient supplied by the academy. */
-.page{background:linear-gradient(90deg,#e3edbb 0%,#f2d9b7 8.333%,#ebc5c3 16.667%,#e3b0c5 25%,#de92ca 33.333%,#d477d5 41.667%,#cd5edf 50%,#c543e4 58.333%,#b02ae2 66.667%,#970fd9 75%,#7e00d1 83.333%,#6500cb 91.667%,#5206c4 100%)}.brandPanel,.formPanel{background:transparent}
+.page{background:linear-gradient(90deg,#1645d1 0%,#0354b7 20%,#0067ad 40%,#037abb 60%,#0a90d5 80%,#23a5e5 100%)}.brandPanel,.formPanel{background:transparent}
+
+.logoPlate{background:white;box-shadow:0 18px 50px #00000018}.powered{color:white}.powered img{filter:brightness(0) invert(1)}
