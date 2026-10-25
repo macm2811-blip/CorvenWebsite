@@ -1,4 +1,5 @@
 "use client";
+import { CourseCover } from "@/components/course-cover";
 import {useState} from "react";
 import type {LmsStudent,LmsCourse} from "@/lib/lms/types";
 import type {academyOperationsAction} from "./student-actions";
@@ -18,7 +19,7 @@ export function AcademyDashboard({organizationId,students,courses,operations,onN
  <button type="button" onClick={()=>setReview("assessments")}><strong>{data?.reviews.length??"…"}</strong><span>Assessments</span><small>Grade open responses</small></button>
  <button type="button" onClick={()=>setReview("homework")}><strong>{data?.submissions.filter(s=>s.status!=="reviewed").length??"…"}</strong><span>Homework</span><small>Review submissions</small></button>
  <button type="button" onClick={()=>setReview("referrals")}><strong>{data?.referrals.length??"…"}</strong><span>Friend referrals</span><small>View & follow up</small></button></div>
- <section className={styles.schedule}><header><h2>Next classes</h2><button type="button" onClick={()=>onNavigate("sessions")}>Manage classes</button></header>{!operations?<p>Loading your schedule…</p>:sessions?.length?sessions.slice(0,3).map(s=><button className={styles.session} type="button" key={s.id} onClick={()=>onNavigate("sessions")}><span>{new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",timeZone:"America/Costa_Rica"}).format(new Date(s.starts_at))}</span><strong>{s.title}</strong><small>{new Intl.DateTimeFormat("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Costa_Rica"}).format(new Date(s.starts_at))}</small></button>):<button className={styles.empty} type="button" onClick={()=>onNavigate("sessions")}>Schedule your first class</button>}</section>
+ <section className={styles.schedule}><header><h2>Next classes</h2><button type="button" onClick={()=>onNavigate("sessions")}>Manage classes</button></header>{!operations?<p>Loading your schedule…</p>:sessions?.length?sessions.slice(0,3).map(s=><button className={styles.session} type="button" key={s.id} onClick={()=>onNavigate("sessions")}><div className={styles.sessionCover}><CourseCover url={s.cover_url??undefined}/></div><span>{new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",timeZone:"America/Costa_Rica"}).format(new Date(s.starts_at))}</span><strong>{s.title}</strong><small>{new Intl.DateTimeFormat("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/Costa_Rica"}).format(new Date(s.starts_at))}</small></button>):<button className={styles.empty} type="button" onClick={()=>onNavigate("sessions")}>Schedule your first class</button>}</section>
  {review&&<LearningViewer title={({assessments:"Assessment review",homework:"Homework review",referrals:"Friend referrals"})[review]} onClose={()=>setReview(null)}><AcademyReviewPanel organizationId={organizationId} students={students} mode={review}/></LearningViewer>}
  </div>;
 }

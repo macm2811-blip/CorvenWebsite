@@ -251,6 +251,7 @@ export async function saveSessionAction(input: {
   if (
     link.protocol !== "https:" ||
     !Number.isFinite(starts.getTime()) ||
+    !Number.isInteger(input.duration) || input.duration < 5 || input.duration > 480 ||
     input.title.trim().length < 2
   )
     throw new Error("Check the title, date and HTTPS link.");
@@ -278,7 +279,7 @@ export async function saveSessionAction(input: {
     duration_minutes: Math.min(480, Math.max(5, input.duration)),
     meeting_url: link.href,
     course_id: input.courseId || null,
-    status: input.status === "cancelled" ? "cancelled" : "scheduled",
+    status: ["scheduled","live","completed","cancelled"].includes(input.status??"") ? input.status! : "scheduled",
   };
   const result = input.id
     ? await db
@@ -286,6 +287,7 @@ export async function saveSessionAction(input: {
         .update(values)
         .eq("id", input.id)
         .eq("organization_id", input.organizationId)
+        .select("id").single()
     : await db
         .from("live_sessions")
         .insert({
@@ -294,17 +296,24 @@ export async function saveSessionAction(input: {
           instructor_id: userId,
         });
   if (result.error) throw new Error(result.error.message);
-  revalidatePath("/learning/platform");
+  // The workspace reloads its uncached session list without resetting navigation.
 }
 
-export async function createSessionWithCoverAction(form: FormData) {
+export async function saveSessionWithCoverAction(form: FormData) {
   const organizationId = String(form.get("organizationId") ?? "");
-  const {role} = await member(organizationId);
+  const {db,role} = await member(organizationId);
   if (!["academy_admin", "instructor"].includes(role)) throw new Error("Access restricted to academy staff.");
+  const id=String(form.get("id")??"");
+  let status="scheduled";
+  if(id){
+    const existing=await db.from("live_sessions").select("status").eq("id",id).eq("organization_id",organizationId).single();
+    if(existing.error || !existing.data) throw new Error("Class unavailable in this academy.");
+    status=existing.data.status;
+  }
   const file = form.get("cover");
   const admin = createAdminClient();
   let path: string | undefined;
-  let coverUrl: string | undefined;
+  let coverUrl: string | undefined = form.get("removeCover")==="true" ? "" : undefined;
   try {
     if (file instanceof File && file.size) {
       if (file.size > 2 * 1024 * 1024) throw new Error("The cover must not exceed 2 MB.");
@@ -319,7 +328,7 @@ export async function createSessionWithCoverAction(form: FormData) {
       if (upload.error) {path=undefined;throw new Error(upload.error.message);}
       coverUrl=admin.storage.from("organization-assets").getPublicUrl(path).data.publicUrl;
     }
-    await saveSessionAction({organizationId,title:String(form.get("title")??""),startsAt:String(form.get("startsAt")??""),duration:Number(form.get("duration")),meetingUrl:String(form.get("meetingUrl")??""),courseId:String(form.get("courseId")??""),lessonId:String(form.get("lessonId")??""),coverUrl});
+    await saveSessionAction({organizationId,id:id||undefined,status,title:String(form.get("title")??""),startsAt:String(form.get("startsAt")??""),duration:Number(form.get("duration")),meetingUrl:String(form.get("meetingUrl")??""),courseId:String(form.get("courseId")??""),lessonId:String(form.get("lessonId")??""),coverUrl});
   } catch(error) {
     if(path) await admin.storage.from("organization-assets").remove([path]);
     throw error;
