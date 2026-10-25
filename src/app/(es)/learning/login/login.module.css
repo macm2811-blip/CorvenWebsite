@@ -7,3 +7,6 @@
 .brandPanel{background:var(--lu-turquoise);color:var(--lu-black)}.brandPanel:after{border-color:color-mix(in srgb, white 18.82%, transparent)}.logoPlate{background:transparent;border:0;box-shadow:none}.powered{color:var(--lu-black)}.powered img{filter:brightness(0)}.formPanel{background:var(--lu-gray)}.formHeading span,.textButton{color:var(--lu-blue)}.submit{background:var(--lu-blue);box-shadow:0 5px 15px color-mix(in srgb, var(--lu-black) 14.51%, transparent)}.submit:hover:not(:disabled){background:var(--lu-blue-hover);box-shadow:0 8px 20px color-mix(in srgb, var(--lu-black) 20%, transparent)}.form input:focus{border-color:var(--lu-orange);box-shadow:0 0 0 3px color-mix(in srgb, var(--lu-black) 40%, transparent)}
 .formHeading h1{color:var(--lu-blue)}.formHeading p,.form label{color:var(--lu-black)}.textButton:hover{color:var(--lu-blue-hover);text-decoration:underline}.form input{color:var(--lu-black)}
 .submit{background:var(--lu-orange);color:var(--lu-black)}.submit:hover:not(:disabled){background:var(--lu-peach);color:var(--lu-black)}
+
+/* Login gradient supplied by the academy. */
+.page{background:linear-gradient(90deg,#e3edbb 0%,#f2d9b7 8.333%,#ebc5c3 16.667%,#e3b0c5 25%,#de92ca 33.333%,#d477d5 41.667%,#cd5edf 50%,#c543e4 58.333%,#b02ae2 66.667%,#970fd9 75%,#7e00d1 83.333%,#6500cb 91.667%,#5206c4 100%)}.brandPanel,.formPanel{background:transparent}
