@@ -60,6 +60,7 @@ export function LessonContent({lesson, showTitle = false, children}: {lesson: Le
   };
   return (
     <div
+      data-lesson-kind={lesson.content_type}
       style={{
         whiteSpace: "pre-wrap",
         backgroundImage: artworkBackground(config),
@@ -129,6 +130,7 @@ export function LessonContent({lesson, showTitle = false, children}: {lesson: Le
       {lesson.content_type === "image" && url && (
         <LessonImage
           src={url}
+          data-lesson-image
           alt={lesson.body || lesson.title}
           width={1000}
           height={600}
