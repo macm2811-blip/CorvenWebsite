@@ -105,7 +105,7 @@ function emptyBlock(kind: LmsCourseBlockKind, position: number): DraftBlock {
   const assessment = kind === "quiz" || kind === "exam";
   return {
     kind,
-    title: assessment ? (kind === "exam" ? "Final exam" : "Knowledge check") : `New block: ${kindLabel(kind).toLowerCase()}`,
+    title: assessment ? (kind === "exam" ? "Final exam" : "Knowledge check") : kind === "image" ? "" : `New block: ${kindLabel(kind).toLowerCase()}`,
     body: "",
     url: "",
     position,
@@ -447,7 +447,7 @@ export function CourseStudioWorkspace({ students = [], courses, setCourses, onNo
             <div className={styles.outlineList}>
               {visibleBlocks.map((block, index) => (
                 <button className={selectedId === block.id ? styles.outlineActive : ""} key={block.id} type="button" onClick={() => {if(selectedId !== block.id) selectBlock(block);}}>
-                  <i>{index + 1}</i><span><strong>{block.title}</strong><small>{kindLabel(block.kind)}</small></span>
+                  <i>{index + 1}</i><span><strong>{block.title || kindLabel(block.kind)}</strong><small>{kindLabel(block.kind)}</small></span>
                 </button>
               ))}
             </div>
@@ -578,7 +578,7 @@ function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
   };
   return <form className={styles.inspectorForm} onSubmit={onSubmit}>
     <div className={styles.inspectorTitle}><span>{kindLabel(draft.kind).toUpperCase()}</span><strong>{draft.id ? "Edit block" : "New block"}</strong></div>
-    <label>Title<input value={draft.title} onChange={(event) => setDraft((current) => current ? { ...current, title: event.target.value } : current)} required /></label>
+    <label>{draft.kind === "image" ? "Title (optional)" : "Title"}<input value={draft.title} onChange={(event) => setDraft((current) => current ? { ...current, title: event.target.value } : current)} required={draft.kind !== "image"} maxLength={180} /></label>
     {draft.kind === "text" && <>
       <label>Text style<select aria-label="Text style" value={draft.config.textStyle} onChange={(event) => updateConfig("textStyle", event.target.value as LmsCourseBlockConfig["textStyle"])}><option value="paragraph">Paragraph</option><option value="heading1">Main heading</option><option value="heading2">Section heading</option><option value="heading3">Subheading</option><option value="quote">Quote</option><option value="callout">Callout</option></select></label>
       <div className={styles.formatToolbar}>

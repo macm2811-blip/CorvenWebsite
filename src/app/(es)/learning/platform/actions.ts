@@ -859,7 +859,7 @@ export async function saveCourseBlockAction(input: {
     if (!validUuid(input.courseId)) throw new Error("Invalid course.");
     if (!courseBlockKinds.includes(input.block.kind)) throw new Error("Invalid content type.");
     const title = input.block.title.trim().replace(/\s+/g, " ").slice(0, 180);
-    if (title.length < 2) throw new Error("Add a block title.");
+    if (input.block.kind !== "image" && title.length < 2) throw new Error("Add a block title.");
     const body = input.block.body.trim().slice(0, 12000);
     const url = input.block.url.trim().slice(0, 2000);
     const config = normalizeBlockConfig(input.block.config);

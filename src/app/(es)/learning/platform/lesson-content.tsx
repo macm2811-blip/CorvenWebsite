@@ -122,7 +122,7 @@ export function LessonContent({lesson, showTitle = false, children}: {lesson: Le
             style={{ maxHeight: 300, width: "100%", objectFit: "contain" }}
           />
         )}
-      {showTitle && <h2 style={{color:"inherit",fontSize:"1.6em",fontWeight:700,margin:"0 0 16px"}}>{lesson.title}</h2>}
+      {showTitle && lesson.title.trim() && <h2 style={{color:"inherit",fontSize:"1.6em",fontWeight:700,margin:"0 0 16px"}}>{lesson.title}</h2>}
       {lesson.content_type === "youtube" && (
         <CourseVideo url={url} title={lesson.title} />
       )}
