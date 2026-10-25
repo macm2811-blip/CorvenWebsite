@@ -142,7 +142,7 @@ export function AcademyWorkspace({
         </p>
       )}
       {view!=="sessions"&&<AcademyReviewPanel organizationId={organizationId} students={students} mode={view==="income"?"payments":"all"}/>}
-      {!data && !error && <p>Loading recordsâ€¦</p>}
+      {!data && !error && <p>Loading records…</p>}
       {view === "sessions" && (
         <section className={styles.panel}>
           <h2>Schedule a class</h2>
@@ -167,7 +167,7 @@ export function AcademyWorkspace({
                 ))}
               </select>
             </label>
-            <label>Start page (optional)<select name="lessonId"><option value="">Continue at the studentâ€™s next page</option>{sessionPages.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
+            <label>Start page (optional)<select name="lessonId"><option value="">Continue at the student’s next page</option>{sessionPages.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
             <label>
               Date and time (local device time)
               <input name="startsAt" type="datetime-local" required />
@@ -207,7 +207,7 @@ export function AcademyWorkspace({
                   {new Date(s.starts_at).toLocaleString("en-US", {
                     timeZone: "America/Costa_Rica",
                   })}{" "}
-                  Â· {s.duration_minutes} minutes Â· {s.status}
+                  · {s.duration_minutes} minutes · {s.status}
                 </p>
                 {s.meeting_url && (
                   <a
@@ -215,7 +215,7 @@ export function AcademyWorkspace({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Open link â†—
+                    Open link ↗
                   </a>
                 )}
                 {view === "sessions" && s.status !== "cancelled" && (
