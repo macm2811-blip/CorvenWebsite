@@ -64,7 +64,7 @@ export async function studentDashboardAction(organizationId: string) {
   const sessions = await db
     .from("live_sessions")
     .select(
-      "id,title,starts_at,duration_minutes,meeting_url,recording_youtube_url,status,course_id,lesson_id",
+      "id,title,starts_at,duration_minutes,meeting_url,recording_youtube_url,status,course_id,lesson_id,cover_url",
     )
     .eq("organization_id", organizationId)
     .neq("status", "cancelled")
@@ -224,7 +224,7 @@ export async function academySessionsAction(organizationId: string) {
     throw new Error("Access restricted to academy staff.");
   const result = await db
     .from("live_sessions")
-    .select("id,title,starts_at,duration_minutes,meeting_url,status,course_id")
+    .select("id,title,starts_at,duration_minutes,meeting_url,status,course_id,lesson_id,cover_url")
     .eq("organization_id", organizationId)
     .order("starts_at");
   if (result.error) throw new Error(result.error.message);
@@ -241,6 +241,7 @@ export async function saveSessionAction(input: {
   id?: string;
   lessonId?:string;
   status?: string;
+  coverUrl?: string;
 }) {
   const { db, userId, role } = await member(input.organizationId);
   if (!["academy_admin", "instructor"].includes(role))
@@ -263,8 +264,15 @@ export async function saveSessionAction(input: {
     if (course.error) throw new Error("Invalid course.");
   }
   if(input.lessonId){if(!input.courseId)throw new Error("Choose a unit first.");const modules=await db.from("modules").select("id").eq("course_id",input.courseId);if(modules.error)throw modules.error;const page=await db.from("lessons").select("id").eq("id",input.lessonId).in("module_id",modules.data.map(m=>m.id)).single();if(page.error)throw new Error("Invalid start page.");}
+  if (input.coverUrl) {
+    const cover = new URL(input.coverUrl);
+    const base = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
+    if (cover.origin !== base.origin || !cover.pathname.startsWith(`/storage/v1/object/public/organization-assets/${input.organizationId}/live-sessions/`) || cover.search || cover.hash)
+      throw new Error("Invalid class cover.");
+  }
   const values = {
-    lesson_id:input.lessonId||null,
+    ...(input.coverUrl !== undefined ? {cover_url:input.coverUrl || null} : {}),
+    ...(input.lessonId !== undefined ? {lesson_id:input.lessonId||null} : {}),
     title: input.title.trim().slice(0, 180),
     starts_at: starts.toISOString(),
     duration_minutes: Math.min(480, Math.max(5, input.duration)),
@@ -287,6 +295,35 @@ export async function saveSessionAction(input: {
         });
   if (result.error) throw new Error(result.error.message);
   revalidatePath("/learning/platform");
+}
+
+export async function createSessionWithCoverAction(form: FormData) {
+  const organizationId = String(form.get("organizationId") ?? "");
+  const {role} = await member(organizationId);
+  if (!["academy_admin", "instructor"].includes(role)) throw new Error("Access restricted to academy staff.");
+  const file = form.get("cover");
+  const admin = createAdminClient();
+  let path: string | undefined;
+  let coverUrl: string | undefined;
+  try {
+    if (file instanceof File && file.size) {
+      if (file.size > 2 * 1024 * 1024) throw new Error("The cover must not exceed 2 MB.");
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const valid = file.type === "image/png" ? [137,80,78,71,13,10,26,10].every((b,i)=>bytes[i]===b)
+        : file.type === "image/jpeg" ? bytes[0]===255 && bytes[1]===216 && bytes[2]===255
+        : file.type === "image/webp" && String.fromCharCode(...bytes.slice(0,4))==="RIFF" && String.fromCharCode(...bytes.slice(8,12))==="WEBP";
+      if (!valid) throw new Error("Choose a valid PNG, JPG or WEBP cover.");
+      const extension = file.type === "image/png" ? "png" : file.type === "image/jpeg" ? "jpg" : "webp";
+      path = `${organizationId}/live-sessions/${crypto.randomUUID()}.${extension}`;
+      const upload = await admin.storage.from("organization-assets").upload(path,file,{contentType:file.type,upsert:false});
+      if (upload.error) {path=undefined;throw new Error(upload.error.message);}
+      coverUrl=admin.storage.from("organization-assets").getPublicUrl(path).data.publicUrl;
+    }
+    await saveSessionAction({organizationId,title:String(form.get("title")??""),startsAt:String(form.get("startsAt")??""),duration:Number(form.get("duration")),meetingUrl:String(form.get("meetingUrl")??""),courseId:String(form.get("courseId")??""),lessonId:String(form.get("lessonId")??""),coverUrl});
+  } catch(error) {
+    if(path) await admin.storage.from("organization-assets").remove([path]);
+    throw error;
+  }
 }
 
 export async function academyOperationsAction(organizationId: string) {

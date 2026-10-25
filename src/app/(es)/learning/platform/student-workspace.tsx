@@ -255,7 +255,7 @@ export function StudentWorkspace({
               </h2>
               {dashboard?.sessions.length ? (
                 dashboard.sessions.map((s) => (
-                  <article className={styles.session} key={s.id}>
+                  <article className={styles.liveCard} key={s.id}><div className={styles.liveCover}><CourseCover url={s.cover_url??undefined}/></div><div className={styles.liveDetails}>
                     <div>
                       <h3>{s.title}</h3>
                       <p>
@@ -274,7 +274,7 @@ export function StudentWorkspace({
                         />
                       )}
                     </div>
-                  </article>
+                  </div></article>
                 ))
               ) : (
                   <div className={styles.emptyState}><span aria-hidden="true">◷</span><strong>No classes scheduled yet</strong><p>Schedules and links published by your academy will appear here.</p></div>

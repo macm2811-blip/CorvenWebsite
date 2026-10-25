@@ -206,3 +206,5 @@
 .workspace .continueCta{display:block;margin:0 0 16px;max-width:100%;padding:12px 18px;background:var(--lu-orange);color:var(--lu-black);border:1px solid var(--lu-orange);font-weight:800;line-height:1.5;text-align:left}.workspace .continueCta:hover{background:var(--lu-peach)}
 
 .referral{margin-top:0;margin-bottom:24px}.courseCardBody>p{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.courseCardBody h2{min-height:2.7em}
+
+.coverField{grid-column:1/-1}.coverPreview{max-width:320px;overflow:hidden;border-radius:12px;border:1px solid var(--lu-line)}.coverField small{font-weight:400;color:var(--lu-muted)}.liveCard{display:flex;gap:24px;align-items:center;padding:20px 0}.liveCover{width:240px;flex-shrink:0;border-radius:12px;overflow:hidden}.liveDetails{flex:1;min-width:0}.liveDetails h3{margin-top:0;color:var(--lu-blue)}.liveDetails button{margin-left:12px}@media(max-width:700px){.liveCard{align-items:stretch;flex-direction:column;gap:14px}.liveCover{width:100%;max-width:420px}.liveDetails button{margin:10px 0 0}}
