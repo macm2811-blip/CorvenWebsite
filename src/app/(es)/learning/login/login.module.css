@@ -11,4 +11,4 @@
 /* Login gradient supplied by the academy. */
 .page{background:linear-gradient(90deg,#1645d1 0%,#0354b7 20%,#0067ad 40%,#037abb 60%,#0a90d5 80%,#23a5e5 100%)}.brandPanel,.formPanel{background:transparent}
 
-.logoPlate{background:white;box-shadow:0 18px 50px #00000018}.powered{color:white}.powered img{filter:brightness(0) invert(1)}
+.logoPlate{background:transparent;border:0;box-shadow:none}.powered{color:white}.powered img{filter:brightness(0) invert(1)}
