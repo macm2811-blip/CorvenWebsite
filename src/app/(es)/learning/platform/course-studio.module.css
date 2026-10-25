@@ -25,3 +25,7 @@
 .catalog :is(h1,h2,h3),.studio :is(h1,h2,h3){color:var(--lu-blue)}.createButton:hover:not(:disabled),.saveButton:hover:not(:disabled){background:var(--lu-blue-hover);color:white}.catalog button:focus-visible{outline:3px solid var(--lu-blue);outline-offset:3px}
 .studio .studioHeader h2{color:white}
 .catalog .createButton,.studio .saveButton{background:var(--lu-orange);color:var(--lu-black);border-color:var(--lu-orange)}.catalog .createButton:hover:not(:disabled),.studio .saveButton:hover:not(:disabled){background:var(--lu-peach);color:var(--lu-black)}
+
+.courseCover{display:block;height:auto;padding:0;cursor:pointer}.courseBody{text-align:center}.courseMeta,.courseActions{justify-content:center;flex-wrap:wrap}.courseBody>p{line-height:1.65}.coverSettings{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:white}.coverSettings>strong{color:var(--lu-blue);font-size:12px}.coverSettings>button{padding:8px;border:1px solid var(--lu-line);border-radius:8px;background:white;color:var(--lu-blue)}.coverSettings input[type=file]{width:100%;font-size:11px}.coverSettings .uploadBox{line-height:1.6}.courseCover:focus-visible{outline:3px solid var(--lu-yellow);outline-offset:-3px}
+
+.courseBody h3{font-size:18px;line-height:1.4;min-height:2.8em}.courseBody>p{font-size:12px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.courseMeta,.courseActions button{font-size:12px}.courseActions button{min-height:40px}

@@ -277,6 +277,7 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
       color: text(course.cover_url).startsWith("color:")
         ? text(course.cover_url).slice(6)
         : ["#2C55A2", "#ea580c", "#0891b2"][index % 3],
+      coverUrl: text(course.cover_url).startsWith("https://") ? text(course.cover_url) : undefined,
       published: course.status === "published",
     };
   });
@@ -460,7 +461,8 @@ export async function loadPlatformData(): Promise<LmsInitialData | null> {
             students: courseEnrollments.length,
             youtubeUrl: text(courseLessons.find((lesson) => text(lesson.youtube_url))?.youtube_url),
             color: ["#2C55A2", "#ea580c", "#0891b2"][courseIndex % 3],
-            published: course.status === "published",
+            coverUrl: text(course.cover_url).startsWith("https://") ? text(course.cover_url) : undefined,
+      published: course.status === "published",
           };
         }),
       };

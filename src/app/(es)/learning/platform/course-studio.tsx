@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { CourseCover } from "@/components/course-cover";
 import { LevelFolders } from "@/components/level-folders";
 import { createLevelFolderAction, levelFoldersAction } from "./level-actions";
 import { CEFR_LEVELS } from "@/lib/lms/learning-path";
@@ -146,7 +147,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     template: "guided" as "blank" | "guided" | "single",
     passingScore: 80,
   });
-  const [settings, setSettings] = useState({ title: "", level: "A1", description: "", color: "#2C55A2" });
+  const [newCover, setNewCover] = useState<File | null>(null);
+  const [settings, setSettings] = useState({ title: "", level: "A1", description: "", color: "#2C55A2", coverUrl: "" });
 
   async function openCourse(course: LmsCourse) {
     setEditingCourse(course);
@@ -155,6 +157,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       level: course.level.split(" · ")[0] || "A1",
       description: course.description,
       color: course.color,
+      coverUrl: course.coverUrl ?? "",
     });
     setSelectedId(null);
     setDraft(null);
@@ -174,6 +177,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   async function createCourse(event: FormEvent) {
     event.preventDefault();
     if (!newCourse.title.trim()) return;
+    if (newCover && (newCover.size > 2*1024*1024 || !["image/png","image/jpeg","image/webp"].includes(newCover.type))) return onNotify("Choose a JPG, PNG or WEBP cover up to 2 MB.");
     setBusy(true);
     let id: string | number = Date.now();
     if (persistent && organizationId) {
@@ -190,16 +194,27 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     const course: LmsCourse = {
       id,
       title: newCourse.title.trim(),
-      level: `${newCourse.level} · Borrador`,
-      description: newCourse.description.trim() || "Curso de LevelUp.",
+      level: `${newCourse.level} · Draft`,
+      description: newCourse.description.trim() || "A new step in your English journey.",
       progress: 0,
       lessons: newCourse.template === "guided" ? 3 : newCourse.template === "single" || newCourse.youtubeUrl ? 1 : 0,
-      duration: "Por definir",
+      duration: "Not set",
       students: 0,
       youtubeUrl: newCourse.youtubeUrl,
       color: newCourse.color,
       published: false,
     };
+    if (newCover && organizationId && persistent && typeof id === "string") {
+      const form = new FormData(); form.set("organizationId", organizationId); form.set("courseId", id); form.set("image", newCover);
+      try {
+        const upload = await uploadCourseImageAction(form);
+        if (!upload.ok || !upload.data) throw new Error(upload.message);
+        const saved = await updateCourseDetailsAction({organizationId,courseId:id,title:course.title,description:course.description,level:newCourse.level,color:course.color,coverUrl:upload.data.url});
+        if (!saved.ok) throw new Error(saved.message);
+        course.coverUrl = upload.data.url;
+      } catch(error) { onNotify(`Course created. Cover was not saved: ${error instanceof Error ? error.message : "Please try again in Course details."}`); }
+    }
+    setNewCover(null);
     setCourses((current) => [...current, course]);
     setNewCourse({ title: "", level: newCourse.level, description: "", youtubeUrl: "", color: "#2C55A2", template: "guided", passingScore: 80 });
     setShowCreate(false);
@@ -223,6 +238,20 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
     setCourses((current) => current.map((item) => item.id === course.id ? updated : item));
   }
 
+  async function uploadCover(file?: File) {
+    if (!file || !editingCourse || !organizationId) return;
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.set("organizationId", organizationId); form.set("courseId", String(editingCourse.id)); form.set("image", file);
+      const result = await uploadCourseImageAction(form);
+      if (!result.ok || !result.data) throw new Error(result.message);
+      setSettings(current => ({...current, coverUrl: result.data!.url}));
+      onNotify("Cover ready. Save changes to apply it to the course.");
+    } catch (error) { onNotify(error instanceof Error ? error.message : "Unable to upload cover. Please try again."); }
+    finally { setBusy(false); }
+  }
+
   async function saveCourseSettings(event: FormEvent) {
     event.preventDefault();
     if (!editingCourse) return;
@@ -243,6 +272,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       level: `${settings.level} · ${editingCourse.published ? "Published" : "Draft"}`,
       description: settings.description,
       color: settings.color,
+      coverUrl: settings.coverUrl || undefined,
     };
     setEditingCourse(updated);
     setCourses((current) => current.map((course) => course.id === updated.id ? updated : course));
@@ -434,7 +464,7 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
 
           <aside className={styles.inspectorPanel} id="course-properties">
             {selectedId === "settings" ? (
-              <CourseSettingsForm settings={settings} setSettings={setSettings} busy={busy} onSubmit={saveCourseSettings} />
+              <CourseSettingsForm settings={settings} setSettings={setSettings} busy={busy} onSubmit={saveCourseSettings} onUpload={uploadCover} />
             ) : draft ? (
               <BlockInspector draft={draft} setDraft={setDraft} busy={busy} onSubmit={saveBlock} onUpload={uploadImage} />
             ) : (
@@ -467,7 +497,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
           <div className={styles.createGrid}>
             <label className={styles.wide}>Course name<input value={newCourse.title} onChange={(event) => setNewCourse((current) => ({ ...current, title: event.target.value }))} placeholder="e.g. Business English B1" required /></label>
             <label>Level<select value={newCourse.level} onChange={(event) => setNewCourse((current) => ({ ...current, level: event.target.value }))}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label>
-            <label>Cover color<div className={styles.colorInput}><input type="color" value={newCourse.color} onChange={(event) => setNewCourse((current) => ({ ...current, color: event.target.value }))} /><span>{newCourse.color.toUpperCase()}</span></div></label>
+            <label>Fallback color<div className={styles.colorInput}><input type="color" value={newCourse.color} onChange={(event) => setNewCourse((current) => ({ ...current, color: event.target.value }))} /><span>{newCourse.color.toUpperCase()}</span></div></label>
+            <label className={styles.full}>Cover photo (optional)<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={event=>setNewCover(event.target.files?.[0]??null)}/><small>JPG, PNG or WEBP · up to 2 MB. You can also add or change it later in Course details.</small></label>
             <label>Starting template<select value={newCourse.template} onChange={(event) => setNewCourse((current) => ({ ...current, template: event.target.value as "blank" | "guided" | "single" }))}><option value="guided">Guided structure</option><option value="single">One starter lesson</option><option value="blank">Blank course</option></select></label>
             <label>Passing score<input type="number" min="0" max="100" value={newCourse.passingScore} onChange={(event) => setNewCourse((current) => ({ ...current, passingScore: Number(event.target.value) }))} /></label>
             <label className={styles.full}>Description<textarea value={newCourse.description} onChange={(event) => setNewCourse((current) => ({ ...current, description: event.target.value }))} placeholder="What will the student learn?" /></label>
@@ -480,8 +511,8 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
       {!levelFolder?<LevelFolders levels={Array.from(new Set([...folders,...courses.map(c=>c.level.split(" · ")[0])])).sort()} courses={courses} onOpen={level=>{setLevelFolder(level);setNewCourse(current=>({...current,level}));}}/>:<><button type="button" onClick={()=>setLevelFolder(null)}>← All levels</button><h2>{levelFolder} · Units</h2><div className={styles.courseGrid}>
         {courses.filter((course) => course.level.split(" · ")[0]===levelFolder && course.title.toLowerCase().includes(query.toLowerCase()) && (filter === "All" || (filter === "Published" ? course.published : !course.published))).map((course) => (
           <article className={styles.courseCard} key={course.id}>
-            <button className={styles.courseCover} style={{ background: `linear-gradient(135deg, ${course.color}, #000000)` }} type="button" onClick={() => void openCourse(course)}>
-              <span>{course.level.split(" · ")[0]}</span><i>▤</i><small>{course.published ? "PUBLISHED" : "DRAFT"}</small>
+            <button className={styles.courseCover} aria-label={`Edit ${course.title}`} type="button" onClick={() => void openCourse(course)}>
+              <CourseCover url={course.coverUrl} color={course.color} level={course.level.split(" · ")[0]} />
             </button>
             <div className={styles.courseBody}>
               <span className={course.published ? styles.published : styles.draftStatus}>{course.published ? "Published" : "Draft"}</span>
@@ -497,13 +528,14 @@ export function CourseStudioWorkspace({ courses, setCourses, onNotify, persisten
   );
 }
 
-function CourseSettingsForm({ settings, setSettings, busy, onSubmit }: {
-  settings: { title: string; level: string; description: string; color: string };
-  setSettings: React.Dispatch<React.SetStateAction<{ title: string; level: string; description: string; color: string }>>;
+function CourseSettingsForm({ settings, setSettings, busy, onSubmit, onUpload }: {
+  settings: { title: string; level: string; description: string; color: string; coverUrl: string };
+  setSettings: React.Dispatch<React.SetStateAction<{ title: string; level: string; description: string; color: string; coverUrl: string }>>;
   busy: boolean;
   onSubmit: (event: FormEvent) => void;
+  onUpload: (file?: File) => Promise<void>;
 }) {
-  return <form className={styles.inspectorForm} onSubmit={onSubmit}><div className={styles.inspectorTitle}><span>SETTINGS</span><strong>Course details</strong></div><label>Name<input value={settings.title} onChange={(event) => setSettings((current) => ({ ...current, title: event.target.value }))} required /></label><label>Level<select value={settings.level} onChange={(event) => setSettings((current) => ({ ...current, level: event.target.value }))}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label><label>Description<textarea value={settings.description} onChange={(event) => setSettings((current) => ({ ...current, description: event.target.value }))} /></label><label>Cover color<div className={styles.colorInput}><input type="color" value={settings.color} onChange={(event) => setSettings((current) => ({ ...current, color: event.target.value }))} /><span>{settings.color.toUpperCase()}</span></div></label><button className={styles.saveButton} disabled={busy} type="submit">{busy ? "Saving…" : "Save changes"}</button></form>;
+  return <form className={styles.inspectorForm} onSubmit={onSubmit}><div className={styles.inspectorTitle}><span>SETTINGS</span><strong>Course details</strong></div><label>Name<input value={settings.title} onChange={(event) => setSettings((current) => ({ ...current, title: event.target.value }))} required /></label><label>Level<select value={settings.level} onChange={(event) => setSettings((current) => ({ ...current, level: event.target.value }))}><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option></select></label><label>Description<textarea value={settings.description} onChange={(event) => setSettings((current) => ({ ...current, description: event.target.value }))} /></label><div className={styles.coverSettings}><strong>Course cover</strong><CourseCover url={settings.coverUrl} color={settings.color} level={settings.level}/><label className={styles.uploadBox}>Upload cover photo<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={event => {void onUpload(event.target.files?.[0]); event.target.value="";}}/><span>JPG, PNG or WEBP · up to 2 MB. Landscape 16:9 works best. Save changes to apply your cover.</span></label>{settings.coverUrl && <button type="button" disabled={busy} onClick={()=>setSettings(current=>({...current,coverUrl:""}))}>Remove photo</button>}</div><label>Fallback color<div className={styles.colorInput}><input type="color" value={settings.color} onChange={(event) => setSettings((current) => ({ ...current, color: event.target.value }))} /><span>{settings.color.toUpperCase()}</span></div></label><button className={styles.saveButton} disabled={busy} type="submit">{busy ? "Saving…" : "Save changes"}</button></form>;
 }
 
 function BlockInspector({ draft, setDraft, busy, onSubmit, onUpload }: {
