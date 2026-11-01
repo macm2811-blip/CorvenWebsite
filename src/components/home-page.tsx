@@ -5,7 +5,7 @@ type Locale = "es" | "en";
 
 const content = {
   es: {
-    ids: { home: "inicio", solutions: "soluciones", diagnostic: "diagnostico", process: "como-trabajamos", about: "sobre-corven", contact: "contacto" },
+    ids: { home: "inicio", solutions: "soluciones", portfolio: "portafolio", pricing: "precios", diagnostic: "diagnostico", process: "como-trabajamos", about: "sobre-corven", contact: "contacto" },
     hero: {
       eyebrow: "Operaciones · Datos · Estrategia", title: "Construya su", titleAccent: "futuro.",
       lead: "CORVEN integra gestión operativa, visualización de datos y proyección estratégica para ayudar a las empresas a actuar hoy con una visión más clara del mañana.",
@@ -22,6 +22,32 @@ const content = {
         ["2", "Datos que se entienden", "Convertimos información dispersa en indicadores y visualizaciones claras que muestran qué está ocurriendo en la empresa."],
         ["3", "Proyección para decidir", "Construimos escenarios y proyecciones que ayudan a anticipar posibilidades y tomar mejores decisiones en el presente."],
       ],
+    },
+    portfolio: {
+      eyebrow: "Portafolio CORVEN",
+      title: "Sistemas y productos construidos para convertir claridad en ejecución.",
+      intro: "Nuestro portafolio muestra capacidades desarrolladas por CORVEN. Los ejercicios de diseño se identifican como tales y no se presentan como clientes ni resultados reales.",
+      items: [
+        ["01", "Operations Management Costa Rica", "Sistema completo para ejecutar consultorías: diagnóstico, formularios, propuesta, SOW, plan de 30 días, seguimiento y control del portafolio.", "Producto operativo interno"],
+        ["02", "Diagnóstico Operativo Express", "Servicio de entrada para empresas que necesitan identificar prioridades, ordenar acciones y comenzar a mejorar sin un proyecto largo.", "Servicio listo para lanzamiento"],
+        ["03", "Corven Learning", "Plataforma de aprendizaje con administración de cursos, rutas formativas y experiencia para estudiantes.", "Producto digital en desarrollo"],
+        ["04", "Irka Store y DOTCOM", "Dos ejercicios prácticos usados para diseñar y probar el método en comercio local y servicios de campo. No fueron consultorías ejecutadas.", "Ejercicios de diseño"],
+      ],
+    },
+    pricing: {
+      eyebrow: "Catálogo inicial",
+      title: "Una entrada accesible y servicios que crecen con la necesidad.",
+      intro: "Publicamos únicamente el precio comercial aprobado. La implementación y el acompañamiento se cotizan después de entender el alcance real.",
+      launchBadge: "Promoción de lanzamiento",
+      regularLabel: "Valor regular",
+      investmentLabel: "Inversión actual",
+      packages: [
+        ["Diagnóstico Operativo Express", "₡40.000", "₡150.000", "Panorama de la operación, tres prioridades, recomendaciones ordenadas y plan inicial de 30 días.", "Precio promocional por tiempo limitado."],
+        ["Sprint de Mejora de Procesos", "Según alcance", "", "Diseño y mejora de un proceso prioritario, con responsables, controles y métricas básicas.", "Se cotiza después del diagnóstico."],
+        ["Acompañamiento de Gestión", "Según alcance", "", "Seguimiento periódico para ejecutar el plan, revisar avances y sostener las mejoras.", "Frecuencia y duración definidas con el cliente."],
+      ],
+      note: "El precio final depende del alcance, complejidad, cantidad de personas y necesidad de trabajo presencial.",
+      cta: "Solicitar diagnóstico",
     },
     diagnostic: {
       eyebrow: "Servicio de entrada", title: "Diagnóstico Operativo Express: claridad para decidir qué mejorar primero.",
@@ -65,7 +91,7 @@ const content = {
     contact: { eyebrow: "Conversemos", title: "Construyamos una visión más clara para su empresa.", text: "Cuéntenos qué necesita entender, mejorar o proyectar. Empezaremos por identificar la conversación más útil para avanzar.", email: "Correo electrónico", whatsapp: "WhatsApp", pending: "Datos de contacto pendientes de confirmación antes de publicar." },
   },
   en: {
-    ids: { home: "home", solutions: "solutions", diagnostic: "diagnostic", process: "how-we-work", about: "about-corven", contact: "contact" },
+    ids: { home: "home", solutions: "solutions", portfolio: "portfolio", pricing: "pricing", diagnostic: "diagnostic", process: "how-we-work", about: "about-corven", contact: "contact" },
     hero: {
       eyebrow: "Operations · Data · Strategy", title: "Build your", titleAccent: "future.",
       lead: "CORVEN brings together operations management, data visualization, and strategic forecasting to help companies act today with a clearer view of tomorrow.",
@@ -82,6 +108,32 @@ const content = {
         ["2", "Data you can understand", "We turn scattered information into clear indicators and visualizations that reveal what is happening across the company."],
         ["3", "Foresight for better decisions", "We build scenarios and projections that help companies anticipate possibilities and make better decisions today."],
       ],
+    },
+    portfolio: {
+      eyebrow: "CORVEN portfolio",
+      title: "Systems and products built to turn clarity into execution.",
+      intro: "Our portfolio presents capabilities developed by CORVEN. Design exercises are clearly identified and are not represented as clients or real results.",
+      items: [
+        ["01", "Costa Rica Operations Management", "An end-to-end consulting system covering diagnostics, forms, proposals, SOWs, 30-day plans, follow-up, and portfolio control.", "Internal operating product"],
+        ["02", "Express Operations Diagnostic", "An entry service for companies that need to identify priorities, organize action, and start improving without a long engagement.", "Ready to launch"],
+        ["03", "Corven Learning", "A learning platform with course administration, learning paths, and a student experience.", "Digital product in development"],
+        ["04", "Irka Store and DOTCOM", "Two practical exercises used to design and test the method for local retail and field services. They were not delivered consulting engagements.", "Design exercises"],
+      ],
+    },
+    pricing: {
+      eyebrow: "Initial catalog",
+      title: "An accessible starting point, with services that scale to the need.",
+      intro: "We publish only the approved commercial price. Implementation and ongoing support are quoted after the real scope is understood.",
+      launchBadge: "Launch promotion",
+      regularLabel: "Regular value",
+      investmentLabel: "Current investment",
+      packages: [
+        ["Express Operations Diagnostic", "CRC 40,000", "CRC 150,000", "An operational overview, three priorities, ordered recommendations, and an initial 30-day plan.", "Limited-time promotional price."],
+        ["Process Improvement Sprint", "Scope-based", "", "Design and improvement of one priority process, with owners, controls, and basic metrics.", "Quoted after the diagnostic."],
+        ["Management Support", "Scope-based", "", "Periodic support to execute the plan, review progress, and sustain improvements.", "Cadence and duration are defined with the client."],
+      ],
+      note: "Final pricing depends on scope, complexity, number of people, and required on-site work.",
+      cta: "Request a diagnostic",
     },
     diagnostic: {
       eyebrow: "Entry service", title: "Express Operations Diagnostic: clarity on what to improve first.",
@@ -146,7 +198,20 @@ export function HomePage({ locale }: { locale: Locale }) {
         </section>
         <section className="signal-strip" aria-label={c.signal.label}><div className="container signal-content"><span className="signal-mark">C</span><p>{c.signal.text} <strong>{c.signal.strong}</strong></p></div></section>
         <section className="section section-challenges" id={c.ids.solutions}><div className="container"><div className="section-heading heading-split"><div><p className="eyebrow">{c.solutions.eyebrow}</p><h2>{c.solutions.title}</h2></div><p>{c.solutions.intro}</p></div><div className="challenge-grid solutions-grid">{c.solutions.items.map(([number, title, text]) => <article className="challenge-card" key={number}><span>{number}</span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+        <section className="section section-portfolio" id={c.ids.portfolio}>
+          <div className="container">
+            <div className="section-heading heading-split"><div><p className="eyebrow">{c.portfolio.eyebrow}</p><h2>{c.portfolio.title}</h2></div><p>{c.portfolio.intro}</p></div>
+            <div className="portfolio-grid">{c.portfolio.items.map(([number, title, text, status]) => <article className="portfolio-card" key={number}><div className="portfolio-meta"><span>{number}</span><small>{status}</small></div><h3>{title}</h3><p>{text}</p></article>)}</div>
+          </div>
+        </section>
         <section className="section section-diagnostic" id={c.ids.diagnostic}><div className="container diagnostic-grid"><div className="diagnostic-copy"><p className="eyebrow eyebrow-light">{c.diagnostic.eyebrow}</p><h2>{c.diagnostic.title}</h2><p>{c.diagnostic.intro}</p></div><div className="deliverables-card"><p className="card-kicker">{c.diagnostic.deliverablesTitle}</p><ul>{c.diagnostic.deliverables.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul><p className="deliverables-note">{c.diagnostic.note}</p></div></div></section>
+        <section className="section section-pricing" id={c.ids.pricing}>
+          <div className="container">
+            <div className="section-heading heading-split"><div><p className="eyebrow">{c.pricing.eyebrow}</p><h2>{c.pricing.title}</h2></div><p>{c.pricing.intro}</p></div>
+            <div className="pricing-grid">{c.pricing.packages.map(([title, price, regular, text, note], index) => <article className={`price-card${index === 0 ? " price-card-featured" : ""}`} key={title}>{index === 0 && <span className="price-badge">{c.pricing.launchBadge}</span>}<h3>{title}</h3><div className="price-block"><small>{c.pricing.investmentLabel}</small><strong>{price}</strong>{regular && <span>{c.pricing.regularLabel}: <del>{regular}</del></span>}</div><p>{text}</p><small className="price-note">{note}</small></article>)}</div>
+            <div className="pricing-footer"><p>{c.pricing.note}</p><a className="button button-brand" href={`#${c.ids.contact}`}>{c.pricing.cta}<span aria-hidden="true">→</span></a></div>
+          </div>
+        </section>
         <section className="section section-snapshot" aria-labelledby={`snapshot-title-${locale}`}><div className="container snapshot-section-grid"><div className="snapshot-section-copy"><p className="eyebrow">{c.snapshot.eyebrow}</p><h2 id={`snapshot-title-${locale}`}>{c.snapshot.title}</h2><p>{c.snapshot.intro}</p></div><div className="snapshot-wrap" aria-label={c.snapshot.aria}><div className="snapshot-note"><span aria-hidden="true"></span> {c.snapshot.example}</div><article className="snapshot-card"><div className="snapshot-header"><div><p>{c.snapshot.cardTitle}</p><strong>{c.snapshot.cardStrong}</strong></div><span>{c.snapshot.timing}</span></div><div className="snapshot-body"><p className="snapshot-label">{c.snapshot.label}</p>{c.snapshot.priorities.map(([number, title, text], index) => <div className={`priority ${["priority-high", "priority-medium", "priority-low"][index]}`} key={number}><span>{number}</span><div><strong>{title}</strong><small>{text}</small></div></div>)}</div><div className="snapshot-footer">{c.snapshot.footer.map((item) => <span key={item}>{item}</span>)}</div></article></div></div></section>
         <section className="section section-process" id={c.ids.process}><div className="container"><div className="section-heading centered-heading"><p className="eyebrow">{c.process.eyebrow}</p><h2>{c.process.title}</h2><p>{c.process.intro}</p></div><ol className="process-grid process-grid-four">{c.process.items.map(([title, text]) => <li key={title}><h3>{title}</h3><p>{text}</p></li>)}</ol></div></section>
         <section className="section section-vision" id={c.ids.about}><div className="container"><div className="about-statement"><p className="eyebrow eyebrow-light">{c.vision.eyebrow}</p><h2>{c.vision.title}</h2><p>{c.vision.intro}</p></div><div className="purpose-grid"><article><p className="eyebrow">{c.vision.missionLabel}</p><h3>{c.vision.missionTitle}</h3><p>{c.vision.missionText}</p></article><article><p className="eyebrow">{c.vision.visionLabel}</p><h3>{c.vision.visionTitle}</h3><p>{c.vision.visionText}</p></article></div><div className="pillars-heading"><p className="eyebrow">{c.vision.pillarsTitle}</p><p>{c.vision.pillarsIntro}</p></div><div className="pillars-grid">{c.vision.pillars.map(([title, text]) => <article className="pillar-card" key={title}><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
