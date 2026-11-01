@@ -25,13 +25,12 @@ const content = {
     },
     portfolio: {
       eyebrow: "Portafolio CORVEN",
-      title: "Sistemas y productos construidos para convertir claridad en ejecución.",
-      intro: "Nuestro portafolio muestra capacidades desarrolladas por CORVEN. Los ejercicios de diseño se identifican como tales y no se presentan como clientes ni resultados reales.",
+      title: "Plataformas desarrolladas para resolver necesidades reales de gestión.",
+      intro: "Estos proyectos muestran cómo CORVEN convierte procesos de negocio en herramientas digitales claras, organizadas y listas para operar.",
       items: [
-        ["01", "Operations Management Costa Rica", "Sistema completo para ejecutar consultorías: diagnóstico, formularios, propuesta, SOW, plan de 30 días, seguimiento y control del portafolio.", "Producto operativo interno"],
-        ["02", "Diagnóstico Operativo Express", "Servicio de entrada para empresas que necesitan identificar prioridades, ordenar acciones y comenzar a mejorar sin un proyecto largo.", "Servicio listo para lanzamiento"],
-        ["03", "Corven Learning", "Plataforma de aprendizaje con administración de cursos, rutas formativas y experiencia para estudiantes.", "Producto digital en desarrollo"],
-        ["04", "Irka Store y DOTCOM", "Dos ejercicios prácticos usados para diseñar y probar el método en comercio local y servicios de campo. No fueron consultorías ejecutadas.", "Ejercicios de diseño"],
+        ["01", "PISTON", "Plataforma de gestión para talleres que digitaliza y organiza el trabajo operativo en un solo sistema.", "Plataforma para talleres"],
+        ["02", "Level Up", "Plataforma LMS para administrar experiencias de aprendizaje, cursos, contenido y participación de estudiantes.", "Plataforma de aprendizaje"],
+        ["03", "Portal COMFETRASA", "Plataforma de gestión laboral estilo CRM que centraliza información, seguimiento y procesos de atención en un entorno organizado.", "Plataforma de gestión laboral"],
       ],
     },
     pricing: {
@@ -111,13 +110,12 @@ const content = {
     },
     portfolio: {
       eyebrow: "CORVEN portfolio",
-      title: "Systems and products built to turn clarity into execution.",
-      intro: "Our portfolio presents capabilities developed by CORVEN. Design exercises are clearly identified and are not represented as clients or real results.",
+      title: "Platforms developed to solve real management needs.",
+      intro: "These projects show how CORVEN turns business processes into clear, organized digital tools that are ready to operate.",
       items: [
-        ["01", "Costa Rica Operations Management", "An end-to-end consulting system covering diagnostics, forms, proposals, SOWs, 30-day plans, follow-up, and portfolio control.", "Internal operating product"],
-        ["02", "Express Operations Diagnostic", "An entry service for companies that need to identify priorities, organize action, and start improving without a long engagement.", "Ready to launch"],
-        ["03", "Corven Learning", "A learning platform with course administration, learning paths, and a student experience.", "Digital product in development"],
-        ["04", "Irka Store and DOTCOM", "Two practical exercises used to design and test the method for local retail and field services. They were not delivered consulting engagements.", "Design exercises"],
+        ["01", "PISTON", "A workshop management platform that digitizes and organizes operational work in a single system.", "Workshop platform"],
+        ["02", "Level Up", "An LMS platform for managing learning experiences, courses, content, and student participation.", "Learning platform"],
+        ["03", "COMFETRASA Portal", "A CRM-style workforce management platform that centralizes information, follow-up, and service processes in one organized environment.", "Workforce management platform"],
       ],
     },
     pricing: {
