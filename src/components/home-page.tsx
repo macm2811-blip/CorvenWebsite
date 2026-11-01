@@ -18,9 +18,9 @@ const content = {
       eyebrow: "Qué hacemos", title: "Tres capacidades conectadas para fortalecer su empresa.",
       intro: "Analizamos el presente, hacemos visible la información importante y ayudamos a convertirla en dirección y acción.",
       items: [
-        ["1", "Operaciones que funcionan", "Organizamos, mejoramos y podemos acompañar la administración de operaciones para lograr un funcionamiento óptimo y estratégico."],
-        ["2", "Datos que se entienden", "Convertimos información dispersa en indicadores y visualizaciones claras que muestran qué está ocurriendo en la empresa."],
-        ["3", "Proyección para decidir", "Construimos escenarios y proyecciones que ayudan a anticipar posibilidades y tomar mejores decisiones en el presente."],
+        ["Operaciones que funcionan", "Organizamos, mejoramos y podemos acompañar la administración de operaciones para lograr un funcionamiento óptimo y estratégico."],
+        ["Datos que se entienden", "Convertimos información dispersa en indicadores y visualizaciones claras que muestran qué está ocurriendo en la empresa."],
+        ["Proyección para decidir", "Construimos escenarios y proyecciones que ayudan a anticipar posibilidades y tomar mejores decisiones en el presente."],
       ],
     },
     portfolio: {
@@ -29,9 +29,9 @@ const content = {
       intro: "Estos proyectos muestran cómo CORVEN convierte procesos de negocio en herramientas digitales claras, organizadas y listas para operar.",
       linkLabel: "Ver proyecto",
       items: [
-        ["01", "PISTON", "Plataforma de gestión para talleres que digitaliza y organiza el trabajo operativo en un solo sistema.", "Plataforma para talleres", "https://manufacturing-os.vercel.app/login"],
-        ["02", "Level Up", "Plataforma LMS para administrar experiencias de aprendizaje, cursos, contenido y participación de estudiantes.", "Plataforma de aprendizaje", "/demo/learning"],
-        ["03", "Portal COMFETRASA", "Plataforma de gestión laboral estilo CRM que centraliza información, seguimiento y procesos de atención en un entorno organizado.", "Plataforma de gestión laboral", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
+        ["PISTON", "Plataforma de gestión para talleres que digitaliza y organiza el trabajo operativo en un solo sistema.", "Plataforma para talleres", "https://manufacturing-os.vercel.app/login"],
+        ["Level Up", "Plataforma LMS para administrar experiencias de aprendizaje, cursos, contenido y participación de estudiantes.", "Plataforma de aprendizaje", "/demo/learning"],
+        ["Portal COMFETRASA", "Plataforma de gestión laboral estilo CRM que centraliza información, seguimiento y procesos de atención en un entorno organizado.", "Plataforma de gestión laboral", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
       ],
     },
     pricing: {
@@ -61,7 +61,7 @@ const content = {
       intro: "Una lectura clara del presente que conecta operación, datos y proyección para definir prioridades y orientar las próximas decisiones.",
       aria: "Ejemplo ilustrativo del Panorama Estratégico CORVEN", example: "Ejemplo ilustrativo", cardTitle: "Panorama Estratégico",
       cardStrong: "Decisiones conectadas", timing: "Presente + futuro", label: "Una visión integral",
-      priorities: [["1", "Operación", "Procesos, responsabilidades y control"], ["2", "Datos", "Indicadores visibles para decidir"], ["3", "Proyección", "Escenarios para actuar a tiempo"]],
+      priorities: [["Operación", "Procesos, responsabilidades y control"], ["Datos", "Indicadores visibles para decidir"], ["Proyección", "Escenarios para actuar a tiempo"]],
       footer: ["Operación", "Datos", "Estrategia"],
     },
     process: {
@@ -104,9 +104,9 @@ const content = {
       eyebrow: "What we do", title: "Three connected capabilities to strengthen your company.",
       intro: "We analyze the present, make critical information visible, and help turn it into direction and action.",
       items: [
-        ["1", "Operations that perform", "We organize and improve operations—and can support their ongoing management—to achieve optimal, strategic performance."],
-        ["2", "Data you can understand", "We turn scattered information into clear indicators and visualizations that reveal what is happening across the company."],
-        ["3", "Foresight for better decisions", "We build scenarios and projections that help companies anticipate possibilities and make better decisions today."],
+        ["Operations that perform", "We organize and improve operations—and can support their ongoing management—to achieve optimal, strategic performance."],
+        ["Data you can understand", "We turn scattered information into clear indicators and visualizations that reveal what is happening across the company."],
+        ["Foresight for better decisions", "We build scenarios and projections that help companies anticipate possibilities and make better decisions today."],
       ],
     },
     portfolio: {
@@ -115,9 +115,9 @@ const content = {
       intro: "These projects show how CORVEN turns business processes into clear, organized digital tools that are ready to operate.",
       linkLabel: "View project",
       items: [
-        ["01", "PISTON", "A workshop management platform that digitizes and organizes operational work in a single system.", "Workshop platform", "https://manufacturing-os.vercel.app/login"],
-        ["02", "Level Up", "An LMS platform for managing learning experiences, courses, content, and student participation.", "Learning platform", "/demo/learning"],
-        ["03", "COMFETRASA Portal", "A CRM-style workforce management platform that centralizes information, follow-up, and service processes in one organized environment.", "Workforce management platform", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
+        ["PISTON", "A workshop management platform that digitizes and organizes operational work in a single system.", "Workshop platform", "https://manufacturing-os.vercel.app/login"],
+        ["Level Up", "An LMS platform for managing learning experiences, courses, content, and student participation.", "Learning platform", "/demo/learning"],
+        ["COMFETRASA Portal", "A CRM-style workforce management platform that centralizes information, follow-up, and service processes in one organized environment.", "Workforce management platform", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
       ],
     },
     pricing: {
@@ -147,7 +147,7 @@ const content = {
       intro: "A clear view of the present that connects operations, data, and projections to define priorities and guide the decisions ahead.",
       aria: "Illustrative example of the CORVEN Strategic Overview", example: "Illustrative example", cardTitle: "Strategic Overview",
       cardStrong: "Connected decisions", timing: "Present + future", label: "An integrated view",
-      priorities: [["1", "Operations", "Processes, responsibilities, and control"], ["2", "Data", "Visible indicators for better decisions"], ["3", "Foresight", "Scenarios that support timely action"]],
+      priorities: [["Operations", "Processes, responsibilities, and control"], ["Data", "Visible indicators for better decisions"], ["Foresight", "Scenarios that support timely action"]],
       footer: ["Operations", "Data", "Strategy"],
     },
     process: {
@@ -197,11 +197,11 @@ export function HomePage({ locale }: { locale: Locale }) {
           </div>
         </section>
         <section className="signal-strip" aria-label={c.signal.label}><div className="container signal-content"><span className="signal-mark">C</span><p>{c.signal.text} <strong>{c.signal.strong}</strong></p></div></section>
-        <section className="section section-challenges" id={c.ids.solutions}><div className="container"><div className="section-heading heading-split"><div><p className="eyebrow">{c.solutions.eyebrow}</p><h2>{c.solutions.title}</h2></div><p>{c.solutions.intro}</p></div><div className="challenge-grid solutions-grid">{c.solutions.items.map(([number, title, text]) => <article className="challenge-card" key={number}><span>{number}</span><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+        <section className="section section-challenges" id={c.ids.solutions}><div className="container"><div className="section-heading heading-split"><div><p className="eyebrow">{c.solutions.eyebrow}</p><h2>{c.solutions.title}</h2></div><p>{c.solutions.intro}</p></div><div className="challenge-grid solutions-grid">{c.solutions.items.map(([title, text]) => <article className="challenge-card" key={title}><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
         <section className="section section-portfolio" id={c.ids.portfolio}>
           <div className="container">
             <div className="section-heading heading-split"><div><p className="eyebrow">{c.portfolio.eyebrow}</p><h2>{c.portfolio.title}</h2></div><p>{c.portfolio.intro}</p></div>
-            <div className="portfolio-grid">{c.portfolio.items.map(([number, title, text, status, url]) => <article className="portfolio-card" key={number}><div className="portfolio-meta"><span>{number}</span><small>{status}</small></div><h3>{title}</h3><p>{text}</p><a className="portfolio-link" href={url} {...(url.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{c.portfolio.linkLabel}<span aria-hidden="true">→</span></a></article>)}</div>
+            <div className="portfolio-grid">{c.portfolio.items.map(([title, text, status, url]) => <article className="portfolio-card" key={title}><div className="portfolio-meta"><small>{status}</small></div><h3>{title}</h3><p>{text}</p><a className="portfolio-link" href={url} {...(url.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{c.portfolio.linkLabel}<span aria-hidden="true">→</span></a></article>)}</div>
           </div>
         </section>
         <section className="section section-diagnostic" id={c.ids.diagnostic}><div className="container diagnostic-grid"><div className="diagnostic-copy"><p className="eyebrow eyebrow-light">{c.diagnostic.eyebrow}</p><h2>{c.diagnostic.title}</h2><p>{c.diagnostic.intro}</p></div><div className="deliverables-card"><p className="card-kicker">{c.diagnostic.deliverablesTitle}</p><ul>{c.diagnostic.deliverables.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul><p className="deliverables-note">{c.diagnostic.note}</p></div></div></section>
@@ -212,7 +212,7 @@ export function HomePage({ locale }: { locale: Locale }) {
             <div className="pricing-footer"><p>{c.pricing.note}</p><a className="button button-brand" href={`#${c.ids.contact}`}>{c.pricing.cta}<span aria-hidden="true">→</span></a></div>
           </div>
         </section>
-        <section className="section section-snapshot" aria-labelledby={`snapshot-title-${locale}`}><div className="container snapshot-section-grid"><div className="snapshot-section-copy"><p className="eyebrow">{c.snapshot.eyebrow}</p><h2 id={`snapshot-title-${locale}`}>{c.snapshot.title}</h2><p>{c.snapshot.intro}</p></div><div className="snapshot-wrap" aria-label={c.snapshot.aria}><div className="snapshot-note"><span aria-hidden="true"></span> {c.snapshot.example}</div><article className="snapshot-card"><div className="snapshot-header"><div><p>{c.snapshot.cardTitle}</p><strong>{c.snapshot.cardStrong}</strong></div><span>{c.snapshot.timing}</span></div><div className="snapshot-body"><p className="snapshot-label">{c.snapshot.label}</p>{c.snapshot.priorities.map(([number, title, text], index) => <div className={`priority ${["priority-high", "priority-medium", "priority-low"][index]}`} key={number}><span>{number}</span><div><strong>{title}</strong><small>{text}</small></div></div>)}</div><div className="snapshot-footer">{c.snapshot.footer.map((item) => <span key={item}>{item}</span>)}</div></article></div></div></section>
+        <section className="section section-snapshot" aria-labelledby={`snapshot-title-${locale}`}><div className="container snapshot-section-grid"><div className="snapshot-section-copy"><p className="eyebrow">{c.snapshot.eyebrow}</p><h2 id={`snapshot-title-${locale}`}>{c.snapshot.title}</h2><p>{c.snapshot.intro}</p></div><div className="snapshot-wrap" aria-label={c.snapshot.aria}><div className="snapshot-note"><span aria-hidden="true"></span> {c.snapshot.example}</div><article className="snapshot-card"><div className="snapshot-header"><div><p>{c.snapshot.cardTitle}</p><strong>{c.snapshot.cardStrong}</strong></div><span>{c.snapshot.timing}</span></div><div className="snapshot-body"><p className="snapshot-label">{c.snapshot.label}</p>{c.snapshot.priorities.map(([title, text], index) => <div className={`priority ${["priority-high", "priority-medium", "priority-low"][index]}`} key={title}><div><strong>{title}</strong><small>{text}</small></div></div>)}</div><div className="snapshot-footer">{c.snapshot.footer.map((item) => <span key={item}>{item}</span>)}</div></article></div></div></section>
         <section className="section section-process" id={c.ids.process}><div className="container"><div className="section-heading centered-heading"><p className="eyebrow">{c.process.eyebrow}</p><h2>{c.process.title}</h2><p>{c.process.intro}</p></div><ol className="process-grid process-grid-four">{c.process.items.map(([title, text]) => <li key={title}><h3>{title}</h3><p>{text}</p></li>)}</ol></div></section>
         <section className="section section-vision" id={c.ids.about}><div className="container"><div className="about-statement"><p className="eyebrow eyebrow-light">{c.vision.eyebrow}</p><h2>{c.vision.title}</h2><p>{c.vision.intro}</p></div><div className="purpose-grid"><article><p className="eyebrow">{c.vision.missionLabel}</p><h3>{c.vision.missionTitle}</h3><p>{c.vision.missionText}</p></article><article><p className="eyebrow">{c.vision.visionLabel}</p><h3>{c.vision.visionTitle}</h3><p>{c.vision.visionText}</p></article></div><div className="pillars-heading"><p className="eyebrow">{c.vision.pillarsTitle}</p><p>{c.vision.pillarsIntro}</p></div><div className="pillars-grid">{c.vision.pillars.map(([title, text]) => <article className="pillar-card" key={title}><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
         <section className="section section-contact" id={c.ids.contact}><div className="container contact-card"><div><p className="eyebrow">{c.contact.eyebrow}</p><h2>{c.contact.title}</h2><p>{c.contact.text}</p></div><div className="contact-actions"><div className="contact-methods"><span className="contact-method" aria-disabled="true"><ContactIcon kind="email" />{c.contact.email}</span><span className="contact-method" aria-disabled="true"><ContactIcon kind="whatsapp" />{c.contact.whatsapp}</span></div><small>{c.contact.pending}</small></div></div></section>
