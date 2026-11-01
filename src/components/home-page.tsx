@@ -27,10 +27,11 @@ const content = {
       eyebrow: "Portafolio CORVEN",
       title: "Plataformas desarrolladas para resolver necesidades reales de gestión.",
       intro: "Estos proyectos muestran cómo CORVEN convierte procesos de negocio en herramientas digitales claras, organizadas y listas para operar.",
+      linkLabel: "Ver proyecto",
       items: [
-        ["01", "PISTON", "Plataforma de gestión para talleres que digitaliza y organiza el trabajo operativo en un solo sistema.", "Plataforma para talleres"],
-        ["02", "Level Up", "Plataforma LMS para administrar experiencias de aprendizaje, cursos, contenido y participación de estudiantes.", "Plataforma de aprendizaje"],
-        ["03", "Portal COMFETRASA", "Plataforma de gestión laboral estilo CRM que centraliza información, seguimiento y procesos de atención en un entorno organizado.", "Plataforma de gestión laboral"],
+        ["01", "PISTON", "Plataforma de gestión para talleres que digitaliza y organiza el trabajo operativo en un solo sistema.", "Plataforma para talleres", "https://manufacturing-os.vercel.app/login"],
+        ["02", "Level Up", "Plataforma LMS para administrar experiencias de aprendizaje, cursos, contenido y participación de estudiantes.", "Plataforma de aprendizaje", "/demo/learning"],
+        ["03", "Portal COMFETRASA", "Plataforma de gestión laboral estilo CRM que centraliza información, seguimiento y procesos de atención en un entorno organizado.", "Plataforma de gestión laboral", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
       ],
     },
     pricing: {
@@ -112,10 +113,11 @@ const content = {
       eyebrow: "CORVEN portfolio",
       title: "Platforms developed to solve real management needs.",
       intro: "These projects show how CORVEN turns business processes into clear, organized digital tools that are ready to operate.",
+      linkLabel: "View project",
       items: [
-        ["01", "PISTON", "A workshop management platform that digitizes and organizes operational work in a single system.", "Workshop platform"],
-        ["02", "Level Up", "An LMS platform for managing learning experiences, courses, content, and student participation.", "Learning platform"],
-        ["03", "COMFETRASA Portal", "A CRM-style workforce management platform that centralizes information, follow-up, and service processes in one organized environment.", "Workforce management platform"],
+        ["01", "PISTON", "A workshop management platform that digitizes and organizes operational work in a single system.", "Workshop platform", "https://manufacturing-os.vercel.app/login"],
+        ["02", "Level Up", "An LMS platform for managing learning experiences, courses, content, and student participation.", "Learning platform", "/demo/learning"],
+        ["03", "COMFETRASA Portal", "A CRM-style workforce management platform that centralizes information, follow-up, and service processes in one organized environment.", "Workforce management platform", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
       ],
     },
     pricing: {
@@ -199,7 +201,7 @@ export function HomePage({ locale }: { locale: Locale }) {
         <section className="section section-portfolio" id={c.ids.portfolio}>
           <div className="container">
             <div className="section-heading heading-split"><div><p className="eyebrow">{c.portfolio.eyebrow}</p><h2>{c.portfolio.title}</h2></div><p>{c.portfolio.intro}</p></div>
-            <div className="portfolio-grid">{c.portfolio.items.map(([number, title, text, status]) => <article className="portfolio-card" key={number}><div className="portfolio-meta"><span>{number}</span><small>{status}</small></div><h3>{title}</h3><p>{text}</p></article>)}</div>
+            <div className="portfolio-grid">{c.portfolio.items.map(([number, title, text, status, url]) => <article className="portfolio-card" key={number}><div className="portfolio-meta"><span>{number}</span><small>{status}</small></div><h3>{title}</h3><p>{text}</p><a className="portfolio-link" href={url} {...(url.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>{c.portfolio.linkLabel}<span aria-hidden="true">→</span></a></article>)}</div>
           </div>
         </section>
         <section className="section section-diagnostic" id={c.ids.diagnostic}><div className="container diagnostic-grid"><div className="diagnostic-copy"><p className="eyebrow eyebrow-light">{c.diagnostic.eyebrow}</p><h2>{c.diagnostic.title}</h2><p>{c.diagnostic.intro}</p></div><div className="deliverables-card"><p className="card-kicker">{c.diagnostic.deliverablesTitle}</p><ul>{c.diagnostic.deliverables.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul><p className="deliverables-note">{c.diagnostic.note}</p></div></div></section>
