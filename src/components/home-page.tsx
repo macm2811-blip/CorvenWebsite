@@ -31,7 +31,7 @@ const content = {
       items: [
         ["PISTON", "Plataforma de gestión para talleres que digitaliza y organiza el trabajo operativo en un solo sistema.", "Plataforma para talleres", "https://manufacturing-os.vercel.app/login"],
         ["Level Up", "Plataforma LMS para administrar experiencias de aprendizaje, cursos, contenido y participación de estudiantes.", "Plataforma de aprendizaje", "/demo/learning"],
-        ["Portal COMFETRASA", "Plataforma de gestión laboral estilo CRM que centraliza información, seguimiento y procesos de atención en un entorno organizado.", "Plataforma de gestión laboral", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
+        ["COMFETRASA", "Proyecto integral que incluyó el desarrollo del logo y la identidad visual, el manejo de redes sociales y un portal estilo CRM para organizar la gestión laboral y el seguimiento de casos.", "Identidad · redes · plataforma", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
       ],
     },
     pricing: {
@@ -117,7 +117,7 @@ const content = {
       items: [
         ["PISTON", "A workshop management platform that digitizes and organizes operational work in a single system.", "Workshop platform", "https://manufacturing-os.vercel.app/login"],
         ["Level Up", "An LMS platform for managing learning experiences, courses, content, and student participation.", "Learning platform", "/demo/learning"],
-        ["COMFETRASA Portal", "A CRM-style workforce management platform that centralizes information, follow-up, and service processes in one organized environment.", "Workforce management platform", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
+        ["COMFETRASA", "An integrated project covering logo and visual identity development, social media management, and a CRM-style portal for organizing workforce operations and case follow-up.", "Brand · social · platform", "https://comfetrasa-git-pruebas-malcon-corea.vercel.app"],
       ],
     },
     pricing: {
