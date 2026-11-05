@@ -88,7 +88,19 @@ const content = {
         ["Evolución", "Buscamos mejoras que fortalezcan el presente y preparen a la empresa para el futuro."],
       ],
     },
-    contact: { eyebrow: "Conversemos", title: "Construyamos una visión más clara para su empresa.", text: "Cuéntenos qué necesita entender, mejorar o proyectar. Empezaremos por identificar la conversación más útil para avanzar.", email: "Correo electrónico", whatsapp: "WhatsApp", pending: "Datos de contacto pendientes de confirmación antes de publicar." },
+    contact: {
+      eyebrow: "Conversemos",
+      title: "Construyamos una visión más clara para su empresa.",
+      text: "Cuéntenos qué necesita entender, mejorar o proyectar. Empezaremos por identificar la conversación más útil para avanzar.",
+      emailLabel: "Correo electrónico",
+      email: "info@corvenconsulting.company",
+      whatsappLabel: "WhatsApp",
+      whatsapp: "+506 6007 9321",
+      whatsappMessage: "Hola, quisiera conocer más sobre los servicios de CORVEN.",
+      instagramLabel: "Instagram",
+      instagram: "@corvenconsultingcr",
+      note: "Atendemos por correo, WhatsApp e Instagram.",
+    },
   },
   en: {
     ids: { home: "home", solutions: "solutions", portfolio: "portfolio", pricing: "pricing", diagnostic: "diagnostic", process: "how-we-work", about: "about-corven", contact: "contact" },
@@ -174,12 +186,25 @@ const content = {
         ["Evolution", "We pursue improvements that strengthen the present and prepare the company for the future."],
       ],
     },
-    contact: { eyebrow: "Let's talk", title: "Let's build a clearer vision for your company.", text: "Tell us what you need to understand, improve, or project. We will begin by identifying the most useful conversation to move forward.", email: "Email", whatsapp: "WhatsApp", pending: "Contact details pending confirmation before publication." },
+    contact: {
+      eyebrow: "Let's talk",
+      title: "Let's build a clearer vision for your company.",
+      text: "Tell us what you need to understand, improve, or project. We will begin by identifying the most useful conversation to move forward.",
+      emailLabel: "Email",
+      email: "info@corvenconsulting.company",
+      whatsappLabel: "WhatsApp",
+      whatsapp: "+506 6007 9321",
+      whatsappMessage: "Hello, I would like to learn more about CORVEN's services.",
+      instagramLabel: "Instagram",
+      instagram: "@corvenconsultingcr",
+      note: "Reach us by email, WhatsApp, or Instagram.",
+    },
   },
 } as const;
 
 export function HomePage({ locale }: { locale: Locale }) {
   const c = content[locale];
+  const whatsappHref = `https://wa.me/50660079321?text=${encodeURIComponent(c.contact.whatsappMessage)}`;
   return (
     <div className="site-shell" lang={locale}>
       <SiteHeader locale={locale} />
@@ -215,17 +240,21 @@ export function HomePage({ locale }: { locale: Locale }) {
         <section className="section section-snapshot" aria-labelledby={`snapshot-title-${locale}`}><div className="container snapshot-section-grid"><div className="snapshot-section-copy"><p className="eyebrow">{c.snapshot.eyebrow}</p><h2 id={`snapshot-title-${locale}`}>{c.snapshot.title}</h2><p>{c.snapshot.intro}</p></div><div className="snapshot-wrap" aria-label={c.snapshot.aria}><div className="snapshot-note"><span aria-hidden="true"></span> {c.snapshot.example}</div><article className="snapshot-card"><div className="snapshot-header"><div><p>{c.snapshot.cardTitle}</p><strong>{c.snapshot.cardStrong}</strong></div><span>{c.snapshot.timing}</span></div><div className="snapshot-body"><p className="snapshot-label">{c.snapshot.label}</p>{c.snapshot.priorities.map(([title, text], index) => <div className={`priority ${["priority-high", "priority-medium", "priority-low"][index]}`} key={title}><div><strong>{title}</strong><small>{text}</small></div></div>)}</div><div className="snapshot-footer">{c.snapshot.footer.map((item) => <span key={item}>{item}</span>)}</div></article></div></div></section>
         <section className="section section-process" id={c.ids.process}><div className="container"><div className="section-heading centered-heading"><p className="eyebrow">{c.process.eyebrow}</p><h2>{c.process.title}</h2><p>{c.process.intro}</p></div><ol className="process-grid process-grid-four">{c.process.items.map(([title, text]) => <li key={title}><h3>{title}</h3><p>{text}</p></li>)}</ol></div></section>
         <section className="section section-vision" id={c.ids.about}><div className="container"><div className="about-statement"><p className="eyebrow eyebrow-light">{c.vision.eyebrow}</p><h2>{c.vision.title}</h2><p>{c.vision.intro}</p></div><div className="purpose-grid"><article><p className="eyebrow">{c.vision.missionLabel}</p><h3>{c.vision.missionTitle}</h3><p>{c.vision.missionText}</p></article><article><p className="eyebrow">{c.vision.visionLabel}</p><h3>{c.vision.visionTitle}</h3><p>{c.vision.visionText}</p></article></div><div className="pillars-heading"><p className="eyebrow">{c.vision.pillarsTitle}</p><p>{c.vision.pillarsIntro}</p></div><div className="pillars-grid">{c.vision.pillars.map(([title, text]) => <article className="pillar-card" key={title}><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
-        <section className="section section-contact" id={c.ids.contact}><div className="container contact-card"><div><p className="eyebrow">{c.contact.eyebrow}</p><h2>{c.contact.title}</h2><p>{c.contact.text}</p></div><div className="contact-actions"><div className="contact-methods"><span className="contact-method" aria-disabled="true"><ContactIcon kind="email" />{c.contact.email}</span><span className="contact-method" aria-disabled="true"><ContactIcon kind="whatsapp" />{c.contact.whatsapp}</span></div><small>{c.contact.pending}</small></div></div></section>
+        <section className="section section-contact" id={c.ids.contact}><div className="container contact-card"><div><p className="eyebrow">{c.contact.eyebrow}</p><h2>{c.contact.title}</h2><p>{c.contact.text}</p></div><div className="contact-actions"><div className="contact-methods"><a className="contact-method" href={`mailto:${c.contact.email}`}><ContactIcon kind="email" /><span className="contact-method-copy"><span>{c.contact.emailLabel}</span><strong>{c.contact.email}</strong></span></a><a className="contact-method" href={whatsappHref} target="_blank" rel="noreferrer"><ContactIcon kind="whatsapp" /><span className="contact-method-copy"><span>{c.contact.whatsappLabel}</span><strong>{c.contact.whatsapp}</strong></span></a><a className="contact-method" href="https://www.instagram.com/corvenconsultingcr/" target="_blank" rel="noreferrer"><ContactIcon kind="instagram" /><span className="contact-method-copy"><span>{c.contact.instagramLabel}</span><strong>{c.contact.instagram}</strong></span></a></div><small>{c.contact.note}</small></div></div></section>
       </main>
       <SiteFooter locale={locale} />
     </div>
   );
 }
 
-function ContactIcon({ kind }: { kind: "email" | "whatsapp" }) {
+function ContactIcon({ kind }: { kind: "email" | "whatsapp" | "instagram" }) {
   if (kind === "email") {
     return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6.5h18v11H3z"/><path d="m4 7.5 8 6 8-6"/></svg>;
   }
 
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 19.5l1.1-4A8 8 0 1 1 20 11.5Z"/><path d="M9 8.5c.4 3.1 2.4 5.1 5.5 5.5"/></svg>;
+  if (kind === "whatsapp") {
+    return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 19.5l1.1-4A8 8 0 1 1 20 11.5Z"/><path d="M9 8.5c.4 3.1 2.4 5.1 5.5 5.5"/></svg>;
+  }
+
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.7" r=".8" fill="currentColor" stroke="none"/></svg>;
 }
