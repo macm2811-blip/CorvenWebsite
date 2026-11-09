@@ -2,17 +2,17 @@ import { BrandLogo } from "@/components/brand-logo";
 
 const navigation = {
   es: [
-    ["Soluciones", "#soluciones"],
-    ["Portafolio", "#portafolio"],
-    ["Precios", "#precios"],
+    ["Soluciones", "/#soluciones"],
+    ["Portafolio", "/#portafolio"],
+    ["Precios", "/#precios"],
     ["Corven Learning", "/learning"],
-    ["Sobre CORVEN", "#sobre-corven"],
+    ["Sobre CORVEN", "/#sobre-corven"],
   ],
   en: [
-    ["Solutions", "#solutions"],
-    ["Portfolio", "#portfolio"],
-    ["Pricing", "#pricing"],
-    ["About CORVEN", "#about-corven"],
+    ["Solutions", "/en#solutions"],
+    ["Portfolio", "/en#portfolio"],
+    ["Pricing", "/en#pricing"],
+    ["About CORVEN", "/en#about-corven"],
   ],
 } as const;
 
@@ -20,7 +20,7 @@ export function SiteHeader({ locale }: { locale: "es" | "en" }) {
   const isEnglish = locale === "en";
   const links = navigation[locale];
   const homeHref = isEnglish ? "/en#home" : "/#inicio";
-  const contactHref = isEnglish ? "#contact" : "#contacto";
+  const contactHref = isEnglish ? "/en#contact" : "/#contacto";
 
   return (
     <header className="site-header">
