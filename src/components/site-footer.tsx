@@ -5,17 +5,19 @@ const footerContent = {
     statement: "Operaciones, datos y estrategia para construir mejores decisiones.",
     scope: "Alcance global",
     scopeText: "Trabajamos con empresas que quieren comprender, mejorar y proyectar su negocio.",
-    links: [["Soluciones", "#soluciones"], ["Portafolio", "#portafolio"], ["Catálogo de precios", "#precios"], ["Corven Learning", "/learning"], ["Sobre CORVEN", "#sobre-corven"]],
-    privacy: "Privacidad — próxima etapa",
-    validation: "Contenido inicial sujeto a validación.",
+    links: [["Soluciones", "/#soluciones"], ["Portafolio", "/#portafolio"], ["Catálogo de precios", "/#precios"], ["Corven Learning", "/learning"], ["Sobre CORVEN", "/#sobre-corven"]],
+    privacy: "Aviso de privacidad",
+    privacyHref: "/privacidad",
+    validation: "Servicios profesionales prestados por Malcon Corea bajo la marca CORVEN.",
   },
   en: {
     statement: "Operations, data, and strategy for better business decisions.",
     scope: "Global reach",
     scopeText: "We work with companies seeking to understand, improve, and shape their future.",
-    links: [["Solutions", "#solutions"], ["Portfolio", "#portfolio"], ["Pricing", "#pricing"], ["Express Diagnostic", "#diagnostic"], ["About CORVEN", "#about-corven"]],
-    privacy: "Privacy — coming next",
-    validation: "Initial content subject to validation.",
+    links: [["Solutions", "/en#solutions"], ["Portfolio", "/en#portfolio"], ["Pricing", "/en#pricing"], ["Express Diagnostic", "/en#diagnostic"], ["About CORVEN", "/en#about-corven"]],
+    privacy: "Privacy notice",
+    privacyHref: "/en/privacy",
+    validation: "Professional services provided by Malcon Corea under the CORVEN brand.",
   },
 } as const;
 
@@ -35,7 +37,7 @@ export function SiteFooter({ locale }: { locale: "es" | "en" }) {
         </div>
         <div className="footer-links">
           {content.links.map(([label, href]) => <a href={href} key={href}>{label}</a>)}
-          <span>{content.privacy}</span>
+          <a href={content.privacyHref}>{content.privacy}</a>
         </div>
       </div>
       <div className="container footer-bottom">
