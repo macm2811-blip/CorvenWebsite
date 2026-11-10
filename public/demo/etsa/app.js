@@ -122,7 +122,7 @@ function pageHead(eyebrow, title, description, chip = "9 de noviembre de 2026") 
 
 function renderHome() {
   main.innerHTML = `
-    ${pageHead("Panel personal", "Buenos días, Andrea", "Continúe su ruta técnica y revise sus próximos vencimientos.")}
+    ${pageHead("Panel personal", "Buenos días, Joel", "Continúe su ruta técnica y revise sus próximos vencimientos.")}
     <section class="hero-grid">
       <article class="hero-card">
         <div class="hero-copy">
@@ -191,7 +191,7 @@ function renderCertificates() {
     <div class="certificate-grid">
       <article class="certificate-card">
         <div class="certificate-inner">
-          <div class="seal">◇</div><p>ETSA ACADEMY CERTIFICA QUE</p><h2>Andrea Rojas</h2><p>ha completado satisfactoriamente el curso</p><h3>Bloqueo y etiquetado de energías</h3><p>Resultado final 92% · Emitido el 2 de noviembre de 2026<br>Válido hasta el 2 de noviembre de 2027</p>
+          <div class="seal">◇</div><p>ETSA ACADEMY CERTIFICA QUE</p><h2>Joel</h2><p>ha completado satisfactoriamente el curso</p><h3>Bloqueo y etiquetado de energías</h3><p>Resultado final 92% · Emitido el 2 de noviembre de 2026<br>Válido hasta el 2 de noviembre de 2027</p>
           <button class="primary-button" id="downloadCertificate">Descargar certificado</button>
         </div>
       </article>
@@ -215,7 +215,7 @@ function renderAdmin() {
       <article class="panel">
         <div class="section-head"><h2>Avance de participantes</h2><button class="secondary-button" id="exportReport">Exportar reporte</button></div>
         <div class="table-wrap"><table><thead><tr><th>Participante</th><th>Rol</th><th>Ruta</th><th>Progreso</th><th>Estado</th></tr></thead><tbody>
-          <tr><td><div class="person"><span class="person-avatar">AR</span>Andrea Rojas</div></td><td>Técnica</td><td>Nivel 1</td><td>68%</td><td><span class="status-pill blue">En curso</span></td></tr>
+          <tr><td><div class="person"><span class="person-avatar">J</span>Joel</div></td><td>Dirección</td><td>Nivel 1</td><td>68%</td><td><span class="status-pill blue">En curso</span></td></tr>
           <tr><td><div class="person"><span class="person-avatar">CM</span>Carlos Méndez</div></td><td>Técnico</td><td>Nivel 1</td><td>100%</td><td><span class="status-pill green">Completado</span></td></tr>
           <tr><td><div class="person"><span class="person-avatar">LS</span>Laura Solano</div></td><td>Supervisora</td><td>Supervisión</td><td>82%</td><td><span class="status-pill blue">En curso</span></td></tr>
           <tr><td><div class="person"><span class="person-avatar">JV</span>José Vargas</div></td><td>Técnico</td><td>Nivel 1</td><td>22%</td><td><span class="status-pill" style="background:var(--red-soft);color:var(--red)">Atrasado</span></td></tr>
