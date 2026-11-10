@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Demo funcional de ETSA Academy para capacitación técnica y seguimiento del aprendizaje." />
+  <title>ETSA Academy Demo</title>
+  <link rel="icon" href="assets/etsa-logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="demo-ribbon"><span></span>Demo conceptual para conversación comercial · Datos y contenido ilustrativos</div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <button class="mobile-close" id="mobileClose" aria-label="Cerrar menú">×</button>
+      <a class="brand" href="#inicio" data-view="home" aria-label="ETSA Academy inicio">
+        <span class="brand-logo-wrap"><img src="assets/etsa-logo.png" alt="ETSA Holding" /></span>
+        <small class="brand-academy">ACADEMY</small>
+      </a>
+
+      <nav class="primary-nav" aria-label="Navegación principal">
+        <button class="nav-item active" data-view="home"><span class="nav-icon">⌂</span><span>Inicio</span></button>
+        <button class="nav-item" data-view="learning"><span class="nav-icon">▣</span><span>Mi aprendizaje</span><span class="nav-count">3</span></button>
+        <button class="nav-item" data-view="catalog"><span class="nav-icon">◫</span><span>Catálogo</span></button>
+        <button class="nav-item" data-view="certificates"><span class="nav-icon">◇</span><span>Certificados</span></button>
+      </nav>
+
+      <div class="nav-section-label">GESTIÓN</div>
+      <nav class="primary-nav" aria-label="Navegación administrativa">
+        <button class="nav-item" data-view="admin"><span class="nav-icon">⌁</span><span>Administración</span></button>
+      </nav>
+
+      <div class="support-card">
+        <span class="support-icon">?</span>
+        <strong>¿Necesita ayuda?</strong>
+        <p>Consulte la guía rápida o contacte a su administrador.</p>
+        <button id="helpButton">Abrir guía</button>
+      </div>
+
+      <div class="sidebar-footer">Academia regional · v0.1 Demo</div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="Abrir menú">☰</button>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+          <input id="globalSearch" type="search" placeholder="Buscar cursos, recursos o temas" aria-label="Buscar" />
+          <kbd>⌘ K</kbd>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" aria-label="Notificaciones"><span>♢</span><i></i></button>
+          <div class="user-menu">
+            <div class="avatar">AR</div>
+            <div><strong>Andrea Rojas</strong><small>Técnica de mantenimiento</small></div>
+            <span class="chevron">⌄</span>
+          </div>
+        </div>
+      </header>
+
+      <main id="mainContent" tabindex="-1"></main>
+      <footer class="site-footer"><span>ETSA Academy</span><span>Entorno demostrativo · No almacena información real</span></footer>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalClose" aria-label="Cerrar">×</button>
+      <div id="modalContent"></div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
